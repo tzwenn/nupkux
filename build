@@ -1,0 +1,16 @@
+#!/bin/sh
+
+echo "Start compilation ..."
+gcc -c kernel/main.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o kernel/main.o
+gcc -c kernel/ktextio.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o kernel/ktextio.o
+gcc -c kernel/sish.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o kernel/sish.o
+gcc -c mm/memory.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o mm/memory.o
+echo "Assemble ..."
+as -o boot/loader.o boot/loader.s
+echo "Link ..."
+ld -T link.ld -o squaros boot/loader.o kernel/main.o kernel/ktextio.o kernel/sish.o mm/memory.o
+echo "Clean up ..."
+rm boot/*.o
+rm kernel/*.o
+rm mm/*.o
+echo "Finished ..."
