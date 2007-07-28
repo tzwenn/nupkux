@@ -54,10 +54,9 @@ typedef struct {
 extern inline void outportb(USHORT port, UCHAR value);
 extern inline UCHAR inportb(USHORT port);
 extern int _ksetcursor(UCHAR x, UCHAR y);
-extern int _kout(char *output);
 extern int _kin(char *instr, int maxlen);
 extern int _kclear();
-extern int format_d(char output[], int max_len, int value);
+extern int printf(const char *fmt, ...);
 extern UCHAR _kinterpret_key(UCHAR key, int layout);
 
 extern CURSOR_POS _cursor_pos;

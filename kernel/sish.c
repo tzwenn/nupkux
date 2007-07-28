@@ -1,61 +1,72 @@
 #include <kernel/sish.h>
 #include <kernel/ktextio.h>
+#include <time.h>
+#include <string.h>
 
 int sish();
 
-typedef UINT size_t;
-
-int strcmp(char *s1, char *s2)
-{	
-	while ((*s1) && (*s2)) {
-		if (*s1<*s2) return -1;
-		if (*s1>*s2) return 1;
-		s1++;
-		s2++;
-	}
-	if ((!*s1) && (*s2)) return -1;
-	if ((*s1) && (!*s2)) return 1;
-	return 0;
-}
-
-size_t strlen(char *str)
-{
-	size_t res = 0;
-	
-	while (*(str++)) res++;
-	return res;
-}
-
-char *strchr(char *str, char chr)
-{
-	while ((*str) && (*str!=chr)) str++;
-	return str;
-}
-
 int sish_help()
 {
-	_kout("List of built-in commands:\n");
-	_kout("\texit\t\tQuit sish\n"); 
-	_kout("\thalt\t\tHalt system\n");
-	_kout("\treboot\t\tReboot system\n");
-	_kout("\thelp\t\tWhat do you read right now?\n");
+	printf("List of built-in commands:\n");
+	printf("\ttime\t\tGive information about time and date\n");
+	printf("\texit\t\tQuit sish\n"); 
+	printf("\thalt\t\tHalt system\n");
+	printf("\treboot\t\tReboot system\n");
+	printf("\thelp\t\tWhat do you read right now?\n");
 	return 0;
 }
 
-int _sish_split_par(char *cmd, char **argv)
+int sish_time()
 {
+	struct tm now;
+	time_t timestamp;
+	char *wdays[7] = {
+		"Sunday","Monday","Thursday","Wednesday","Tuesday","Friday","Saturday"
+	};
+	
+	now=getrtctime();
+	printf("Time:\t\t%d:%d:%d\n",now.tm_hour,now.tm_min,now.tm_sec);
+	printf("Date:\t\t%s %d-%d-%d\n",wdays[now.tm_wday],now.tm_year,now.tm_mon,now.tm_mday);
+	removetimezone(&now);
+	timestamp=mktime(&now);	
+	printf("Timestamp:\t%d\n",timestamp);
+	return 1;
+}
+
+int ltrim(char *cmd)
+{
+	char *str = cmd;
+
+	while ((*str<=32) && (*str)) str++;
+	strcpy(cmd,str);
+	return str-cmd;
+}
+
+int _sish_split_par(char *cmd, char *args)
+{
+	char *astart;
+
+	ltrim(cmd);
+	astart=strchr(cmd,' ');
+	if (astart) {
+		*astart=0;
+		strcpy(args,astart+1);
+		ltrim(args);
+	}
 	return 0;
 }
 
 int _sish_interpret(char *cmd) 
 {
-	if (!strcmp(cmd,"help")) return sish_help();
+	char args[STRLEN];
+
+	_sish_split_par(cmd,args);
+	if (!strcmp(cmd,"time")) return sish_time();
 	if (!strcmp(cmd,"exit")) return SISH_EXIT;
 	if (!strcmp(cmd,"halt")) return SISH_HALT;
 	if (!strcmp(cmd,"reboot")) return SISH_REBOOT;
-	_kout("sish: ");
-	_kout(cmd);
-	_kout(": command not found\n");
+	if (!strcmp(cmd,"help")) return sish_help();
+	printf("sish: %s: command not found\n",cmd);
 	return 0;
 }
 
@@ -64,9 +75,9 @@ int sish()
 	char input[STRLEN];
 	int ret;
 
-	_kout("\nSquaros intern shell (sish) started.\n\n");
+	printf("\nSquaros intern shell (sish) started.\nType \"help\" for a list of built-in commands.\n\n");
 	while (1) {
-		_kout("$ ");
+		printf("$ ");
 		_kin(input,STRLEN);
 		ret=_sish_interpret(input);
 		if ((ret & 0xF0)==0xE0) break;

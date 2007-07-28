@@ -1,13 +1,14 @@
 #include <kernel/ktextio.h>
 #include <memory.h>
+#include <stdarg.h>
 
 int _ksetcursor(UCHAR x, UCHAR y);
-int _kout(char *output);
 int _kin(char *instr, int maxlen);
 int _kclear();
-int format_d(char output[], int max_len, int value);
 UCHAR _kkeyboard_layout(UCHAR key, int layout);
 UCHAR _kinterpret_key(UCHAR key, int layout);
+
+int _kout(char *output);
 
 CURSOR_POS _cursor_pos;
 CURSOR_POS _cursor_max;
@@ -53,31 +54,19 @@ int _kline_buffer_reset()
 		_kline_buffer_down();
 	return 1;
 }
+extern int vsprintf(char *buf, const char *fmt, va_list args);
 
-int format_d(char output[], int max_len, int value) 
+int printf(const char *fmt, ...)
 {
-	char tmp;
-	int i = 0,j;
-	
-	if (max_len<2) return -1;
-	if (!value) {
-		output[0]='0';
-		output[1]=0;
-		return 1;
-	}
-	while (value) {
-		output[i++]=(char)(value%10+48);
-		output[i]=0;
-		if (i==max_len-1) break;
-		value=value/10;
-	}
-	j=i-1;
-	for (i=j/2;i>=0;i--) {
-		tmp=output[i];
-		output[i]=output[j-i];
-		output[j-i]=tmp;
-	}
-	return 1;
+	char str[STRLEN];
+	int res;
+	va_list ap;
+
+	va_start(ap,fmt);
+	res=vsprintf(str,fmt,ap);
+	_kout(str);
+	va_end(ap);
+	return res;
 }
 
 UCHAR _kkeyboard_layout(UCHAR key, int layout)
@@ -236,10 +225,8 @@ int _ksetcursor(UCHAR x, UCHAR y)
 	if (y>TXT_HEIGHT) y=0;
 	if (y==TXT_HEIGHT) y--;
 	position=(y*TXT_WIDTH)+x;
-	// cursor LOW port to vga INDEX register
 	outportb(0x3D4,0x0F);
 	outportb(0x3D5,(USHORT) (position & 0xFF));
-	// cursor HIGH port to vga INDEX register
 	outportb(0x3D4,0x0E);
 	outportb(0x3D5,(USHORT) ((position>>8) & 0xFF));
 	_cursor_pos.x=x;
@@ -394,12 +381,4 @@ int _kout(char *output)
 	}
 	_ksetcursor(x,y);
 	return 0;
-}
-
-void WriteCharacter(unsigned char c, unsigned char forecolour, unsigned char backcolour, int x, int y)
-{
-     unsigned short attrib = (((backcolour << 4) | (forecolour & 0x0F))) << 8;
-     volatile unsigned short *where;
-     where = (volatile unsigned short *) (0xB8000 + (y * 80 + x));
-     *where = c | (attrib << 8);
 }

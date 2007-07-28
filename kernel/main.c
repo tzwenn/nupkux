@@ -1,12 +1,15 @@
 #include <squaros.h>
 #include <kernel/ktextio.h>
 #include <kernel/sish.h>
+#include <time.h>
+
+int _kernel_start_time;
 
 void reboot()
 {
 	volatile UCHAR in = 0x02;
 
-	_kout("Will now reboot");
+	printf("Will now reboot");
 	while (in & 0x02)
 		in=inportb(0x64);
 	outportb(0x64,0xFE);
@@ -14,21 +17,17 @@ void reboot()
 
 void halt()
 {
-	_kout("Will now halt");
-}
-
-int _int0x21()
-{
-	_kout("Interupt\n");
-	return 0;
+	printf("Will now halt");
+	printf("\n\nYou can turn off the computer.");
 }
 
 int _kmain()
 {
 	int ret;
 	
+	_kernel_start_time=time(0);
 	_kclear();
-	_kout("Squaros booted ...\n");
+	printf("Squaros booted ...\n");
 	ret=sish();
 	switch (ret) {
 	  case SISH_REBOOT: reboot();
@@ -37,7 +36,7 @@ int _kmain()
 	  case SISH_HALT:   halt();
 			    return 0;
 			    break;
-	  default: 	    _kout("sish returned unknown value.\nStop system");
+	  default: 	    printf("sish returned with 0x%X.\nStop system",ret);
 			    return 0;
 			    break;
 	}
