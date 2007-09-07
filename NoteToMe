@@ -1,1 +1,13 @@
-Lagere die Zeitzone in eine Datei aus!!!!
+Diese Datei soll helfen in dem entstehenden Chaos etwas Übersich zu behalten.
+
+- Lagere die Zeitzone in eine Datei aus!!!!
+- Der PC-Speaker kommt aus der SISH in eine eigene "Multimedia-Bibliothek". Mit Hilfe der Clock-Ticks eine Zeitdauer übergeben.
+
+Funktionen in Module auslagern. Laden in Speicher, Call der Funktion.
+Modulbefehle: Modul laden, entfernen, ersetzen
+Interpretmodule?
+
+Module können Programme werden => Auf zum Hybridkernel:
+	Ein Modul mit einer Schnittstelle zum IPC-fähigen Programm.
+
+Das Jahrhundert von Adresse 50 aus der RTC lesen

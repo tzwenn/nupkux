@@ -17,7 +17,7 @@ UCHAR _line_buffer[LINE_BUFFER_LEN][2*TXT_WIDTH];
 UINT _line_buffer_len = 0;
 char _key_states[128];
 
-inline void outportb(USHORT port, UCHAR value)  // Output a byte to a port
+inline void outportb(USHORT port, UCHAR value) 
 {
     asm volatile ("outb %%al,%%dx"::"d" (port), "a" (value));
 }
@@ -27,6 +27,19 @@ inline UCHAR inportb(USHORT port)
  	UCHAR value;
 
 	asm volatile ("inb %%dx,%%al":"=a" (value):"d"(port));
+	return value;
+}
+
+inline void outportw(USHORT port, USHORT value) 
+{
+    asm volatile ("outw %%ax,%%dx"::"d"(port), "a"(value));
+}
+
+inline USHORT inportw(USHORT port)  
+{
+ 	USHORT value;
+
+	asm volatile ("inw %%dx,%%ax":"=a"(value):"d"(port));
 	return value;
 }
 

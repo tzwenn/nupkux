@@ -53,6 +53,8 @@ typedef struct {
 
 extern inline void outportb(USHORT port, UCHAR value);
 extern inline UCHAR inportb(USHORT port);
+extern inline void outportw(USHORT port, USHORT value);
+extern inline USHORT inportw(USHORT port); 
 extern int _ksetcursor(UCHAR x, UCHAR y);
 extern int _kin(char *instr, int maxlen);
 extern int _kclear();

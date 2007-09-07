@@ -4,6 +4,7 @@ echo "Start compilation ..."
 gcc -c kernel/main.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o kernel/main.o
 gcc -c kernel/ktextio.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o kernel/ktextio.o
 gcc -c kernel/sish.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o kernel/sish.o
+gcc -c kernel/pc_speaker.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o kernel/pc_speaker.o
 gcc -c kernel/time.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o kernel/time.o
 gcc -c lib/string.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o lib/string.o
 gcc -c lib/vsprintf.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I./include -o lib/vsprintf.o
@@ -11,7 +12,7 @@ gcc -c mm/memory.c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -
 echo "Assemble ..."
 as -o boot/loader.o boot/loader.s
 echo "Link ..."
-ld -T link.ld -o squaros boot/loader.o kernel/main.o kernel/ktextio.o kernel/sish.o kernel/time.o lib/string.o lib/vsprintf.o mm/memory.o 
+ld -T link.ld -o squaros boot/loader.o kernel/main.o kernel/ktextio.o kernel/sish.o kernel/pc_speaker.o kernel/time.o lib/string.o lib/vsprintf.o mm/memory.o 
 echo "Clean up ..."
 rm boot/*.o
 rm kernel/*.o

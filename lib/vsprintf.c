@@ -3,7 +3,7 @@
  * Wirzenius wrote this portably, Torvalds fucked it up :-)
  */
 /*
- * Postscriptum: Sven Koehler take this stuff and modified it for his obsolete system
+ * Postscriptum: Sven Koehler take this stuff and put it into his obsolete system
  */
 
 #include <stdarg.h>

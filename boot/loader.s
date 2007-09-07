@@ -18,9 +18,9 @@
 _loader:
    mov   $(stack + STACKSIZE), %esp 
    push  %eax                       
-   push  %ebx                       
+   push  %ebx             
+   cli          
 
 #Start Kernel's main-function
    call  _kmain           
-   cli
    hlt                   

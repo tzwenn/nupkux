@@ -39,12 +39,14 @@ struct tm getrtctime()
 	now.tm_mon=DateBCD(inportb(0x71),is_bcd);
 	outportb(0x70,0x09);
 	now.tm_year=DateBCD(inportb(0x71),is_bcd);
+	/*//In VirtualBox it's weird, on my laptop everything is fine, on my PC it sucks. Forget the day.
 	outportb(0x70,0x06);
 	now.tm_wday=inportb(0x71);
-	/*//A stupid bugfix, i've got no idea why it doesn't work correctly in my virtual box:
+	//A stupid bugfix, i've got no idea why it doesn't work correctly in my virtual box:
 	now.tm_wday+=2;
 	if (now.tm_wday>6) now.tm_wday-=7;*/
-	//yday
+	now.tm_wday=-1;
+	
 	now.tm_yday=(now.tm_mon-1)*30;
 	if (now.tm_mon>2) now.tm_yday-=2;
 	if (now.tm_mon<7) now.tm_yday+=(now.tm_mon)/2;
