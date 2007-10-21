@@ -1,9 +1,12 @@
 #ifndef _TIME_H
 #define _TIME_H
 
-#define CLOCKS_PER_SEC 100
+#include <squaros.h>
 
-typedef long time_t;
+#ifndef _TIME_T
+#define _TIME_T
+  typedef long time_t;
+#endif
 typedef long clock_t;
 
 struct tm {
@@ -23,5 +26,6 @@ extern time_t mktime(struct tm *timeptr);
 //Write a ctime, it will make things much easyer
 extern struct tm getrtctime();
 extern int removetimezone(struct tm *timeptr);
+extern void sleep(UINT msecs);
 
 #endif

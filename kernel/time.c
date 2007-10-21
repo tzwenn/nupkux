@@ -2,11 +2,34 @@
 #include <squaros.h>
 #include <kernel/ktextio.h>
 
+#define tick_rate 100
+
 int _ktimezone = 1;
 int _kdaylight_saving_time = 1; //It's the 27th of July
 
 time_t time(time_t *__timer);
 int removetimezone(struct tm *timeptr);
+
+ULONG ticks = 0;
+
+void set_pic_timer(int freq)
+{
+    int divisor = 1193180/freq;     
+    outportb(0x43,0x36);            
+    outportb(0x40,divisor & 0xFF);   
+    outportb(0x40,divisor >> 8);     
+}
+
+void timer_handler(struct regs *r)
+{
+	ticks++;
+}
+
+void timer_install()
+{
+	set_pic_timer(tick_rate);
+	irq_install_handler(0,timer_handler);
+}
 
 UCHAR DateBCD(UCHAR value, int is_bcd)
 {
@@ -97,6 +120,12 @@ time_t time(time_t *tp)
 	result = mktime(&now);
 	if (tp) *tp=result;
 	return result;
+}
+
+void sleep(UINT msecs)
+{
+	ULONG tstart = ticks, tdiff = (tick_rate*msecs)/1000;
+	while (ticks-tdiff<tstart);
 }
 
 int removetimezone(struct tm *timeptr)

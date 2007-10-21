@@ -27,7 +27,9 @@
 #define SPEC_KEY_F1 	59
 #define SPEC_KEY_F10 	68
 #define SPEC_KEY_RETURN 28
-#define SPEC_KEY_SHIFT	54
+#define SPEC_KEY_SHIFTL	42
+#define SPEC_KEY_SHIFTR	54
+#define SPEC_KEY_ALT    56
 #define SPEC_KEY_ALTGR  56
 #define SPEC_KEY_CTRLL  29
 #define SPEC_KEY_CTRLR  29
@@ -60,11 +62,12 @@ extern int _kin(char *instr, int maxlen);
 extern int _kclear();
 extern int printf(const char *fmt, ...);
 extern UCHAR _kinterpret_key(UCHAR key, int layout);
+extern void input_setup();
+extern int str2d(char *str);
 
 extern CURSOR_POS _cursor_pos;
 extern CURSOR_POS _cursor_max;
 extern UINT _line_buffer_pos;
-extern UINT _line_buffer_len;
 extern UCHAR _line_buffer[LINE_BUFFER_LEN][TXT_WIDTH*2];
 extern char _key_states[128];
 

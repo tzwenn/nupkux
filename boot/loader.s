@@ -23,4 +23,17 @@ _loader:
 
 #Start Kernel's main-function
    call  _kmain           
+   cli
    hlt                   
+
+.global att_lgdt
+.extern gp
+att_lgdt:
+   lgdt gp
+   ret
+
+.global idt_load
+.extern idtp
+idt_load:
+    lidt idtp
+    ret

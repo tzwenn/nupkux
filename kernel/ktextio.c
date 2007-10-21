@@ -12,10 +12,10 @@ int _kout(char *output);
 
 CURSOR_POS _cursor_pos;
 CURSOR_POS _cursor_max;
-UINT _line_buffer_pos = 0;
+UINT _line_buffer_pos = 0, _line_buffer_end = 0;
 UCHAR _line_buffer[LINE_BUFFER_LEN][2*TXT_WIDTH];
-UINT _line_buffer_len = 0;
 char _key_states[128];
+char _print_pressed_keys = 0;
 
 inline void outportb(USHORT port, UCHAR value) 
 {
@@ -45,26 +45,26 @@ inline USHORT inportw(USHORT port)
 
 int _kline_buffer_up() 
 {
-	if (_line_buffer_pos==_line_buffer_len) return 1;
-		
-
+	if (((_line_buffer_end>=0) && (_line_buffer_pos==_line_buffer_end)) || 
+	   ((_line_buffer_end<0) && (_line_buffer_pos==-_line_buffer_end-1) )) return 0;
+	
 	_line_buffer_pos++;
+	printf("+(%d)",_line_buffer_pos);	
 	return 1;
 }
 
 int _kline_buffer_down() 
 {
-	if (!_line_buffer_pos)	return 1;
-	
-	_line_buffer_pos--;
+	if (!_line_buffer_pos)	return 0;
+
+	_line_buffer_pos--;	printf("-(%d)",_line_buffer_pos);
 	return 1;
 }
 
 
 int _kline_buffer_reset() 
 {
-	while (_line_buffer_pos)
-		_kline_buffer_down();
+	//while (_kline_buffer_down());
 	return 1;
 }
 extern int vsprintf(char *buf, const char *fmt, va_list args);
@@ -82,77 +82,31 @@ int printf(const char *fmt, ...)
 	return res;
 }
 
+int str2d(char *str)
+{
+	int res = 0;
+
+	while (*str) {
+		res=10*(res)+(*str-48);
+		str++;
+	}
+	return res;
+}
+
 UCHAR _kkeyboard_layout(UCHAR key, int layout)
 {
-	switch (key) {
-//F-Keys
-/*
-//		case  1: return 1; //'ESC';
-		case 59 = F1;
-		case 68 = F10;
-		87 = F11;
-		88 = F12; 
-*/		
-//numbers
-		case 41: return '^';
-		case  2: return '1';
-		case  3: return '2';
-		case  4: return '3';
-		case  5: return '4';
-		case  6: return '5';
-		case  7: return '6';
-		case  8: return '7';
-		case  9: return '8';
-		case 10: return '9';
-		case 11: return '0';
-		case 12: return 223;//'ß';
-//		case 13: return '´';
-		case 14: return '\b';
-//first row
-		case 15: return '\t';
-		case 16: return 'q';
-		case 17: return 'w';
-		case 18: return 'e';
-		case 19: return 'r';
-		case 20: return 't';		
-		case 21: return 'z';
-		case 22: return 'u';
-		case 23: return 'i';
-		case 24: return 'o';
-		case 25: return 'p';
-//		case 26: return 'ü';
-		case 27: return '+';
-		case 28: return '\n';
-//second row
-		case 30: return 'a';
-		case 31: return 's';
-		case 32: return 'd';
-		case 33: return 'f';
-		case 34: return 'g';
-		case 35: return 'h';
-		case 36: return 'j';
-		case 37: return 'k';
-		case 38: return 'l';
-		//case 39: return 246;//'ö';
-		//case 40: return 228;//'ä';
-		case 43: return '#';
-//last row
-		case 86: return '<';
-		case 44: return 'y';
-		case 45: return 'x';
-		case 46: return 'c';
-		case 47: return 'v';
-		case 48: return 'b';
-		case 49: return 'n';
-		case 50: return 'm';
-		case 51: return ',';
-		case 52: return '.';
-		case 53: return '-';
-//others
-		case 57: return ' ';
-		default: return 0;
-	}
+	UCHAR german_keymap[90] = 	{0,1,'1','2','3','4','5','6','7','8','9','0',223/*ß*/,0/*´*/,'\b',
+					'\t','q','w','e','r','t','z','u','i','o','p',0/*ü*/,'+','\n',
+					0,'a','s','d','f','g','h','j','k','l',0/*ö*/,0/*ä*/,'^',0,'#',
+					'y','x','c','v','b','n','m',',','.','-',
+					0,0,0,' ',0,0,0,0,0,0,0,0,0,0,0,0,0,
+					0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'<',0,0,0};
+
+	if ((layout==KEYBOARD_LAY_DE) && (key<=90)) return german_keymap[key];
+	return 0;
 }
+
+extern void reboot();
 
 UCHAR _kinterpret_key(UCHAR key, int layout)
 {
@@ -172,15 +126,28 @@ UCHAR _kinterpret_key(UCHAR key, int layout)
 			case SPEC_KEY_END:   if (_key_states[SPEC_KEY_CTRLL]) _ksetcursor(TXT_WIDTH-1,TXT_HEIGHT-1);
 						else _ksetcursor(TXT_WIDTH-1,_cursor_pos.y);
 					     break;
-			case SPEC_KEY_DELET: if ((_cursor_pos.x!=TXT_WIDTH-1) && (_cursor_pos.y!=TXT_HEIGHT-1)) {
+			case SPEC_KEY_NEXT:  if (_key_states[SPEC_KEY_SHIFTL] || _key_states[SPEC_KEY_SHIFTR]) _kline_buffer_up();
+					     break;
+			case SPEC_KEY_PRIOR: if (_key_states[SPEC_KEY_SHIFTL] || _key_states[SPEC_KEY_SHIFTR]) _kline_buffer_down();
+					     break;
+			case SPEC_KEY_DELET: if (_key_states[SPEC_KEY_CTRLL] && _key_states[SPEC_KEY_ALT]) {
+						reboot();
+						return 0;
+					     }
+					     if ((_cursor_pos.x!=TXT_WIDTH-1) && (_cursor_pos.y!=TXT_HEIGHT-1)) {
 						_ksetcursor(_cursor_pos.x+1,_cursor_pos.y);
 						_kout("\b");
+					     }
+					     break;
+			case 46: 	     if (_key_states[SPEC_KEY_CTRLL]) {
+						_kabort_func=1;  //^C
+	 				        return 0;
 					     }
 					     break;
 		}
 	key=_kkeyboard_layout(key,layout);
 	if (!key) return 0;
-	if (_key_states[SPEC_KEY_SHIFT]) {
+	if (_key_states[SPEC_KEY_SHIFTL] || _key_states[SPEC_KEY_SHIFTR]) {
         	if ((key>=97) && (key<=123)) return key & 0xDF;
 		switch (key) {
 			case '1': return '!';
@@ -277,40 +244,49 @@ int _kiomove(int x, int y, int len)
 	return 0;
 }
 
+void irq_keyboard(struct regs *r) 
+{
+	UCHAR input = inportb(0x60);
+	char keyprint[2] = " ";
+
+	if (!(input & 0x80)) {
+		if (!_key_states[input]) {
+			_key_states[input]=1;
+			keyprint[0]=_kinterpret_key(input,KEYBOARD_LAY_DE);
+			if ((_print_pressed_keys) && (keyprint[0]!='\n')) _kout(keyprint);
+		}
+	} else if (_key_states[input-128]) {
+		_key_states[input-128]=0;
+	}
+}
+
+void input_setup()
+{
+	int i = 0;
+
+	irq_install_handler(1,irq_keyboard);
+	i=128;
+	while (i--)
+		_key_states[i]=0;
+}
+
 int _kin(char *instr, int maxlen)
 {
 	CURSOR_POS cstart = _cursor_pos;	
 	char *mem = (char *) VIDEO_MEM_ENTRY;
-	char keyprint[2];
 
-	UCHAR input = 0;
 	int i = 0;
 
+	_print_pressed_keys=1;
 	instr[0]=0;
-	keyprint[0]=' ';
-	keyprint[1]=0;
-	input=128;
-	while (input--)
-		_key_states[input]=0;
-	while (1) {
-		input=inportb(0x60);
-		if (input<128) {
-			if (!_key_states[input]) {
-				if ((!maxlen) && (input!=SPEC_KEY_RETURN)) continue;
-				keyprint[0]=_kinterpret_key(input,KEYBOARD_LAY_DE);
-				_key_states[input]=1;
-				if (keyprint[0]=='\n') continue;
-				_kout(keyprint);
-			}
-		} else if (_key_states[input-128]) {
-			if ((!maxlen) && (input-128!=SPEC_KEY_RETURN)) continue;
-			keyprint[0]=_kinterpret_key(input-128,KEYBOARD_LAY_DE);
-			_key_states[input-128]=0;
-			if (keyprint[0]=='\n') break;
-		}
+	while (!_key_states[SPEC_KEY_RETURN]) {
+		_kabort_func_return(_kaborted);
 		if (_cursor_pos.y<cstart.y) _ksetcursor(_cursor_pos.x,cstart.y);
+		if ((_key_states[SPEC_KEY_DOWN]) && (_cursor_pos.y>cstart.y)) _ksetcursor(_cursor_pos.x,cstart.y);
 		if ((_cursor_pos.y==cstart.y) && (_cursor_pos.x<cstart.x)) _ksetcursor(cstart.x,_cursor_pos.y);
 	}
+	_print_pressed_keys=0;
+	while (_key_states[SPEC_KEY_RETURN]);
 	while ((instr) && (i<maxlen-1) && (i<(_cursor_pos.y*TXT_WIDTH+_cursor_pos.x)-(cstart.y*TXT_WIDTH+cstart.x))) {
 		instr[i]=mem[2*(cstart.y*TXT_WIDTH+cstart.x+i)];
 		instr[++i]=0;
@@ -374,11 +350,15 @@ int _kout(char *output)
 			y++;
 		}
 		if (y>=TXT_HEIGHT) {
-			y=LINE_BUFFER_LEN;
+			/*y=LINE_BUFFER_LEN;
 			while (y--) 
 				memcpy((_line_buffer+2*y*TXT_WIDTH),(_line_buffer+2*(y-1)*TXT_WIDTH),(UINT) 2*TXT_WIDTH);
 			memcpy(_line_buffer,mem,(UINT) 2*TXT_WIDTH);
-			if (_line_buffer_len<LINE_BUFFER_LEN-1) _line_buffer_len++;
+			if (_line_buffer_len<LINE_BUFFER_LEN-1) _line_buffer_len++;*/
+			if (_line_buffer_end<0) y=-(_line_buffer_end--)-1;
+				else y=_line_buffer_end++;
+			memcpy(_line_buffer+y*2*TXT_WIDTH,mem,(UINT) 2*TXT_WIDTH);
+			if ((_line_buffer_end==LINE_BUFFER_LEN) || (_line_buffer_end==-LINE_BUFFER_LEN-1)) _line_buffer_end=-1;
 			y=0;
 			while (y<TXT_HEIGHT-1) {
 				memcpy(mem+2*(y*TXT_WIDTH),mem+2*((y+1)*TXT_WIDTH),(UINT) 2*TXT_WIDTH);

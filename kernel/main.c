@@ -2,8 +2,10 @@
 #include <kernel/ktextio.h>
 #include <kernel/sish.h>
 #include <time.h>
+#include <kernel/devices/fdc.h>
 
-int _kernel_start_time;
+char _kabort_func = 0;
+int errno;
 
 void reboot()
 {
@@ -16,7 +18,7 @@ void reboot()
 }
 
 void halt()
-{
+{	
 	printf("Will now halt");
 	printf("\n\nYou can turn off the computer.");
 }
@@ -25,9 +27,24 @@ int _kmain()
 {
 	int ret;
 	
-	_kernel_start_time=time(0);
 	_kclear();
-	printf("Squaros booted ...\n");
+	printf("Squaros booted ...\nSet up Descriptors ... ");
+	gdt_install();
+	idt_install();
+	printf("Finished.\nInstall IRQ & ISRS ... ");
+	isrs_install();
+	irq_install();
+	printf("Finished.\nEnable Interrupts ... ");
+	asm volatile ("sti\n\t");
+	printf("Finished.\nStart Keyboard Controller ... ");
+	input_setup();
+	printf("Finished.\nSet up timer ... ");
+	timer_install();
+	printf("Finished.\nFloppydrive support  ... ");
+	init_floppy();
+	if (!floppy_drives) printf("No drives found.\n");
+		else printf("%s found.\n",(floppy_drives & 0x0F)?"2 drives":"1 drive");
+	printf("Booted up!\n");
 	ret=sish();
 	switch (ret) {
 	  case SISH_REBOOT: reboot();
@@ -40,7 +57,7 @@ int _kmain()
 			    return 0;
 			    break;
 	}
-	//while (1);
+	while (1);
 	return 0;
 }
 

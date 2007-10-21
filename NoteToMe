@@ -11,3 +11,10 @@ Module können Programme werden => Auf zum Hybridkernel:
 	Ein Modul mit einer Schnittstelle zum IPC-fähigen Programm.
 
 Das Jahrhundert von Adresse 50 aus der RTC lesen
+
+Namensvergabe für "Laufwerke":
+	fd0		-	Diskettenlaufwerk 1
+	fd1		-	Diskettenlaufwerk 2
+	ata0m		-	IDE-Cntrl 1 - Master
+	ata0s		-	IDE-Cntrl 1 - Slave
+	XXX1		-	Partion 1 auf XXX	

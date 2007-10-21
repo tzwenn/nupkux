@@ -2,158 +2,10 @@
 #include <kernel/ktextio.h>
 #include <time.h>
 #include <string.h>
+#include <kernel/devices/fdc.h>
+#include <kernel/devices/ata.h>
 
 int sish();
-
-int sish_help()
-{
-	printf("List of built-in commands:\n");
-	printf("\ttest\t\tRun the current development function\n");
-	printf("\ttime\t\tGive information about time and date\n");
-	printf("\texit\t\tQuit sish\n"); 
-	printf("\thalt\t\tHalt system\n");
-	printf("\treboot\t\tReboot system\n");
-	printf("\thelp\t\tWhat do you read right now?\n");
-	return 0;
-}
-
-int sish_time()
-{
-	struct tm now;
-	time_t timestamp;
-	
-	now=getrtctime();
-	printf("Time:\t\t%.2d:%.2d:%.2d\n",now.tm_hour,now.tm_min,now.tm_sec);
-	printf("Date:\t\t%.2d-%.2d-%.2d\n",now.tm_year,now.tm_mon,now.tm_mday);
-	removetimezone(&now);
-	timestamp=mktime(&now);	
-	printf("Timestamp:\t%d\n",timestamp);
-	return 1;
-}
-
-void lba28_init(USHORT controller, UCHAR drive, UINT addr) 
-{
-	outportb(controller | 0x01,0x00);
-	outportb(controller | 0x02,0x01); //UCHAR sectorcount
-	outportb(controller | 0x03,(UCHAR) (addr & 0xFF));
-	outportb(controller | 0x04,(UCHAR) ((addr>>8) & 0xFF));
-	outportb(controller | 0x05,(UCHAR) ((addr>>16) & 0xFF));
-	outportb(controller | 0x06,0xE0 | (drive << 4) | ((addr >> 24) & 0x0F));
-}
-
-int lba28_read(UCHAR buf[512], USHORT controller, UCHAR drive, UINT addr)
-{
-	int i;
-	USHORT value;
-//	UCHAR test[2] = " ";
-	time_t timestmp;
-
-	controller=controller & 0xFFF0;
-	if ((controller!=0x1F0) && (controller!=0x170)) return 0;
-	if ((drive!=0xA0) && (drive!=0xB0)) return 0;
-	lba28_init(controller,addr,drive);
-	outportb(controller | 0x07,0x20);
-	timestmp=time(0);
-	while ((inportb(controller | 0x07) & 0x08)==0x08) {if (!(time(0)-timestmp-2)) return 0;}
-	timestmp=time(0);
-	while ((inportb(controller | 0x07) & 0x0F)!=0x08) {if (!(time(0)-timestmp-2)) return 0;}
-	for (i=0;i<256;i++) {
-		value=inportw(controller);
-		buf[i*2]=(UCHAR) (value & 0xFF);
-		buf[i*2+1]=(UCHAR) ((value & 0xFF00) >> 8);
-/*		test[0]=buf[i*2];
-		printf("%s",test);
-		test[0]=buf[i*2+1];
-		printf("%s",test);*/
-		printf("%.4X",value);
-	}
-	return 1;
-}
-
-int lba28_write(UCHAR buf[512], USHORT controller, UCHAR drive, UINT addr)
-{
-	int i;
-	USHORT value;
-	time_t timestmp;
-
-	controller=controller & 0xFFF0;
-	if ((controller!=0x1F0) && (controller!=0x170)) return 0;
-	if ((drive!=0xA0) && (drive!=0xB0)) return 0;
-	lba28_init(controller,addr,drive);
-	outportb(controller | 0x07,0x30);
-	timestmp=time(0);
-	while ((inportb(controller | 0x07) & 0x08)==0x08) {if (!(time(0)-timestmp-2)) return 0;}
-	timestmp=time(0);
-	while ((inportb(controller | 0x07) & 0x0F)!=0x08) {if (!(time(0)-timestmp-2)) return 0;}
-	for (i=0;i<256;i++) {
-		value=buf[i*2];
-		value|=buf[i*2+1] << 8;
-		outportw(controller,value);
-	}
-	return 1;
-}
-
-int test_lba()
-{
-#define sish_test_sleep() timestamp=time(0); \
-	while (time(0)==timestamp)
-
-	UINT controller = 0;
-	USHORT tmpword = 0;
-	time_t timestamp;
-	UCHAR buffer[512];
-
-	printf("Detect Devices ...\n");
-	outportb(0x1F6,0xA0);
-	sish_test_sleep();
-	tmpword=inportb(0x1F7);
-	if (tmpword & 0x40) {
-		controller=0x01;
-		printf("Primary master exists.\n");
-		for (tmpword=0;tmpword<512;tmpword++)
-			buffer[tmpword]=tmpword;	
-		if (!lba28_write(buffer,0x1F0,0xA0,0)) printf("Write-Error\n");
-		if (!lba28_read(buffer,0x1F0,0xA0,0)) printf("Read-Error\n");
-		printf("Reading address 0 of primary master finished.\n");
-	}
-	outportb(0x1F6,0xB0);
-	sish_test_sleep();
-	tmpword=inportb(0x1F7);
-	if (tmpword & 0x40) {
-		controller=controller | 0x02;
-		printf("Primary slave exists.\n");
-		if (!lba28_read(buffer,0x1F0,0xB0,0)) printf("Read-Error");
-		printf("\nReading address 0 of primary slave finished.\n");
-	}
-	outportb(0x176,0xA0);
-	sish_test_sleep();
-	tmpword=inportb(0x177);
-	if (tmpword & 0x40) {
-		controller=controller | 0x10;
-		printf("Secondary master exists.\n");
-		if (!lba28_read(buffer,0x170,0xA0,0)) printf("Read-Error");
-		printf("\nReading address 0 of secondary master finished.\n");
-	}
-	outportb(0x176,0xB0);
-	sish_test_sleep();
-	tmpword=inportb(0x177);
-	if (tmpword & 0x40) {
-		controller=controller | 0x20;
-		printf("Secondary Slave exists.\n");
-		if (!lba28_read(buffer,0x170,0xB0,0)) printf("Read-Error");
-		printf("\nReading address 0 of secondary slave finished.\n");
-	}
-	printf("Finished.\n");
-	return 1;
-}
-
-int sish_test()
-{
-	printf("Floppydriver called ...\n");
-	printf("Init DMA ...\n");
-	outportb(0x0A,0x06);	//Disable channel 2
-	outportb(
-}
 
 int ltrim(char *cmd)
 {
@@ -178,12 +30,148 @@ int _sish_split_par(char *cmd, char *args)
 	return 0;
 }
 
+
+int sish_help()
+{
+	printf("List of built-in commands:\n");
+	printf("\ttest\t\tRun the current development function\n");
+	printf("\tclear\t\tCleans up the mess on the screen.\n");
+	printf("\tlba28\t\tAccess IDE-ATA drives\n");
+	printf("\ttime\t\tGive information about time and date\n");
+	printf("\texit\t\tQuit sish\n"); 
+	printf("\thalt\t\tHalt system\n");
+	printf("\treboot\t\tReboot system\n");
+	printf("\thelp\t\tWhat do you read right now?\n");
+	return 0;
+}
+
+int sish_time()
+{
+	struct tm now;
+	time_t timestamp;
+	
+	now=getrtctime();
+	printf("Time:\t\t%.2d:%.2d:%.2d\n",now.tm_hour,now.tm_min,now.tm_sec);
+	printf("Date:\t\t%.2d-%.2d-%.2d\n",now.tm_year,now.tm_mon,now.tm_mday);
+	removetimezone(&now);
+	timestamp=mktime(&now);	
+	printf("Timestamp:\t%d\n",timestamp);
+	return 1;
+}
+
+int sish_lba28()
+{
+	UCHAR idelist = 0,drv,tcalc;
+	USHORT tmpword = 0, contrl;
+	UINT addr;
+	UCHAR buffer[512];
+	char input[STRLEN];
+
+	printf("Detect Devices ...\n");
+	outportb(0x1F6,0xA0);
+	sleep(10);
+	tmpword=inportb(0x1F7);
+	if (tmpword & 0x40) {
+		idelist=0x01;
+		printf("Primary master exists.\n");
+	}
+	outportb(0x1F6,0xB0);
+	sleep(10);
+	tmpword=inportb(0x1F7);
+	if (tmpword & 0x40) {
+		idelist|=0x02;
+		printf("Primary slave exists.\n");
+	}
+	outportb(0x176,0xA0);
+	sleep(10);
+	tmpword=inportb(0x177);
+	if (tmpword & 0x40) {
+		idelist|=0x10;
+		printf("Secondary master exists.\n");
+	}
+	outportb(0x176,0xB0);
+	sleep(10);
+	tmpword=inportb(0x177);
+	if (tmpword & 0x40) {
+		idelist|=0x20;
+		printf("Secondary Slave exists.\n");
+	}
+	printf("Finished. Start loop, [^C] stops.\n");
+	while (1) {
+		printf("Controller (1/2): ");
+		if (_kin(input,STRLEN)==_kaborted) break;
+		if (!strcmp(input,"1")) contrl=0x1F0;
+			else if (!strcmp(input,"2")) contrl=0x170;
+			else {
+				printf("Unknown controller.\n");
+				continue;
+			     }
+		printf("Drive (A/B): ");
+		if (_kin(input,STRLEN)==_kaborted) break;
+		if (!strcmp(input,"A")) drv=0x00;
+			else if (!strcmp(input,"B")) drv=0x01;
+			else {
+				printf("Unknown drive.\n");
+				continue;
+			     }
+		tcalc=drv+1;
+		if (contrl==0x170) tcalc<<=4;
+		if (!(idelist & tcalc)) {
+			printf("No device attached.\n");
+			continue;
+		}
+		printf("Enter address: ");
+		if (_kin(input,STRLEN)==_kaborted) break;
+		addr=str2d(input);
+		if (!lba28_read(buffer,contrl,drv,addr,0)) {
+			printf("Read-Error\n");
+			continue;
+		} else printf("Reading finished.\n");
+		for (addr=0;addr<512;addr++)
+			printf("%.2X",buffer[addr]);
+		printf("\n");
+	}
+	printf("\n");
+	return 1;
+}
+
+int sish_test()
+{
+#define read_start 0x1AC 
+#define read_count 1
+	UCHAR buf[read_count*512];
+	int i;
+	
+	printf("Programm/module from floppy\n");
+	if (!fdc_read_block(read_start,buf,read_count)) {
+		printf("Can't read floppy\n");
+		return 1;
+	}
+	for (i=0;i<read_count*512;i++) {
+		if (i==512) printf("|");
+		printf("%X",buf[i]);
+	}
+	/*buf[6]=0xCD;
+	buf[7]=0x80;
+	buf[8]=0xC3;*/
+	printf("\nCall ... \n");
+	asm ("call *%%ebx\n\t"::"b"(buf));
+	printf("\n\n");
+	return 1;
+}
+
 int _sish_interpret(char *cmd) 
 {
 	char args[STRLEN];
 
 	_sish_split_par(cmd,args);
+	if (!(*cmd)) {
+		printf("\n");
+		return 0;
+	}
 	if (!strcmp(cmd,"test")) return sish_test();
+	if (!strcmp(cmd,"clear")) return _kclear();
+	if (!strcmp(cmd,"lba28")) return sish_lba28();
 	if (!strcmp(cmd,"time")) return sish_time();
 	if (!strcmp(cmd,"exit")) return SISH_EXIT;
 	if (!strcmp(cmd,"halt")) return SISH_HALT;
