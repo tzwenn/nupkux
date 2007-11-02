@@ -37,6 +37,7 @@ int sish_help()
 	printf("\ttest\t\tRun the current development function\n");
 	printf("\tclear\t\tCleans up the mess on the screen.\n");
 	printf("\tlba28\t\tAccess IDE-ATA drives\n");
+	printf("\tpaging\t\tCreates a pagefault and crashes the kernel\n");
 	printf("\ttime\t\tGive information about time and date\n");
 	printf("\texit\t\tQuit sish\n"); 
 	printf("\thalt\t\tHalt system\n");
@@ -55,7 +56,6 @@ int sish_time()
 	printf("Date:\t\t%.2d-%.2d-%.2d\n",now.tm_year,now.tm_mon,now.tm_mday);
 	removetimezone(&now);
 	timestamp=mktime(&now);	
-	printf("Timestamp:\t%d\n",timestamp);
 	return 1;
 }
 
@@ -135,6 +135,15 @@ int sish_lba28()
 	return 1;
 }
 
+int sish_paging()
+{
+	UINT *ptr = (UINT*) 0xA0000000;
+
+	printf("I will crash, If I work fine ...\n");
+	printf("*ptr: 0x%X, btw: Kernel is still running, so there must be a problem.\n",*ptr); 	//Kernel should never print this
+	return 1; 	
+}
+
 int sish_test()
 {
 #define read_start 0x1AC 
@@ -172,6 +181,7 @@ int _sish_interpret(char *cmd)
 	if (!strcmp(cmd,"test")) return sish_test();
 	if (!strcmp(cmd,"clear")) return _kclear();
 	if (!strcmp(cmd,"lba28")) return sish_lba28();
+	if (!strcmp(cmd,"paging")) return sish_paging();
 	if (!strcmp(cmd,"time")) return sish_time();
 	if (!strcmp(cmd,"exit")) return SISH_EXIT;
 	if (!strcmp(cmd,"halt")) return SISH_HALT;

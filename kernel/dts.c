@@ -10,6 +10,7 @@
 extern void gdt_flush();
 extern void idt_load();
 extern int SysCallHandler(struct regs *r);
+extern int page_fault_handler(struct regs *r);
 
 // GDT stuff
 struct gdt_entry {
@@ -26,7 +27,7 @@ struct gdt_ptr {
     UINT base;
 } __attribute__((packed));
 
-struct gdt_entry gdt[3];
+struct gdt_entry gdt[5];
 struct gdt_ptr gp;
 
 void gdt_set_gate(int num, ULONG base, ULONG limit, UCHAR access, UCHAR granularity) {
@@ -34,17 +35,19 @@ void gdt_set_gate(int num, ULONG base, ULONG limit, UCHAR access, UCHAR granular
     gdt[num].base_middle = (base >> 16) & 0xFF;
     gdt[num].base_high = (base >> 24) & 0xFF;
     gdt[num].limit_low = (limit & 0xFFFF);
-    gdt[num].granularity = ((limit >> 16) & 0x0F);
+    gdt[num].granularity = ((limit >> 16) & 0xFF);
     gdt[num].granularity |= (granularity & 0xF0);
     gdt[num].access = access;
 }
 
 void gdt_install() {
-    gp.limit = (sizeof(struct gdt_entry) * 3) - 1;
-    gp.base = (int) &gdt;
+    gp.limit = (sizeof(struct gdt_entry)*5)-1;
+    gp.base = (UINT) &gdt;
     gdt_set_gate(0, 0, 0, 0, 0);
     gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);
     gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);
+    gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF); 
+    gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF); 
     gdt_flush();
 }
 
@@ -156,7 +159,7 @@ void irq_install()
 void irq_handler(struct regs *r)
 {
     void (*handler)(struct regs *r);
-    handler = irq_routines[r->int_no - 32];
+    handler = irq_routines[r->int_no - 32];	//If I would remove this - 32, a lot of things would be nicer
     if (handler) handler(r);
     if (r->int_no >= 40) outportb(0xA0, 0x20);
     outportb(0x20, 0x20);
@@ -278,11 +281,19 @@ char *exception_messages[] = {
 	"Reserved"
 };
 
-void fault_handler(struct regs *r)
+int fault_handler(struct regs *r)
 {
-	if (r->int_no < 32) {
-		printf("%s Exception. System Halted!\n",exception_messages[r->int_no]);
-		asm volatile ("hlt\n\t");
+	switch (r->int_no) {
+		case 0x0E:	return page_fault_handler(r);
+				break;
+		case 0x80:	return SysCallHandler(r);
+				break;
+		default: 	if (r->int_no<32) {
+					printf("%s Exception. System Halted!\n",exception_messages[r->int_no]);
+					cli();
+					hlt();
+				}
+				break;
 	}
-	if (r->int_no == 0x80) SysCallHandler(r);
+	return 0;
 }

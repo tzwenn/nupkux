@@ -19,7 +19,7 @@ SRCFILES = $(shell find $(PROJDIRS) -mindepth 1 -maxdepth 4 -name "*.c")
 HDRFILES = $(shell find include -mindepth 1 -maxdepth 4 -name "*.h")
 OBJFILES = $(patsubst %.c,%.c.o,$(SRCFILES))
 DEPFILES = $(HDRFILES)
-PRJFILES = $(HDRFILES) $(SRCFILES) boot/dts.asm boot/loader.s Makefile link.ld NoteToMe squaros
+PRJFILES = $(HDRFILES) $(SRCFILES) boot/dts.asm boot/loader.s Makefile link.ld NoteToMe squaros LICENSE
 BACKUPTMP = ../backup-tmp
 BACKUPDIR = ../backups
 

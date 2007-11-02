@@ -28,6 +28,7 @@ extern void irq_uninstall_handler(int irq);					//To MACRO
 extern void irq_install();
 extern void timer_install();
 extern void init_floppy();
+extern void paging_setup();
 
 extern char _kabort_func;
 
@@ -39,5 +40,9 @@ extern char _kabort_func;
 					_kabort_func=0; \
 					return val; \
 				}
+
+#define sti() asm volatile ("sti\n\t")
+#define cli() asm volatile ("cli\n\t")
+#define hlt() asm volatile ("hlt\n\t")
 
 #endif

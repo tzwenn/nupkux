@@ -1,11 +1,14 @@
+#include <multiboot.h>
 #include <squaros.h>
 #include <kernel/ktextio.h>
 #include <kernel/sish.h>
 #include <time.h>
 #include <kernel/devices/fdc.h>
+#include <paging.h>
 
 char _kabort_func = 0;
 int errno;
+ULONG memory_end = 0;
 
 void reboot()
 {
@@ -21,21 +24,27 @@ void halt()
 {	
 	printf("Will now halt");
 	printf("\n\nYou can turn off the computer.");
+	cli();
+	hlt();
 }
 
-int _kmain()
+int _kmain(multiboot_info_t* mbd, unsigned int magic) 
 {
 	int ret;
 	
 	_kclear();
-	printf("Squaros booted ...\nSet up Descriptors ... ");
+	if (mbd->flags&0x01) memory_end=mbd->mem_upper*1024;
+		else memory_end=0x400000;
+	printf("Squaros booted ...\nAmount of RAM: %d Bytes.\nSet up Descriptors ... ",memory_end);
 	gdt_install();
 	idt_install();
 	printf("Finished.\nInstall IRQ & ISRS ... ");
 	isrs_install();
 	irq_install();
 	printf("Finished.\nEnable Interrupts ... ");
-	asm volatile ("sti\n\t");
+	sti();
+	printf("Finished.\nEnable Paging ... ");
+	paging_setup();
 	printf("Finished.\nStart Keyboard Controller ... ");
 	input_setup();
 	printf("Finished.\nSet up timer ... ");

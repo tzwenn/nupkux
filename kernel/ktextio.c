@@ -17,6 +17,8 @@ UCHAR _line_buffer[LINE_BUFFER_LEN][2*TXT_WIDTH];
 char _key_states[128];
 char _print_pressed_keys = 0;
 
+char *mem = (char *) VIDEO_MEM_ENTRY;
+
 inline void outportb(USHORT port, UCHAR value) 
 {
     asm volatile ("outb %%al,%%dx"::"d" (port), "a" (value));
@@ -215,9 +217,7 @@ int _ksetcursor(UCHAR x, UCHAR y)
 }
 
 int _kclear()
-{
-        char *mem = (char *) VIDEO_MEM_ENTRY;
-        int i=0;
+{        int i=0;
 
 	_kline_buffer_reset();
         while (i<(TXT_WIDTH*TXT_HEIGHT*2)) {
@@ -232,7 +232,6 @@ int _kclear()
 
 int _kiomove(int x, int y, int len)
 {
-	char *mem = (char *) VIDEO_MEM_ENTRY;	
 	int i;
 
 	for (i=2*TXT_HEIGHT*TXT_WIDTH;i>=2*(y*TXT_WIDTH+x+len-1);i--)
@@ -273,7 +272,6 @@ void input_setup()
 int _kin(char *instr, int maxlen)
 {
 	CURSOR_POS cstart = _cursor_pos;	
-	char *mem = (char *) VIDEO_MEM_ENTRY;
 
 	int i = 0;
 
@@ -298,9 +296,7 @@ int _kin(char *instr, int maxlen)
 }
 
 int _kout(char *output) 
-{
-	char *mem = (char *) VIDEO_MEM_ENTRY;
-	UCHAR x = _cursor_pos.x, y = _cursor_pos.y;
+{	UCHAR x = _cursor_pos.x, y = _cursor_pos.y;
 	int i;
 
 	_kline_buffer_reset();
@@ -354,10 +350,10 @@ int _kout(char *output)
 			while (y--) 
 				memcpy((_line_buffer+2*y*TXT_WIDTH),(_line_buffer+2*(y-1)*TXT_WIDTH),(UINT) 2*TXT_WIDTH);
 			memcpy(_line_buffer,mem,(UINT) 2*TXT_WIDTH);
-			if (_line_buffer_len<LINE_BUFFER_LEN-1) _line_buffer_len++;*/
+			if (_line_buffer_len<LINE_BUFFER_LEN-1) _line_buffer_len++;
+			memcpy(_line_buffer+y*2*TXT_WIDTH,mem,(UINT) 2*TXT_WIDTH);*/
 			if (_line_buffer_end<0) y=-(_line_buffer_end--)-1;
 				else y=_line_buffer_end++;
-			memcpy(_line_buffer+y*2*TXT_WIDTH,mem,(UINT) 2*TXT_WIDTH);
 			if ((_line_buffer_end==LINE_BUFFER_LEN) || (_line_buffer_end==-LINE_BUFFER_LEN-1)) _line_buffer_end=-1;
 			y=0;
 			while (y<TXT_HEIGHT-1) {
