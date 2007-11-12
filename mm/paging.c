@@ -50,24 +50,6 @@ UINT _kmalloc_pa(UINT sz, UINT *phys)
 	return res;
 }
 
-page alloc_frame(UINT number, UINT flags)
-{
-	page res; 
-
-	res.frame=number;
-	res.flags=flags;
-	framemap[number/32]|=(1<<(number%32));
-	return res;
-}
-
-void free_frame(page *_page)
-{
-	UINT number=_page->frame;
-	
-	_page->frame=0;
-	if (number) framemap[number/32]&=~(1<<(number%32));
-}
-
 UINT first_frame()
 {
 	UINT i,j;
@@ -80,6 +62,24 @@ UINT first_frame()
 	return 0xFFFFFFFF;
 }
 
+void alloc_frame(page *apage, UINT flags)
+{
+	UINT number = first_frame();
+
+	if (apage->frame) return;	
+	apage->frame=number;
+	apage->flags=flags;
+	framemap[number/32]|=(1<<(number%32));
+}
+
+void free_frame(page *_page)
+{
+	UINT number=_page->frame;
+	
+	_page->frame=0;
+	if (number) framemap[number/32]&=~(1<<(number%32));
+}
+
 page_table *make_table(UINT index, UINT flags, page_directory *directory)
 {
 	page_table *res=(page_table *)_kmalloc_pa(sizeof(page_table),&(directory->physTabs[index]));
@@ -90,13 +90,13 @@ page_table *make_table(UINT index, UINT flags, page_directory *directory)
 	return res;
 }
 
-page *make_page(UINT address, int make, page_directory *directory)
+page *make_page(UINT address, UINT flags, page_directory *directory, int alloc)
 {
 	UINT index = address/FRAME_SIZE;
 	UINT tab = index/1024;
 
 	if (!directory->physTabs[tab]) make_table(tab,flags,directory);
-	directory->tables[tab]->entries[index%1024]=alloc_frame(index,flags);
+	if (alloc) alloc_frame(&(directory->tables[tab]->entries[index%1024]),flags);
 	return &(directory->tables[tab]->entries[index%1024]);
 }
 
@@ -108,7 +108,7 @@ page *get_page(UINT address, int make, page_directory *directory)
 	if (directory->physTabs[tab]) 
 		return &(directory->tables[tab]->entries[index%1024]);
 	else if (make) 
-		return make_page(address,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | PAGE_FLAG_USERMODE,directory);
+		return make_page(address,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | PAGE_FLAG_USERMODE,directory,0);
 	return 0;
 }
 
@@ -124,7 +124,8 @@ void paging_setup()
 	memset(kernel_directory->physTabs,0,0x1000);
 	i=0;
 	while (i<kmalloc_pos) {
-		make_page(i,PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT,kernel_directory);
+		//make_page(i,PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT,kernel_directory,1);
+		alloc_frame(get_page(i,1,kernel_directory),PAGE_FLAG_PRESENT);
 		i+=0x1000;
 	}
 	current_directory=kernel_directory;
