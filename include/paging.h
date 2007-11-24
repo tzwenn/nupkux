@@ -2,9 +2,8 @@
 #define _PAGING_H
 
 #include <squaros.h>
+#include <mm.h>
 
-#define WORKING_MEMSTART ((UINT) &kernel_end)   /* By the way, this will be a minumum of required space, what a suprise ;-) */
-#define WORKING_MEMEND 		memory_end	/* And this is accessable maximum of memory */
 #define FRAME_SIZE		0x1000
 #define PAGE_FLAG_PRESENT	0x01
 #define PAGE_FLAG_WRITE		0x02
@@ -18,6 +17,12 @@
 #define PAGE_FLAG_KERNELMODE	0x00
 
 #define KERNEL_PAGE_BUFFER	0x32000
+
+#define CHECK_ALIGN(VALUE)	((VALUE) & 0x00000FFF)
+#define ASSERT_ALIGN(VALUE)	if (CHECK_ALIGN(VALUE)) {	\
+					VALUE&=0xFFFFF000;	\
+					VALUE+=FRAME_SIZE;	\
+				}
 
 typedef struct _page_directory page_directory;
 typedef struct _page_table page_table;
@@ -40,5 +45,8 @@ struct _page_directory {
 
 extern UINT kernel_end;		//Defined in link.ld
 extern ULONG memory_end;	//Defined in main.c
+
+extern page *make_page(UINT address, UINT flags, page_directory *directory, int alloc);
+extern page *free_page(UINT address, page_directory *directory);
 
 #endif

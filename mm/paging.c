@@ -6,49 +6,19 @@
 page_directory *current_directory, *kernel_directory;
 page_table *table;
 
-UINT kmalloc_pos = WORKING_MEMSTART, framecount = 0;
+UINT framecount = 0;
 UINT *framemap;
+
+extern UINT kmalloc_pos;
+extern UINT _kmalloc_pa(UINT sz, UINT *phys);
+extern heap *kheap;
 
 #define set_page_directory(PAGE_DIR)	asm volatile ("cli\n\t"				\
 						      "movl %%eax,%%cr3\n\t"		\
 						      "movl %%cr0,%%eax\n\t"		\
 						      "orl  $0x80000000,%%eax\n\t"	\
 						      "movl %%eax,%%cr0\n\t"		\
-						      "sti"::"a"(PAGE_DIR->physTabs))
-UINT _kmalloc(UINT sz)
-{
-	UINT res=kmalloc_pos;
-	
-	kmalloc_pos+=sz;
-	return res;
-}
-
-UINT _kmalloc_a(UINT sz)
-{
-	UINT res;
-
-	if (kmalloc_pos & 0xFFFFF000) {
-		kmalloc_pos&=0xFFFFF000;
-		kmalloc_pos+=0x1000;
-	}
-	res=kmalloc_pos;
-	kmalloc_pos+=sz;
-	return res;
-}
-
-UINT _kmalloc_pa(UINT sz, UINT *phys)
-{
-	UINT res;
-
-	if (kmalloc_pos & 0xFFFFF000) {
-		kmalloc_pos&=0xFFFFF000;
-		kmalloc_pos+=0x1000;
-	}
-	*phys=kmalloc_pos;
-	res=kmalloc_pos;
-	kmalloc_pos+=sz;
-	return res;
-}
+						      "sti"::"a"(PAGE_DIR->physTabs));
 
 UINT first_frame()
 {
@@ -100,6 +70,16 @@ page *make_page(UINT address, UINT flags, page_directory *directory, int alloc)
 	return &(directory->tables[tab]->entries[index%1024]);
 }
 
+page *free_page(UINT address, page_directory *directory)
+{
+	UINT index = address/FRAME_SIZE;
+	UINT tab = index/1024;
+
+	if (!directory->physTabs[tab]) return 0;
+	free_frame(&(directory->tables[tab]->entries[index%1024]));
+	return &(directory->tables[tab]->entries[index%1024]);
+}
+
 page *get_page(UINT address, int make, page_directory *directory)
 {
 	UINT index = address/FRAME_SIZE;
@@ -114,7 +94,7 @@ page *get_page(UINT address, int make, page_directory *directory)
 
 void paging_setup()
 {
-	UINT i;
+	UINT i = 0;
 	
 	framecount=WORKING_MEMEND/FRAME_SIZE;
 	framemap=(UINT *)_kmalloc(framecount/32);
@@ -122,14 +102,15 @@ void paging_setup()
 	kernel_directory=(page_directory *)_kmalloc_pa(sizeof(page_directory),&i);
 	kernel_directory->physPos=i;
 	memset(kernel_directory->physTabs,0,0x1000);
-	i=0;
-	while (i<kmalloc_pos) {
-		//make_page(i,PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT,kernel_directory,1);
-		alloc_frame(get_page(i,1,kernel_directory),PAGE_FLAG_PRESENT);
-		i+=0x1000;
-	}
+	for (i=MM_KHEAP_START;i<MM_KHEAP_START+MM_KHEAP_SIZE;i+=FRAME_SIZE)
+		get_page(i,1,kernel_directory);
+	for (i=0;i<=kmalloc_pos+FRAME_SIZE;i+=FRAME_SIZE)
+		make_page(i,PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT,kernel_directory,1);
+	for (i=MM_KHEAP_START;i<MM_KHEAP_START+MM_KHEAP_SIZE;i+=FRAME_SIZE)
+	       alloc_frame(get_page(i,1,kernel_directory),PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT);
 	current_directory=kernel_directory;
 	set_page_directory(kernel_directory);
+	kheap=create_heap(MM_KHEAP_START,MM_KHEAP_START+MM_KHEAP_SIZE,WORKING_MEMEND,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE);
 }
 
 int page_fault_handler(struct regs *r)

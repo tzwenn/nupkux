@@ -4,7 +4,7 @@
 #include <kernel/sish.h>
 #include <time.h>
 #include <kernel/devices/fdc.h>
-#include <paging.h>
+#include <mm.h>
 
 char _kabort_func = 0;
 int errno;
@@ -41,12 +41,12 @@ int _kmain(multiboot_info_t* mbd, unsigned int magic)
 	printf("Finished.\nInstall IRQ & ISRS ... ");
 	isrs_install();
 	irq_install();
+	printf("Finished.\nStart Keyboard Controller ... ");
+	input_setup();
 	printf("Finished.\nEnable Interrupts ... ");
 	sti();
 	printf("Finished.\nEnable Paging ... ");
 	paging_setup();
-	printf("Finished.\nStart Keyboard Controller ... ");
-	input_setup();
 	printf("Finished.\nSet up timer ... ");
 	timer_install();
 	printf("Finished.\nFloppydrive support  ... ");

@@ -1,6 +1,6 @@
 #include <kernel/ktextio.h>
-#include <memory.h>
-#include <stdarg.h>
+#include <lib/stdarg.h>
+#include <mm.h>
 
 int _ksetcursor(UCHAR x, UCHAR y);
 int _kin(char *instr, int maxlen);

@@ -1,4 +1,4 @@
-#include <memory.h>
+#include <lib/memory.h>
 
 void *memcpy(void *target, void *src, UINT count);
 void *memset(void *target, char value, UINT count);

@@ -1,9 +1,10 @@
 #include <kernel/sish.h>
 #include <kernel/ktextio.h>
 #include <time.h>
-#include <string.h>
+#include <lib/string.h>
 #include <kernel/devices/fdc.h>
 #include <kernel/devices/ata.h>
+#include <mm.h>
 
 int sish();
 
@@ -151,6 +152,31 @@ int sish_test()
 	UCHAR buf[read_count*512];
 	int i;
 	
+	int *a=(int *)malloc(sizeof(int));
+	int *b=(int *)malloc(sizeof(int)),*c;
+	*a=*b=0;
+	printf("_a @ 0x%X; _b @ 0x%X\n",(UINT)a-sizeof(mm_header),(UINT)b-sizeof(mm_header));
+	printf("hdr: %d; ftr: %d\na:",sizeof(mm_header),sizeof(mm_footer));
+	for (i=(UINT)a-sizeof(mm_header);i<(UINT)a;i++)
+		printf("%.2X-",*((UCHAR *)i));
+	printf("\b|");
+	for (i=(UINT)a+4;i<(UINT)a+4+sizeof(mm_footer);i++)
+		printf("%.2X-",*((UCHAR *)i));
+	printf("\b\nb:");
+	for (i=(UINT)b-sizeof(mm_header);i<(UINT)b;i++)
+		printf("%.2X-",*((UCHAR *)i));
+	printf("\b|");
+	for (i=(UINT)b+4;i<(UINT)b+4+sizeof(mm_footer);i++)
+		printf("%.2X-",*((UCHAR *)i));
+	printf("\b\n");
+//	c=malloc(3*sizeof(int));
+	free(a);
+	free(b);
+/*	*c=0;
+	printf("_c @ 0x%X\n",(UINT)c-sizeof(mm_header));
+	free(c);*/
+	return 1;
+
 	printf("Programm/module from floppy\n");
 	if (!fdc_read_block(read_start,buf,read_count)) {
 		printf("Can't read floppy\n");
