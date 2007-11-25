@@ -154,7 +154,9 @@ int sish_test()
 	
 	int *a=(int *)malloc(sizeof(int));
 	int *b=(int *)malloc(sizeof(int)),*c;
-	*a=*b=0;
+	if (!a || !b) return 1;
+	*a=0;
+	*b=0;
 	printf("_a @ 0x%X; _b @ 0x%X\n",(UINT)a-sizeof(mm_header),(UINT)b-sizeof(mm_header));
 	printf("hdr: %d; ftr: %d\na:",sizeof(mm_header),sizeof(mm_footer));
 	for (i=(UINT)a-sizeof(mm_header);i<(UINT)a;i++)
@@ -169,12 +171,12 @@ int sish_test()
 	for (i=(UINT)b+4;i<(UINT)b+4+sizeof(mm_footer);i++)
 		printf("%.2X-",*((UCHAR *)i));
 	printf("\b\n");
-//	c=malloc(3*sizeof(int));
+	c=malloc(3*sizeof(int));
 	free(a);
 	free(b);
-/*	*c=0;
+	*c=0;
 	printf("_c @ 0x%X\n",(UINT)c-sizeof(mm_header));
-	free(c);*/
+	free(c);
 	return 1;
 
 	printf("Programm/module from floppy\n");
