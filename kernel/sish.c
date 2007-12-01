@@ -171,8 +171,8 @@ int sish_test()
 	for (i=(UINT)b+4;i<(UINT)b+4+sizeof(mm_footer);i++)
 		printf("%.2X-",*((UCHAR *)i));
 	printf("\b\n");
-	c=malloc(3*sizeof(int));
 	free(a);
+	c=malloc(3*sizeof(int));
 	free(b);
 	*c=0;
 	printf("_c @ 0x%X\n",(UINT)c-sizeof(mm_header));

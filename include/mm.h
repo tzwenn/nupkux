@@ -9,7 +9,7 @@
 #define WORKING_MEMEND 		memory_end	/* And this is accessable maximum of memory */
 
 #define MM_MAGIC	0x52555448
-#define MM_KHEAP_START	0x200000	//And another mininum
+#define MM_KHEAP_START	0x100000	//1MB after kmalloc_pos
 #define MM_KHEAP_SIZE	0x200000	//Add this to above and clear up the mess!
 #define MM_KHEAP_MIN	0x100000
 #define MM_INDEX_COUNT	0x400

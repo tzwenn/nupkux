@@ -1,38 +1,44 @@
 #include <mm.h>
-#include <kernel/ktextio.h>
 
 UINT kmalloc_pos = WORKING_MEMSTART;
 heap *kheap = 0;
 
+void *heap_malloc(UINT size, UCHAR page_align, heap *aheap);
+
 extern page_directory *kernel_directory;
+
+UINT _kmalloc_base(UINT sz, UINT *phys, UCHAR align)
+{
+	UINT res;
+	
+	if (kheap) {
+		res=(UINT)heap_malloc(sz,align,kheap);
+		if (phys) {
+			page *apage = get_page(res,0,kernel_directory);
+            		*phys=(apage->frame*FRAME_SIZE)+(res&0xFFFFF000);
+		}
+	} else {
+		if (align) ASSERT_ALIGN(kmalloc_pos);
+		if (phys) *phys=kmalloc_pos;
+		res=kmalloc_pos;
+		kmalloc_pos+=sz;
+	}
+	return res;
+}
 
 UINT _kmalloc(UINT sz)
 {
-	UINT res=kmalloc_pos;
-	
-	kmalloc_pos+=sz;
-	return res;
+	return _kmalloc_base(sz,0,0);
 }
 
 UINT _kmalloc_a(UINT sz)
 {
-	UINT res;
-
-	ASSERT_ALIGN(kmalloc_pos);
-	res=kmalloc_pos;
-	kmalloc_pos+=sz;
-	return res;
+	return _kmalloc_base(sz,0,1);
 }
 
 UINT _kmalloc_pa(UINT sz, UINT *phys)
 {
-	UINT res;
-
-	ASSERT_ALIGN(kmalloc_pos);
-	*phys=kmalloc_pos;
-	res=kmalloc_pos;
-	kmalloc_pos+=sz;
-	return res;
+	return _kmalloc_base(sz,phys,1);
 }
 
 heap *create_heap(UINT start, UINT end, UINT memend, UINT pageflags)
@@ -41,7 +47,9 @@ heap *create_heap(UINT start, UINT end, UINT memend, UINT pageflags)
 	mm_header *initholestart;
 	mm_footer *initholeend;
 
-	if (CHECK_ALIGN(start) || CHECK_ALIGN(end)) return 0;
+	ASSERT_ALIGN(start);
+	ASSERT_ALIGN(end);
+	ASSERT_ALIGN(memend);
 	newheap->entries=(mm_header **)start;
 	start+=MM_INDEX_COUNT*sizeof(mm_header *);
 	ASSERT_ALIGN(start);
@@ -113,9 +121,18 @@ void heap_add_entry(mm_header *entry, heap *aheap)
 
 void heap_del_entry(UINT i, heap *aheap)
 {
+	if (i==MM_NO_HOLE) return;
 	for (;i<aheap->entrycount;i++)
 		aheap->entries[i]=aheap->entries[i+1];
 	aheap->entrycount--;
+}
+
+UINT heap_find_entry(mm_header *entry, heap *aheap)
+{
+	UINT i;
+	for (i=0;i<aheap->entrycount;i++)
+		if (aheap->entries[i]==entry) return i;
+	return MM_NO_HOLE;
 }
 
 UINT find_smallest_hole(UINT size, UCHAR page_align, heap *aheap)  //Binary search?
@@ -144,7 +161,7 @@ void *heap_malloc(UINT size, UCHAR page_align, heap *aheap)
 	mm_header *header, *newheader;
 	mm_footer *newfooter;
 
-	if (!aheap) return 0;
+	if ((!size) || (!aheap)) return 0;
 	if (hole_pos==MM_NO_HOLE) {
 		oldsize=aheap->end-aheap->start;
 		oldend=aheap->end;
@@ -220,16 +237,16 @@ void heap_free(void *ptr, heap *aheap)
 {
 	mm_header *header, *tmpheader;
 	mm_footer *footer, *tmpfooter;
-	UINT oldsize,i,newsize;
+	UINT oldsize,newsize;
 	UCHAR opt = 1;
 
 	if ((!ptr) || (!aheap)) return;
-	header = (mm_header*) ((UINT)ptr-sizeof(mm_header));
-	footer = (mm_footer*) ((UINT)header+header->size-sizeof(mm_footer));
+	header=(mm_header*) ((UINT)ptr-sizeof(mm_header));
+	footer=(mm_footer*) ((UINT)header+header->size-sizeof(mm_footer));
 	if ((header->magic!=MM_MAGIC) || (footer->magic!=MM_MAGIC)) return;
 	oldsize=header->size;
 	header->flag=MM_FLAG_HOLE;
-	tmpfooter = (mm_footer*) ((UINT)header-sizeof(mm_footer));
+	tmpfooter=(mm_footer*) ((UINT)header-sizeof(mm_footer));
 	if ((tmpfooter->magic==MM_MAGIC) && (tmpfooter->header->magic==MM_MAGIC) && (tmpfooter->header->flag==MM_FLAG_HOLE)) {
 		opt=0;
 		header=tmpfooter->header;   
@@ -240,11 +257,8 @@ void heap_free(void *ptr, heap *aheap)
 	if ((tmpheader->magic==MM_MAGIC) && (tmpheader->flag==MM_FLAG_HOLE) && (((mm_footer*) ((UINT)tmpheader+tmpheader->size-sizeof(mm_footer)))->magic=MM_MAGIC)) {
 		header->size+=tmpheader->size;
 		footer=(mm_footer*) ((UINT)tmpheader+tmpheader->size-sizeof(mm_footer));
-		for (i=0;(i<aheap->entrycount) && (aheap->entries[i]!=(void*)tmpheader);i++);
-		if (i<aheap->entrycount)
-			heap_del_entry(i,aheap);
+		heap_del_entry(heap_find_entry(tmpheader,aheap),aheap);
 	} 
-
 	if ((UINT)footer+sizeof(mm_footer)==aheap->end) {
 		oldsize=aheap->end-aheap->start;
 		newsize=contract_heap((UINT)header-aheap->start,aheap);
@@ -253,11 +267,7 @@ void heap_free(void *ptr, heap *aheap)
 			footer=(mm_footer*) ((UINT)header+header->size-sizeof(mm_footer));
 			footer->magic=MM_MAGIC;
 			footer->header=header;
-		} else {
-			for (i=0;(i<aheap->entrycount) && (aheap->entries[i]!=(void*)header);i++);
-			if (i<aheap->entrycount)
-				heap_del_entry(i,aheap);
-		}
+		} else heap_del_entry(heap_find_entry(header,aheap),aheap);
 	}
 	if (opt) heap_add_entry(header,aheap); 
 }
@@ -284,10 +294,10 @@ void free(void *ptr)
 
 void *realloc(void *ptr, UINT size)
 {
-	void *res = calloc(size,1);
+	void *res = malloc(size);
 	
 	if (!res) return 0;
-	memcpy(res,ptr,size);
+	if (ptr && size) memcpy(res,ptr,size);
 	free(ptr);
 	return res;
 }

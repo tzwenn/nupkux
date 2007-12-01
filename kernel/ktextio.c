@@ -13,7 +13,7 @@ int _kout(char *output);
 CURSOR_POS _cursor_pos;
 CURSOR_POS _cursor_max;
 UINT _line_buffer_pos = 0, _line_buffer_end = 0;
-UCHAR _line_buffer[LINE_BUFFER_LEN][2*TXT_WIDTH];
+UCHAR *_line_buffer = 0;
 char _key_states[128];
 char _print_pressed_keys = 0;
 
@@ -82,6 +82,11 @@ int printf(const char *fmt, ...)
 	_kout(str);
 	va_end(ap);
 	return res;
+}
+
+void init_ktexto()
+{
+	_line_buffer=(UCHAR *)calloc(2*TXT_WIDTH,LINE_BUFFER_LEN);
 }
 
 int str2d(char *str)
@@ -324,8 +329,6 @@ int _kout(char *output)
 				x--;
 				for (i=2*(y*TXT_WIDTH+x);i<2*TXT_HEIGHT*TXT_WIDTH;i++)
 					mem[i]=mem[i+2];
-				/*mem[2*(y*TXT_WIDTH+x)]=' ';
-				mem[2*(y*TXT_WIDTH+x)+1]=TXT_COL_WHITE;*/	
 				break;
 		  case '\v':	_kiomove(x,y,TXT_WIDTH);
 				y++;
@@ -346,15 +349,7 @@ int _kout(char *output)
 			y++;
 		}
 		if (y>=TXT_HEIGHT) {
-			/*y=LINE_BUFFER_LEN;
-			while (y--) 
-				memcpy((_line_buffer+2*y*TXT_WIDTH),(_line_buffer+2*(y-1)*TXT_WIDTH),(UINT) 2*TXT_WIDTH);
-			memcpy(_line_buffer,mem,(UINT) 2*TXT_WIDTH);
-			if (_line_buffer_len<LINE_BUFFER_LEN-1) _line_buffer_len++;
-			memcpy(_line_buffer+y*2*TXT_WIDTH,mem,(UINT) 2*TXT_WIDTH);*/
-			if (_line_buffer_end<0) y=-(_line_buffer_end--)-1;
-				else y=_line_buffer_end++;
-			if ((_line_buffer_end==LINE_BUFFER_LEN) || (_line_buffer_end==-LINE_BUFFER_LEN-1)) _line_buffer_end=-1;
+			/*ToDo: line_buffer*/
 			y=0;
 			while (y<TXT_HEIGHT-1) {
 				memcpy(mem+2*(y*TXT_WIDTH),mem+2*((y+1)*TXT_WIDTH),(UINT) 2*TXT_WIDTH);

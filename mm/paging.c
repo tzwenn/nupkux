@@ -102,15 +102,19 @@ void paging_setup()
 	kernel_directory=(page_directory *)_kmalloc_pa(sizeof(page_directory),&i);
 	kernel_directory->physPos=i;
 	memset(kernel_directory->physTabs,0,0x1000);
-	for (i=MM_KHEAP_START;i<MM_KHEAP_START+MM_KHEAP_SIZE;i+=FRAME_SIZE)
+	i=MM_KHEAP_START+kmalloc_pos;
+	ASSERT_ALIGN(i);
+	for (;i<MM_KHEAP_START+MM_KHEAP_SIZE+(kmalloc_pos&0xFFFFF000)+FRAME_SIZE;i+=FRAME_SIZE)
 		get_page(i,1,kernel_directory);
 	for (i=0;i<=kmalloc_pos+FRAME_SIZE;i+=FRAME_SIZE)
 		make_page(i,PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT,kernel_directory,1);
-	for (i=MM_KHEAP_START;i<MM_KHEAP_START+MM_KHEAP_SIZE;i+=FRAME_SIZE)
+	i=MM_KHEAP_START+kmalloc_pos;
+	ASSERT_ALIGN(i);
+	for (;i<MM_KHEAP_START+MM_KHEAP_SIZE+(kmalloc_pos&0xFFFFF000)+FRAME_SIZE;i+=FRAME_SIZE)
 	       alloc_frame(get_page(i,1,kernel_directory),PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT);
 	current_directory=kernel_directory;
 	set_page_directory(kernel_directory);
-	kheap=create_heap(MM_KHEAP_START,MM_KHEAP_START+MM_KHEAP_SIZE,WORKING_MEMEND,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE);
+	kheap=create_heap(MM_KHEAP_START+kmalloc_pos,MM_KHEAP_START+MM_KHEAP_SIZE+kmalloc_pos,WORKING_MEMEND,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE);
 }
 
 int page_fault_handler(struct regs *r)

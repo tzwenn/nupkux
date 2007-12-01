@@ -18,3 +18,6 @@ Namensvergabe für "Laufwerke":
 	ata0m		-	IDE-Cntrl 1 - Master
 	ata0s		-	IDE-Cntrl 1 - Slave
 	XXX1		-	Partion 1 auf XXX	
+
+sobald /dev/stdout existiert: line_buffer aktualisieren
+

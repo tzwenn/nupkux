@@ -67,8 +67,6 @@ extern int str2d(char *str);
 
 extern CURSOR_POS _cursor_pos;
 extern CURSOR_POS _cursor_max;
-extern UINT _line_buffer_pos;
-extern UCHAR _line_buffer[LINE_BUFFER_LEN][TXT_WIDTH*2];
 extern char _key_states[128];
 
 #endif

@@ -13,7 +13,7 @@ CFLAGS	=-c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -Iinclude
 LD	=ld
 LDFLAGS	=-T link.ld
 
-PROJDIRS=kernel lib mm
+PROJDIRS=kernel lib mm fs
 
 SRCFILES = $(shell find $(PROJDIRS) -mindepth 1 -maxdepth 4 -name "*.c")
 HDRFILES = $(shell find include -mindepth 1 -maxdepth 4 -name "*.h")

@@ -45,8 +45,9 @@ int _kmain(multiboot_info_t* mbd, unsigned int magic)
 	input_setup();
 	printf("Finished.\nEnable Interrupts ... ");
 	sti();
-	printf("Finished.\nEnable Paging ... ");
+	printf("Finished.\nEnable Paging and Memory Manager... ");
 	paging_setup();
+	init_ktexto();
 	printf("Finished.\nSet up timer ... ");
 	timer_install();
 	printf("Finished.\nFloppydrive support  ... ");

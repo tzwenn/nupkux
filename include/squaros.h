@@ -19,6 +19,7 @@ struct regs {
 };
 
 extern void gdt_set_gate(int num, ULONG base, ULONG limit, UCHAR access, UCHAR granularity);
+extern void init_ktexto();
 extern void gdt_install();
 extern void idt_set_gate(UCHAR num, ULONG base, USHORT sel, UCHAR flags);
 extern void idt_install();
