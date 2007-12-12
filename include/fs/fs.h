@@ -13,7 +13,10 @@
 #define FS_SYMLINK     0x06
 #define FS_MOUNTPOINT  0x08 
 
+#define FS_TYPE_FAT32	0xB
+
 typedef struct _fs_node fs_node;
+typedef struct _mountinfo mountinfo;
 
 typedef void (*open_proto)(fs_node*);
 typedef UINT (*read_proto)(fs_node*,UINT,UINT,UCHAR*);
@@ -46,12 +49,22 @@ struct _fs_node {
 	fs_node *ptr; 
 };
 
+struct _mountinfo {
+	UINT filesystem;
+	void *discr;
+	char *device;
+	fs_node *mountpoint;
+	mountinfo *next;
+};
+
 extern void open_fs(fs_node *node, UCHAR read, UCHAR write);
 extern UINT read_fs(fs_node *node, UINT offset, UINT size, UCHAR *buffer);
 extern UINT write_fs(fs_node *node, UINT offset, UINT size, UCHAR *buffer);
 extern void close_fs(fs_node *node);
 extern struct dirent *readdir_fs(fs_node *node, UINT index);
 extern fs_node *finddir_fs(fs_node *node, char *name);
+
+extern mountinfo *fs_add_mountpoint(UINT filesystem, void *discr, fs_node *mountpoint, char *device);
 
 extern fs_node fs_root;
 

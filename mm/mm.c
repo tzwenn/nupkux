@@ -272,6 +272,43 @@ void heap_free(void *ptr, heap *aheap)
 	if (opt) heap_add_entry(header,aheap); 
 }
 
+void *heap_realloc(void *ptr, UINT size, heap *aheap)
+{
+	mm_header *header, *tmpheader;
+	mm_footer *footer, *tmpfooter;
+	
+	if ((!ptr) || (!aheap)) return 0;
+	if (!size) {
+		heap_free(ptr,aheap);
+		return 0;
+	}
+	header=(mm_header*) ((UINT)ptr-sizeof(mm_header));
+	footer=(mm_footer*) ((UINT)header+header->size-sizeof(mm_footer));
+	if ((header->magic!=MM_MAGIC) || (footer->magic!=MM_MAGIC)) return 0;
+	if (size==header->size-sizeof(mm_header)-sizeof(mm_footer)) return ptr;
+	else if (size<header->size-sizeof(mm_header)-sizeof(mm_footer)) {
+		if (header->size-size-2*(sizeof(mm_header)-sizeof(mm_footer))<0) return ptr;
+		tmpheader=(mm_header*) (ptr+size+sizeof(mm_footer));
+		tmpfooter=(mm_footer*) (ptr+size);
+		footer->header=tmpheader;
+		tmpfooter->header=header;
+		tmpheader->magic=tmpfooter->magic=MM_MAGIC;
+		tmpheader->flag=MM_FLAG_BLOCK;
+		tmpheader->size=(UINT)footer-(UINT)tmpheader+sizeof(mm_footer);
+		header->size=sizeof(mm_header)+size+sizeof(mm_footer);
+		heap_free((void *)((UINT)tmpheader+sizeof(mm_header)),aheap);
+		return ptr;
+	} else {
+		void *res = heap_malloc(size,0,aheap);
+	
+		if (!res) return 0;
+		memcpy(res,ptr,size);
+		heap_free(ptr,aheap);
+		return res;
+	}
+}
+
+
 void *malloc(UINT size)
 {
 	if (!kheap) return (void *)_kmalloc(size);
@@ -294,10 +331,5 @@ void free(void *ptr)
 
 void *realloc(void *ptr, UINT size)
 {
-	void *res = malloc(size);
-	
-	if (!res) return 0;
-	if (ptr && size) memcpy(res,ptr,size);
-	free(ptr);
-	return res;
+	return heap_realloc(ptr,size,kheap);
 }

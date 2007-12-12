@@ -52,6 +52,7 @@ global _isr28
 global _isr29
 global _isr30
 global _isr31
+global _isr33
 
 global _isr128
 

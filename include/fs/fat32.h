@@ -3,19 +3,29 @@
 
 #include <squaros.h>
 
-#define FAT32_FSVer 0x0000
+#define FAT32_FSVer	0x0000
+#define SECTORSZ	512
+#define FAT_DIR_SZ	32
+#define FAT32_EOC	0x0FFFFFF8
+#define FAT32_BADCLUSTER 0x0FFFFFF7
 
-typedef struct _fat32discr fat32discr;
+#define FirstSectorofCluster(N,discr) (((N-2)*discr->BPB.BPB_SecPerClus)+discr->FirstDataSector)
+#define FAT32_FATOffset(N) ((N)*4)
+#define FAT32_ThisFATEntOffset(N,discr) (FAT32_FATOffset(N)%(discr)->BPB.BPB_BytsPerSec)
+
 typedef UCHAR* fat32fat;
+typedef struct _fat32BPB fat32BPB;
+typedef struct _fat32discr fat32discr;
 
-struct _fat32discr {
+struct _fat32BPB {
 	UCHAR BPB_SecPerClus;	//offset 13
 	UCHAR BPB_NumFATs;	//offset 16
 	UCHAR BPB_Media;	//offset 21
 	UCHAR BS_DrvNum;	//offset 64
 	UCHAR BS_VolLab[11];	//offset 71
 	USHORT BPB_BytsPerSec;  //offset 11
-	USHORT BPB_RsvdSecC;	//offset 14
+	USHORT BPB_ResvdSecCnt;	//offset 14
+	USHORT BPB_RootEntCnt;	//offset 17
 	USHORT BPB_SecPerTrk;	//offset 24
 	USHORT BPB_NumHeads;	//offset 26
 	USHORT BPB_ExtFlags;	//offset 40
@@ -27,6 +37,17 @@ struct _fat32discr {
 	UINT BPB_RootClus;	//offset 44	
 };
 
-extern fat32discr fat32_read_discr(UCHAR *device);
+struct _fat32discr {
+	char *device;
+	fat32fat FAT;
+	UINT FatSz;
+	UINT FirstDataSector;
+	UINT RootDirSectors;
+	UINT DataSec;
+	UINT CountofClusters;
+	fat32BPB BPB;
+};
+
+extern UINT fat32_read_discr(char *device, fat32discr *discr);
 
 #endif

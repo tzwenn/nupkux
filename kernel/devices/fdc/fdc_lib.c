@@ -208,32 +208,16 @@ void reset(void)
    outportb(FDC_DOR,0x0c);
 
    /* resetting triggered an interrupt - handle it */
-#ifdef DEBUG
-	printf( "waiting...\n" );
-#endif
    done = TRUE;
-   if( waitfdc(TRUE) == FALSE )
-	printf( "waiting failed..." );
-#ifdef DEBUG
-	printf( "specify timings...\n" );
-#endif
 
    /* specify drive timings (got these off the BIOS) */
    sendbyte(CMD_SPECIFY);
    sendbyte(0xdf);  /* SRT = 3ms, HUT = 240ms */
    sendbyte(0x02);  /* HLT = 16ms, ND = 0 */
-
-#ifdef DEBUG
-	kputs( "clearing disk change status...\n" );
-#endif
    
    /* clear "disk change" status */
    flseek(1);
    recalibrate();
-
-#ifdef DEBUG
-	kputs( "reset complete\n" );
-#endif
 
    dchange = FALSE;
 }
@@ -264,9 +248,6 @@ void motoroff()
 /* recalibrate the drive */
 void recalibrate(void)
 {
-#ifdef DEBUG
-	kputs( "recalibrating, motor spin up...\n" );
-#endif
 
    /* turn the motor on */
   // motoron();
@@ -275,23 +256,13 @@ void recalibrate(void)
    sendbyte(CMD_RECAL);
    sendbyte(0);
 
-#ifdef DEBUG
-	kputs( "recalibrating, wait for seek...\n" );
-#endif
 
    /* wait until seek finished */
    waitfdc(TRUE);
 
-#ifdef DEBUG
-	kputs( "recalibrating, motor off...\n" );
-#endif
    
    /* turn the motor off */
   // motoroff();
-
-#ifdef DEBUG
-	kputs( "recalibrating, complete...\n" );
-#endif
 }
 
 /* seek to track */
@@ -435,14 +406,12 @@ BOOL fdc_rw(int block,BYTE *blockbuff,BOOL read,unsigned long nosectors)
 	 flseek(1);  /* clear "disk change" status */
 	 recalibrate();
 	 motoroff();
-	 printf("FDC: Disk change detected. Trying again.\n");
 	 
 	 return fdc_rw(block, blockbuff, read, nosectors);
       }
       /* move head to right track */
       if (!flseek(track)) {
 	 motoroff();
-	 printf("FDC: Error seeking to track\n");
 	 return FALSE;
       }
       
@@ -473,7 +442,6 @@ BOOL fdc_rw(int block,BYTE *blockbuff,BOOL read,unsigned long nosectors)
       /* wait for command completion */
       /* read/write don't need "sense interrupt status" */
       if (!waitfdc(TRUE)) {
-	printf("Timed out, trying operation again after reset()\n");
 	reset();
 	return fdc_rw(block, blockbuff, read, nosectors);
       }

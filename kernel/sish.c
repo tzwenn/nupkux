@@ -2,7 +2,7 @@
 #include <kernel/ktextio.h>
 #include <time.h>
 #include <lib/string.h>
-#include <kernel/devices/fdc.h>
+#include <fs/fat32.h>
 #include <kernel/devices/ata.h>
 #include <mm.h>
 
@@ -36,9 +36,9 @@ int sish_help()
 {
 	printf("List of built-in commands:\n");
 	printf("\ttest\t\tRun the current development function\n");
-	printf("\tclear\t\tCleans up the mess on the screen.\n");
+	printf("\tclear\t\tClean up the mess on the screen.\n");
 	printf("\tlba28\t\tAccess IDE-ATA drives\n");
-	printf("\tpaging\t\tCreates a pagefault and crashes the kernel\n");
+	printf("\tpaging\t\tCreate a pagefault and crashes the kernel\n");
 	printf("\ttime\t\tGive information about time and date\n");
 	printf("\texit\t\tQuit sish\n"); 
 	printf("\thalt\t\tHalt system\n");
@@ -145,55 +145,36 @@ int sish_paging()
 	return 1; 	
 }
 
+extern UINT device_read(char *device, UINT pos, UINT n, UCHAR* buffer);
+
 int sish_test()
 {
-#define read_start 0x1AC 
-#define read_count 1
-	UCHAR buf[read_count*512];
-	int i;
-	
-	int *a=(int *)malloc(sizeof(int));
-	int *b=(int *)malloc(sizeof(int)),*c;
-	if (!a || !b) return 1;
-	*a=0;
-	*b=0;
-	printf("_a @ 0x%X; _b @ 0x%X\n",(UINT)a-sizeof(mm_header),(UINT)b-sizeof(mm_header));
-	printf("hdr: %d; ftr: %d\na:",sizeof(mm_header),sizeof(mm_footer));
-	for (i=(UINT)a-sizeof(mm_header);i<(UINT)a;i++)
-		printf("%.2X-",*((UCHAR *)i));
-	printf("\b|");
-	for (i=(UINT)a+4;i<(UINT)a+4+sizeof(mm_footer);i++)
-		printf("%.2X-",*((UCHAR *)i));
-	printf("\b\nb:");
-	for (i=(UINT)b-sizeof(mm_header);i<(UINT)b;i++)
-		printf("%.2X-",*((UCHAR *)i));
-	printf("\b|");
-	for (i=(UINT)b+4;i<(UINT)b+4+sizeof(mm_footer);i++)
-		printf("%.2X-",*((UCHAR *)i));
-	printf("\b\n");
-	free(a);
-	c=malloc(3*sizeof(int));
-	free(b);
-	*c=0;
-	printf("_c @ 0x%X\n",(UINT)c-sizeof(mm_header));
-	free(c);
-	return 1;
+	fat32discr discr;	
+	UCHAR dir0[512];
+#define	DIR_NUM	14
 
-	printf("Programm/module from floppy\n");
-	if (!fdc_read_block(read_start,buf,read_count)) {
-		printf("Can't read floppy\n");
+	printf("---FAT32 Driver for floppy devices---\n\n");
+	if (!fat32_read_discr("/dev/fd0",&discr)) {
+		printf("Can not access floppy drive: Aborting.\n");
 		return 1;
 	}
-	for (i=0;i<read_count*512;i++) {
-		if (i==512) printf("|");
-		printf("%X",buf[i]);
+	printf("FirstDataSector: %d\nBPB_BytsPerSec: %d\n",discr.FirstDataSector,discr.BPB.BPB_BytsPerSec);
+	printf("BPB_FATSz32: 0x%X\nRootDirSectors: %d\n",discr.BPB.BPB_FATSz32,discr.RootDirSectors);
+	printf("CountofClusters: %d\nBPB_SecPerClus: %d\n",discr.CountofClusters,discr.BPB.BPB_SecPerClus);	
+	UINT i,j,k;
+	for (k=discr.FirstDataSector;k<discr.FirstDataSector+1;k++) {
+		if (!device_read("/dev/fd0",(k)*512,512,dir0)) {
+			printf("Error\n");
+			return 1;
+		}
+		for (j=0;j<DIR_NUM;j++) {
+			if ((!dir0[j*32]) || (dir0[j*32]=='A' && dir0[j*32+1]>'Z')) continue;
+			for (i=j*32;i<j*32+11;i++)
+				printf("%c",dir0[i]);
+			printf("\n");
+		}
 	}
-	/*buf[6]=0xCD;
-	buf[7]=0x80;
-	buf[8]=0xC3;*/
-	printf("\nCall ... \n");
-	asm ("call *%%ebx\n\t"::"b"(buf));
-	printf("\n\n");
+	free(discr.FAT);
 	return 1;
 }
 
@@ -224,6 +205,7 @@ int sish()
 	char input[STRLEN];
 	int ret;
 
+	asm ("int $0x21\n\t");
 	printf("\nSquaros intern shell (sish) started.\nType \"help\" for a list of built-in commands.\n\n");
 	while (1) {
 		printf("$ ");

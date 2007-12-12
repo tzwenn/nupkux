@@ -3,7 +3,7 @@
 
 #include <squaros.h>
 
-#define NODE_NAME_LEN 256
+#define NODE_NAME_LEN 128
 
 #define FS_FILE        0x01
 #define FS_DIRECTORY   0x02
