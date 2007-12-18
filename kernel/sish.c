@@ -146,15 +146,18 @@ int sish_paging()
 }
 
 extern UINT device_read(char *device, UINT pos, UINT n, UCHAR* buffer);
+extern UINT fat32_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer);
 
 int sish_test()
 {
-	fat32discr discr;	
+	fat32discr discr;
 	UCHAR dir0[512];
 #define	DIR_NUM	14
 
+	fs_node *node = fat32_mount("/dev/fd0",0);
 	printf("---FAT32 Driver for floppy devices---\n\n");
-	if (!fat32_read_discr("/dev/fd0",&discr)) {
+	discr=*((fat32discr *) ((mountinfo *) node->filesystem)->discr);
+	if (!node) {
 		printf("Can not access floppy drive: Aborting.\n");
 		return 1;
 	}
@@ -174,6 +177,8 @@ int sish_test()
 			printf("\n");
 		}
 	}
+	printf("--------------------------\n");
+	fat32_read(node,0,0,dir0);
 	free(discr.FAT);
 	return 1;
 }

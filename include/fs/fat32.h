@@ -2,6 +2,7 @@
 #define _FAT32_H
 
 #include <squaros.h>
+#include <fs/fs.h>
 
 #define FAT32_FSVer	0x0000
 #define SECTORSZ	512
@@ -16,6 +17,7 @@
 typedef UCHAR* fat32fat;
 typedef struct _fat32BPB fat32BPB;
 typedef struct _fat32discr fat32discr;
+typedef struct _fat32fileentry fat32fileentry;
 
 struct _fat32BPB {
 	UCHAR BPB_SecPerClus;	//offset 13
@@ -48,6 +50,12 @@ struct _fat32discr {
 	fat32BPB BPB;
 };
 
+struct _fat32fileentry {
+	UINT cluster;
+	UINT offset;
+};
+
 extern UINT fat32_read_discr(char *device, fat32discr *discr);
+extern fs_node *fat32_mount(char *device, fs_node *mountpoint);
 
 #endif

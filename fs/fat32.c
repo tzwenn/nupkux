@@ -8,7 +8,7 @@
 
 struct dirent *fat32_readdir(fs_node *node, UINT index);
 fs_node *fat32_finddir(fs_node *node, char *name);
-UINT fat32_findfileentry(fs_node *node, UINT *cluster, UINT *offset);
+UINT fat32_findfileentry(fs_node *node, fat32fileentry *result);
 UINT fat32_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer);
 
 struct dirent dirent;
@@ -76,29 +76,42 @@ UINT fat32_read_discr(char *device, fat32discr *discr)
 	return 1;
 }
 
-UINT fat32_findfileentry(fs_node *node, UINT *cluster, UINT *offset)
+UINT fat32_findfileentry(fs_node *node, fat32fileentry *entry)
 {
+/*
+	fat32discr *discr = (fat32discr *) (node->filesystem)->discr;
+	char *device = (char *) node->filesystem->device;
+	UCHAR *clusterbuf = (UCHAR *) malloc(discr->BPB.BPB_SecPerClus*SECTORSZ);*/
 	
-	return 0;
+	entry->cluster=2;
+	entry->offset=1*FAT_DIR_SZ;
+//	free(clusterbuf);
+	return 1;
 }
 
 
 UINT fat32_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
 {
-	UINT entrycluster, entryoffset;
-	fat32discr *discr = (fat32discr *) ((mountinfo *) node->filesystem)->discr;
-	char *device = (char *) ((mountinfo *) node->filesystem)->device;
+	UINT cluster;
+	fat32fileentry entry;
+	fat32discr *discr = (fat32discr *) (node->filesystem)->discr;
+	char *device = (char *) node->filesystem->device;
 	UCHAR *clusterbuf = (UCHAR *) malloc(discr->BPB.BPB_SecPerClus*SECTORSZ);
 
-	if (!fat32_findfileentry(node,&entrycluster,&entryoffset)) return 0;
-	entrycluster=0;
-	entryoffset=0;
-	if (!device_read(device,FirstSectorofCluster(entrycluster,discr)*SECTORSZ,discr->BPB.BPB_SecPerClus*SECTORSZ,clusterbuf)) return 0;
-	
+	if (!fat32_findfileentry(node,&entry)) return 0;
+	printf("%d: %d (starts %d)\n",FirstSectorofCluster(entry.cluster,discr),discr->BPB.BPB_SecPerClus*SECTORSZ,discr->FirstDataSector);
+	if (!device_read(device,FirstSectorofCluster(entry.cluster,discr)*SECTORSZ,discr->BPB.BPB_SecPerClus*SECTORSZ,clusterbuf)) return 0;
+
 	UINT i;
-	for (i=0;i<11;i++)
-		printf("%c",clusterbuf[entryoffset+i]);
-	printf("\n");
+	for (i=0;i<11;i++) {
+		if (!clusterbuf[entry.offset+i]) break;
+		printf("%c",clusterbuf[entry.offset+i]);
+	}
+	printf(" in cluster ");
+	cluster=*((USHORT *)(clusterbuf+entry.offset+20)) << 16;
+	cluster|=*((USHORT *)(clusterbuf+entry.offset+26));
+	printf("%d\n",cluster);
+	free(clusterbuf);
 	return 0;
 }
 
@@ -136,7 +149,7 @@ fs_node *fat32_mount(char *device, fs_node *mountpoint)
 	root->readdir=&fat32_readdir;
 	root->finddir=&fat32_finddir;
 	root->ptr=0;
-	root->filesystem=(UINT)fs_add_mountpoint(FS_TYPE_FAT32,(void *)discr,mountpoint,device);
+	root->filesystem=fs_add_mountpoint(FS_TYPE_FAT32,(void *)discr,mountpoint,device);
 
 	return root;
 }

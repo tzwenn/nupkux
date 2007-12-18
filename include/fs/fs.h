@@ -39,7 +39,7 @@ struct _fs_node {
 	UINT flags;
 	UINT inode;
 	UINT size;
-	UINT filesystem;  
+	mountinfo *filesystem;  
 	open_proto open;
 	read_proto read;
 	write_proto write;
