@@ -45,12 +45,14 @@ mountinfo *fs_add_mountpoint(UINT filesystem, void *discr, fs_node *mountpoint, 
 	mi->filesystem=filesystem;
 	mi->discr=discr;
 	mi->mountpoint=mountpoint;
-	mi->next=mountinfos;
 	mi->device=device;
+	mi->next=mountinfos;
+	mountinfos=mi;
+
 	return mi;
 }
 
-void fs_del_mountpoint(mountinfo *mi)
+UINT fs_del_mountpoint(mountinfo *mi)
 {
 	mountinfo *pre=0,*tmp=mountinfos;
 	
@@ -59,8 +61,9 @@ void fs_del_mountpoint(mountinfo *mi)
 		pre=tmp;
 		tmp=tmp->next;
 	}
-	if (!tmp) return;
+	if (!tmp) return 0;
 	if (!pre) mountinfos=tmp->next;
 		else pre->next=tmp->next;
 	free(mi);
+	return 1;
 }

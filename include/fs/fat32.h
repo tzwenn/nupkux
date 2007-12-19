@@ -51,11 +51,16 @@ struct _fat32discr {
 };
 
 struct _fat32fileentry {
+	UCHAR name[11];
+	UCHAR attr;
 	UINT cluster;
 	UINT offset;
+	UINT startcluster;
+	UINT size;
 };
 
 extern UINT fat32_read_discr(char *device, fat32discr *discr);
 extern fs_node *fat32_mount(char *device, fs_node *mountpoint);
+extern UINT fat32_umount(fs_node *node);
 
 #endif

@@ -65,6 +65,7 @@ extern struct dirent *readdir_fs(fs_node *node, UINT index);
 extern fs_node *finddir_fs(fs_node *node, char *name);
 
 extern mountinfo *fs_add_mountpoint(UINT filesystem, void *discr, fs_node *mountpoint, char *device);
+extern UINT fs_del_mountpoint(mountinfo *mi);
 
 extern fs_node fs_root;
 

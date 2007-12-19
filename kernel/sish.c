@@ -152,9 +152,14 @@ int sish_test()
 {
 	fat32discr discr;
 	UCHAR dir0[512];
+//	void *dummy;
+	fs_node *node;
 #define	DIR_NUM	14
 
-	fs_node *node = fat32_mount("/dev/fd0",0);
+/*	dummy=malloc(50);
+	printf("dummy at 0x%X\n",dummy);
+	free(dummy);*/
+	node=fat32_mount("/dev/fd0",0);
 	printf("---FAT32 Driver for floppy devices---\n\n");
 	discr=*((fat32discr *) ((mountinfo *) node->filesystem)->discr);
 	if (!node) {
@@ -164,7 +169,7 @@ int sish_test()
 	printf("FirstDataSector: %d\nBPB_BytsPerSec: %d\n",discr.FirstDataSector,discr.BPB.BPB_BytsPerSec);
 	printf("BPB_FATSz32: 0x%X\nRootDirSectors: %d\n",discr.BPB.BPB_FATSz32,discr.RootDirSectors);
 	printf("CountofClusters: %d\nBPB_SecPerClus: %d\n",discr.CountofClusters,discr.BPB.BPB_SecPerClus);	
-	UINT i,j,k;
+	/*UINT i,j,k;
 	for (k=discr.FirstDataSector;k<discr.FirstDataSector+1;k++) {
 		if (!device_read("/dev/fd0",(k)*512,512,dir0)) {
 			printf("Error\n");
@@ -176,10 +181,13 @@ int sish_test()
 				printf("%c",dir0[i]);
 			printf("\n");
 		}
-	}
+	}*/
 	printf("--------------------------\n");
-	fat32_read(node,0,0,dir0);
-	free(discr.FAT);
+	if (!fat32_read(node,0,0,dir0)) printf("Error on read\n");
+	if (!fat32_umount(node)) printf("Error on unmount!\n");
+	/*dummy=malloc(50);
+	printf("dummy at 0x%X\n",dummy);
+	free(dummy);*/
 	return 1;
 }
 
