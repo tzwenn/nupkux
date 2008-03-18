@@ -253,12 +253,14 @@ void heap_free(void *ptr, heap *aheap)
 		footer->header=header;        
 		header->size+=oldsize;     
 	}
+
 	tmpheader=(mm_header*) ((UINT)footer+sizeof(mm_footer));
-	if ((tmpheader->magic==MM_MAGIC) && (tmpheader->flag==MM_FLAG_HOLE) && (((mm_footer*) ((UINT)tmpheader+tmpheader->size-sizeof(mm_footer)))->magic=MM_MAGIC)) {
+	if ((tmpheader->magic==MM_MAGIC) && (tmpheader->flag==MM_FLAG_HOLE)) {//&&
+//		 (((mm_footer*) ((UINT)tmpheader+tmpheader->size-sizeof(mm_footer)))->magic=MM_MAGIC)) {
 		header->size+=tmpheader->size;
 		footer=(mm_footer*) ((UINT)tmpheader+tmpheader->size-sizeof(mm_footer));
 		heap_del_entry(heap_find_entry(tmpheader,aheap),aheap);
-	} 
+	}
 	if ((UINT)footer+sizeof(mm_footer)==aheap->end) {
 		oldsize=aheap->end-aheap->start;
 		newsize=contract_heap((UINT)header-aheap->start,aheap);

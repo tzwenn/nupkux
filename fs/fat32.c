@@ -22,14 +22,36 @@ UINT FAT32_ClusEntryVal(UINT N, fat32discr *discr)
 	return (*((UINT *) &SecBuff[FAT32_ThisFATEntOffset(N,discr)])) & 0x0FFFFFFF;
 }
 
+/*UINT device_read(char *device, UINT pos, UINT n, UCHAR* buffer)
+{
+	UINT len = (n%SECTORSZ)?(n/SECTORSZ+4):(n/SECTORSZ);
+	UCHAR *buf = (UCHAR *)malloc(len*SECTORSZ);
+
+	printf("Read n=%d;len=%d sectors from pos=%d (%d)\n",n,len,pos,pos/SECTORSZ);	
+	pos/=SECTORSZ;
+	if (!fdc_read_block(pos,buf,len)) {
+		free(buf);
+		return 0;
+	}
+	memcpy(buffer,buf,n);
+	free(buf);
+	return n;
+}*/
+
 UINT device_read(char *device, UINT pos, UINT n, UCHAR* buffer)
 {
-	UINT len = (n%SECTORSZ)?(n/SECTORSZ+SECTORSZ):(n/SECTORSZ);
-	UCHAR *buf = (UCHAR *)malloc(len);
+	UINT len;
+	UCHAR *buf;
 
-	pos/=SECTORSZ;
-	if (!fdc_read_block(pos,buf,len)) return 0;
-	memcpy(buffer,buf,n);
+	len=((pos+n)/SECTORSZ-(pos)/SECTORSZ);
+	if (!len) len=4;
+	printf("Read n=%d;len=%d sectors from pos=%d (%d)\n",n,len,pos,pos/SECTORSZ);
+	buf=(UCHAR *)malloc(len*SECTORSZ);
+	if (!fdc_read_block(pos/SECTORSZ,buf,len)) {
+		free(buf);
+		return 0;
+	}
+	memcpy(buffer,buf+pos%SECTORSZ,n);
 	free(buf);
 	return n;
 }
@@ -70,8 +92,11 @@ UINT fat32_read_discr(char *device, fat32discr *discr)
 	discr->FirstDataSector=discr->BPB.BPB_ResvdSecCnt+(discr->BPB.BPB_NumFATs*discr->FatSz)+discr->RootDirSectors;
 	discr->DataSec=discr->BPB.BPB_TotSec32-(discr->BPB.BPB_ResvdSecCnt+(discr->BPB.BPB_NumFATs*discr->FatSz)+discr->RootDirSectors);
 	discr->CountofClusters=discr->DataSec/discr->BPB.BPB_SecPerClus;
-	discr->FAT=malloc(discr->FatSz);
-	device_read(device,discr->BPB.BPB_ResvdSecCnt*SECTORSZ,discr->FatSz,discr->FAT);
+	discr->FAT=malloc(discr->FatSz*SECTORSZ);
+	if (!device_read(device,discr->BPB.BPB_ResvdSecCnt*SECTORSZ,discr->FatSz,discr->FAT)) {
+		free(discr->FAT);
+		return 0;	
+	}
 	
 	return 1;
 }
@@ -85,7 +110,10 @@ UINT fat32_findfileentry(fs_node *node, fat32fileentry *entry)
 	entry->cluster=2;
 	entry->offset=11*FAT_DIR_SZ;
 
-	if (!device_read(device,FirstSectorofCluster(entry->cluster,discr)*SECTORSZ,discr->BPB.BPB_SecPerClus*SECTORSZ,clusterbuf)) return 0;	
+	if (!device_read(device,FirstSectorofCluster(entry->cluster,discr)*SECTORSZ,discr->BPB.BPB_SecPerClus*SECTORSZ,clusterbuf)) {
+		free(clusterbuf);
+		return 0;	
+	}
 
 	memcpy(entry->name,clusterbuf+entry->offset,11);
 	entry->attr=clusterbuf[entry->offset+11];
@@ -100,19 +128,30 @@ UINT fat32_findfileentry(fs_node *node, fat32fileentry *entry)
 
 UINT fat32_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
 {
-	UINT cluster;
+	UINT cluster,clusnum,bufsize=0;
+	UCHAR *clusterbuf = 0;
 
 	fat32fileentry entry;
 	fat32discr *discr = (fat32discr *) (node->filesystem)->discr;
-//	char *device = (char *) node->filesystem->device;
+	char *device = (char *) node->filesystem->device;
 
 	if (!fat32_findfileentry(node,&entry)) return 0;
 	printf("%s in cluster %d (size: %d)\n",entry.name,entry.startcluster,entry.size);
 	cluster=entry.startcluster;
-	while ((cluster<FAT32_BADCLUSTER) && cluster) {
+	clusnum=offset/(discr->BPB.BPB_SecPerClus*discr->BPB.BPB_BytsPerSec);
+	while ((cluster<FAT32_BADCLUSTER) && cluster && (clusnum--)) {
 		cluster=FAT32_ClusEntryVal(cluster,discr);
 	}
-
+	if (clusnum) return 0;
+	bufsize=discr->BPB.BPB_SecPerClus-offset%(discr->BPB.BPB_SecPerClus*discr->BPB.BPB_BytsPerSec);
+	clusterbuf=malloc(bufsize);
+	if (!device_read(device,FirstSectorofCluster(cluster,discr)*SECTORSZ+offset%(discr->BPB.BPB_SecPerClus*discr->BPB.BPB_BytsPerSec),
+			bufsize,clusterbuf)) {
+		free(clusterbuf);
+		return 0;
+	}
+	memcpy(buffer,clusterbuf,bufsize);
+	free(clusterbuf);
 	return 1;
 }
 

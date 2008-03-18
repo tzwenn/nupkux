@@ -182,8 +182,11 @@ int sish_test()
 			printf("\n");
 		}
 	}*/
+	UINT i;
 	printf("--------------------------\n");
-	if (!fat32_read(node,0,0,dir0)) printf("Error on read\n");
+	if (!fat32_read(node,0,10,dir0)) printf("Error on read\n");
+	for (i=0;i<10;i++) printf("%c",dir0[i]);
+	printf("\n");
 	if (!fat32_umount(node)) printf("Error on unmount!\n");
 	/*dummy=malloc(50);
 	printf("dummy at 0x%X\n",dummy);
