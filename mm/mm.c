@@ -1,6 +1,6 @@
 #include <mm.h>
 
-UINT kmalloc_pos = WORKING_MEMSTART;
+UINT kmalloc_pos;
 heap *kheap = 0;
 
 void *heap_malloc(UINT size, UCHAR page_align, heap *aheap);
@@ -15,7 +15,7 @@ UINT _kmalloc_base(UINT sz, UINT *phys, UCHAR align)
 		res=(UINT)heap_malloc(sz,align,kheap);
 		if (phys) {
 			page *apage = get_page(res,0,kernel_directory);
-            		*phys=(apage->frame*FRAME_SIZE)+(res&0xFFFFF000);
+            		*phys=(apage->frame*FRAME_SIZE)+(res&0xFFF);
 		}
 	} else {
 		if (align) ASSERT_ALIGN(kmalloc_pos);

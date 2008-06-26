@@ -2,7 +2,7 @@
 #include <kernel/ktextio.h>
 #include <time.h>
 #include <lib/string.h>
-#include <fs/fat32.h>
+#include <fs/initrd.h>
 #include <kernel/devices/ata.h>
 #include <mm.h>
 
@@ -17,6 +17,19 @@ int ltrim(char *cmd)
 	return str-cmd;
 }
 
+int rtrim(char *cmd)
+{
+	char *str = cmd;
+
+	if (!*str) return 0;
+	while (*str) str++;
+	str--;
+	while ((*str<=32) && (str>=cmd)) str--;
+	str++;
+	*str=0;
+	return str-cmd;
+}
+
 int _sish_split_par(char *cmd, char *args)
 {
 	char *astart;
@@ -27,6 +40,7 @@ int _sish_split_par(char *cmd, char *args)
 		*astart=0;
 		strcpy(args,astart+1);
 		ltrim(args);
+		rtrim(args);
 	}
 	return 0;
 }
@@ -145,56 +159,98 @@ int sish_paging()
 	return 1; 	
 }
 
-extern UINT device_read(char *device, UINT pos, UINT n, UCHAR* buffer);
-extern UINT fat32_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer);
+extern UINT initrd_location;
+
+static void format_mode(fs_node *node, char *output)
+{
+	strcpy(output,"??????????");
+	
+	if (!node) return;
+	UINT mode = node->mode, i=3;
+	switch (node->flags) {
+		case FS_DIRECTORY:	output[0]='d';
+					break;
+		case FS_CHARDEVICE:	output[0]='c';
+					break;
+		case FS_BLOCKDEVICE:	output[0]='b';
+					break;
+		case FS_PIPE:		output[0]='p';
+					break;
+		case FS_SYMLINK:	output[0]='l';
+					break;
+		default:		output[0]='-';
+					break;
+	}
+	while (i--) {
+		output[(i+1)*3]=(mode&1)?'x':'-';
+		output[i*3+2]=(mode&2)?'w':'-';
+		output[i*3+1]=(mode&4)?'r':'-';
+		mode>>=3;
+	}
+}
 
 int sish_test()
 {
-	fat32discr discr;
-	UCHAR dir0[512];
-//	void *dummy;
-	fs_node *node;
-#define	DIR_NUM	14
-
-/*	dummy=malloc(50);
-	printf("dummy at 0x%X\n",dummy);
-	free(dummy);*/
-	node=fat32_mount("/dev/fd0",0);
-	printf("---FAT32 Driver for floppy devices---\n\n");
-	discr=*((fat32discr *) ((mountinfo *) node->filesystem)->discr);
-	if (!node) {
-		printf("Can not access floppy drive: Aborting.\n");
-		return 1;
-	}
-	printf("FirstDataSector: %d\nBPB_BytsPerSec: %d\n",discr.FirstDataSector,discr.BPB.BPB_BytsPerSec);
-	printf("BPB_FATSz32: 0x%X\nRootDirSectors: %d\n",discr.BPB.BPB_FATSz32,discr.RootDirSectors);
-	printf("CountofClusters: %d\nBPB_SecPerClus: %d\n",discr.CountofClusters,discr.BPB.BPB_SecPerClus);	
-	/*UINT i,j,k;
-	for (k=discr.FirstDataSector;k<discr.FirstDataSector+1;k++) {
-		if (!device_read("/dev/fd0",(k)*512,512,dir0)) {
-			printf("Error\n");
-			return 1;
-		}
-		for (j=0;j<DIR_NUM;j++) {
-			if ((!dir0[j*32]) || (dir0[j*32]=='A' && dir0[j*32+1]>'Z')) continue;
-			for (i=j*32;i<j*32+11;i++)
-				printf("%c",dir0[i]);
-			printf("\n");
-		}
-	}*/
+	printf("---initrd test---\n\n");
+	UCHAR *buf;
 	UINT i;
-	printf("--------------------------\n");
-	if (!fat32_read(node,0,10,dir0)) printf("Error on read\n");
-	for (i=0;i<10;i++) printf("%c",dir0[i]);
-	printf("\n");
-	if (!fat32_umount(node)) printf("Error on unmount!\n");
-	/*dummy=malloc(50);
-	printf("dummy at 0x%X\n",dummy);
-	free(dummy);*/
+	char input[STRLEN],args[STRLEN],the_mode[11];
+	fs_node *root,*testfile,*tmp;
+	struct dirent *pDirEnt;
+	
+	root=setup_initrd(initrd_location);
+	set_fs_root_node(root);
+	
+	while (1) {
+		printf("> ");
+		_kin(input,STRLEN);
+		memset(args,0,STRLEN);
+		_sish_split_par(input,args);
+		if (!(*input)) {
+			printf("\n");
+			continue;
+		}
+		if (!strcmp(input,"exit")) break;
+		if (!strcmp(input,"read")) {
+			testfile=namei(args);
+			if (testfile) {
+				buf=(UCHAR *)malloc(testfile->size);
+				printf("----Open  file \"%s\"----\n",testfile->name);
+				read_fs(testfile,0,testfile->size,buf);
+				for (i=0;i<testfile->size;i++)
+					printf("%c",buf[i]);
+				printf("----Close file \"%s\"----\n",testfile->name);
+				free(testfile);
+			} else printf("Error: Could not open file.\n");
+		}
+		if (!strcmp(input,"ls")) {
+			if (!*args) testfile=root;
+				else testfile=namei(args);
+			if (testfile) {
+				i=0;
+				printf("Inode\tMode\t\tUID\tGID\tSize\tName\n");
+				if (testfile->flags!=FS_DIRECTORY) {
+					tmp=testfile;
+					format_mode(tmp,the_mode);
+					printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,tmp->name);
+				} else while ((pDirEnt=readdir_fs(testfile,i))) {
+					tmp=finddir_fs(testfile,pDirEnt->d_name);
+					format_mode(tmp,the_mode);
+					printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,tmp->name);
+					free(tmp);
+					i++;
+				}
+				if (*args) free(testfile);
+			} else printf("Error: Could not find file.\n");
+		}
+	}
+			
+	remove_initrd(root);
+	set_fs_root_node(0);
 	return 1;
 }
 
-int _sish_interpret(char *cmd) 
+int _sish_interpret(char *cmd)
 {
 	char args[STRLEN];
 

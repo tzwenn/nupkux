@@ -40,7 +40,7 @@ struct _fat32BPB {
 };
 
 struct _fat32discr {
-	char *device;
+	fs_node *device;
 	fat32fat FAT;
 	UINT FatSz;
 	UINT FirstDataSector;
@@ -59,8 +59,8 @@ struct _fat32fileentry {
 	UINT size;
 };
 
-extern UINT fat32_read_discr(char *device, fat32discr *discr);
-extern fs_node *fat32_mount(char *device, fs_node *mountpoint);
+extern UINT fat32_read_discr(fs_node *device, fat32discr *discr);
+extern fs_node *fat32_mount(fs_node *device, fs_node *mountpoint);
 extern UINT fat32_umount(fs_node *node);
 
 #endif

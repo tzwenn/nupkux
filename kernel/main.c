@@ -8,7 +8,10 @@
 
 char _kabort_func = 0;
 int errno;
+UINT initrd_location = -1;
 ULONG memory_end = 0;
+UINT __working_memstart = 0;
+extern UINT kmalloc_pos;
 
 void reboot()
 {
@@ -35,7 +38,13 @@ int _kmain(multiboot_info_t* mbd, unsigned int magic)
 	_kclear();
 	if (mbd->flags&0x01) memory_end=mbd->mem_upper*1024;
 		else memory_end=0x400000;
+	//Check mbd->mods_count !
 	printf("Squaros booted ...\nAmount of RAM: %d Bytes.\nSet up Descriptors ... ",memory_end);
+	if (mbd->mods_count>0) {
+		initrd_location = *((UINT*)mbd->mods_addr);
+		__working_memstart=*(UINT*)(mbd->mods_addr+4);
+	} else __working_memstart=(UINT) &kernel_end;
+	kmalloc_pos=__working_memstart;
 	gdt_install();
 	idt_install();
 	printf("Finished.\nInstall IRQ & ISRS ... ");

@@ -14,7 +14,8 @@ typedef unsigned long  ULONG;
 
 struct regs {
 	UINT gs, fs, es, ds;
-	UINT edi, esi, ebp, esp, ebx, edx, ecx, eax;	UINT int_no, err_code;
+	UINT edi, esi, ebp, esp, ebx, edx, ecx, eax;
+	UINT int_no, err_code;
 	UINT eip, cs, eflags, useresp, ss;    
 };
 

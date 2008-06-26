@@ -11,35 +11,43 @@
 #define FS_BLOCKDEVICE 0x04
 #define FS_PIPE        0x05
 #define FS_SYMLINK     0x06
-#define FS_MOUNTPOINT  0x08 
+#define FS_MOUNTPOINT  0x08
 
 #define FS_TYPE_FAT32	0xB
+#define FS_TYPE_INITRD	0x1120
+#define FS_TYPE_DEVFS	0xDEF5
+
+#define NR_OPEN		64
 
 typedef struct _fs_node fs_node;
 typedef struct _mountinfo mountinfo;
+typedef struct file FILE;
 
 typedef void (*open_proto)(fs_node*);
 typedef UINT (*read_proto)(fs_node*,UINT,UINT,UCHAR*);
 typedef UINT (*write_proto)(fs_node*,UINT,UINT,UCHAR*);
 typedef void (*close_proto)(fs_node*);
 typedef struct dirent *(*readdir_proto)(fs_node*,UINT);
-typedef fs_node *(*finddir_proto)(fs_node*,char *name); 
+typedef fs_node *(*finddir_proto)(fs_node*,char *name);
 
-struct dirent //POSIX: return readdir call
+struct dirent
 {
-  char name[NODE_NAME_LEN];
-  UINT ino; //Inode
+	UINT d_ino;
+	char d_name[NODE_NAME_LEN];
+	USHORT d_namlen;
+	UCHAR d_type;
 };
 
 struct _fs_node {
-	char name[NODE_NAME_LEN];     
-	UINT mask;        
-	UINT uid;         
-	UINT gid;         
-	UINT flags;
+	char name[NODE_NAME_LEN];
+	UINT mode;
+	UINT uid;
+	UINT gid;
+	UCHAR flags;
 	UINT inode;
 	UINT size;
-	mountinfo *filesystem;  
+	mountinfo *mi; //impl
+	UCHAR nlinks;
 	open_proto open;
 	read_proto read;
 	write_proto write;
@@ -50,12 +58,20 @@ struct _fs_node {
 };
 
 struct _mountinfo {
-	UINT filesystem;
+	UINT fs_type;
 	void *discr;
-	char *device;
+	fs_node *device;
 	fs_node *mountpoint;
 	mountinfo *next;
 };
+
+struct file {
+	USHORT mode;
+	fs_node *node;
+	UINT offset;
+};
+
+//VFS functions
 
 extern void open_fs(fs_node *node, UCHAR read, UCHAR write);
 extern UINT read_fs(fs_node *node, UINT offset, UINT size, UCHAR *buffer);
@@ -64,9 +80,19 @@ extern void close_fs(fs_node *node);
 extern struct dirent *readdir_fs(fs_node *node, UINT index);
 extern fs_node *finddir_fs(fs_node *node, char *name);
 
-extern mountinfo *fs_add_mountpoint(UINT filesystem, void *discr, fs_node *mountpoint, char *device);
-extern UINT fs_del_mountpoint(mountinfo *mi);
+//Managment of mountpoints
 
-extern fs_node fs_root;
+extern mountinfo *fs_add_mountpoint(UINT fs_type, void *discr, fs_node *mountpoint, fs_node *device, fs_node *root);
+extern UINT fs_del_mountpoint(mountinfo *mi);
+extern fs_node *get_fs_root_node();
+extern fs_node *set_fs_root_node(fs_node* new_root);
+
+//Variables
+
+extern FILE *filep[NR_OPEN];
+
+//functions NOT in fs.c
+
+extern fs_node *namei(char *filename);
 
 #endif

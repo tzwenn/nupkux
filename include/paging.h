@@ -29,8 +29,8 @@ typedef struct _page_table page_table;
 typedef struct _page page;
 
 struct _page { 
-   UINT flags: 12; 
-   UINT frame: 20;  
+   UINT flags: 12;
+   UINT frame: 20;
 };
 
 struct _page_table {
@@ -38,13 +38,14 @@ struct _page_table {
 };
 
 struct _page_directory {
-	UINT physTabs[1024];		//Must be first, so I can use _kmalloc_pa
+	UINT physTabs[1024];  //Must be first, so I can use _kmalloc_pa
 	UINT physPos;
 	page_table *tables[1024];
 };
 
 extern UINT kernel_end;		//Defined in link.ld
 extern ULONG memory_end;	//Defined in main.c
+extern UINT __working_memstart;
 
 extern page *make_page(UINT address, UINT flags, page_directory *directory, int alloc);
 extern page *get_page(UINT address, int make, page_directory *directory);

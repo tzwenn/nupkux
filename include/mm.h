@@ -5,8 +5,9 @@
 #include <paging.h>
 #include <lib/memory.h>
 
-#define WORKING_MEMSTART ((UINT) &kernel_end)   /* By the way, this will be a minumum of required space, what a suprise ;-) */
-#define WORKING_MEMEND 		memory_end	/* And this is accessable maximum of memory */
+//#define WORKING_MEMSTART ((UINT) &kernel_end)   /* By the way, this will be a minumum of required space, what a suprise ;-) */
+#define WORKING_MEMSTART 	(__working_memstart)
+#define WORKING_MEMEND 		(memory_end)	/* And this is accessable maximum of memory */
 
 #define MM_MAGIC	0x52555448
 #define MM_KHEAP_START	0x100000	//1MB after kmalloc_pos

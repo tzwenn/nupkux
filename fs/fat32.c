@@ -38,7 +38,7 @@ UINT FAT32_ClusEntryVal(UINT N, fat32discr *discr)
 	return n;
 }*/
 
-UINT device_read(char *device, UINT pos, UINT n, UCHAR* buffer)
+UINT device_read(fs_node *device, UINT pos, UINT n, UCHAR* buffer)
 {
 	UINT len;
 	UCHAR *buf;
@@ -56,7 +56,7 @@ UINT device_read(char *device, UINT pos, UINT n, UCHAR* buffer)
 	return n;
 }
 
-UINT fat32_read_BPB(char *device, fat32BPB *BPB)
+UINT fat32_read_BPB(fs_node *device, fat32BPB *BPB)
 {
 	UCHAR sector[SECTORSZ];
 
@@ -83,7 +83,7 @@ UINT fat32_read_BPB(char *device, fat32BPB *BPB)
 	return 1;
 }
 
-UINT fat32_read_discr(char *device, fat32discr *discr)
+UINT fat32_read_discr(fs_node *device, fat32discr *discr)
 {
 	discr->device=device;
 	if (!fat32_read_BPB(device,&discr->BPB)) return 0;
@@ -103,8 +103,8 @@ UINT fat32_read_discr(char *device, fat32discr *discr)
 
 UINT fat32_findfileentry(fs_node *node, fat32fileentry *entry)
 {
-	fat32discr *discr = (fat32discr *) (node->filesystem)->discr;
-	char *device = (char *) node->filesystem->device;
+	fat32discr *discr = (fat32discr *) (node->mi)->discr;
+	fs_node *device = node->mi->device;
 	UCHAR *clusterbuf = (UCHAR *) malloc(discr->BPB.BPB_SecPerClus*SECTORSZ);
 
 	entry->cluster=2;
@@ -132,8 +132,8 @@ UINT fat32_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
 	UCHAR *clusterbuf = 0;
 
 	fat32fileentry entry;
-	fat32discr *discr = (fat32discr *) (node->filesystem)->discr;
-	char *device = (char *) node->filesystem->device;
+	fat32discr *discr = (fat32discr *) (node->mi)->discr;
+	fs_node *device = node->mi->device;
 
 	if (!fat32_findfileentry(node,&entry)) return 0;
 	printf("%s in cluster %d (size: %d)\n",entry.name,entry.startcluster,entry.size);
@@ -168,7 +168,7 @@ fs_node *fat32_finddir(fs_node *node, char *name)
 	return 0;
 }
 
-fs_node *fat32_mount(char *device, fs_node *mountpoint)
+fs_node *fat32_mount(fs_node *device, fs_node *mountpoint)
 {
 	fs_node *root = (fs_node*) malloc(sizeof(fs_node));
 	fat32discr *discr = (fat32discr *) malloc(sizeof(fat32discr));
@@ -179,7 +179,7 @@ fs_node *fat32_mount(char *device, fs_node *mountpoint)
 		return 0;
 	}
 	strcpy(root->name,"fat32root");
-	root->mask=0x1ED;	//rwxr-xr-x
+	root->mode=0x1ED;	//rwxr-xr-x
 	root->flags=FS_DIRECTORY;
 	root->uid=root->gid=root->inode=root->size=0;
 	root->read=0;
@@ -189,16 +189,16 @@ fs_node *fat32_mount(char *device, fs_node *mountpoint)
 	root->readdir=&fat32_readdir;
 	root->finddir=&fat32_finddir;
 	root->ptr=0;
-	root->filesystem=fs_add_mountpoint(FS_TYPE_FAT32,(void *)discr,mountpoint,device);
+	root->mi=fs_add_mountpoint(FS_TYPE_FAT32,(void *)discr,mountpoint,device,root);
 
 	return root;
 }
 
 UINT fat32_umount(fs_node *node)
 {
-	fat32discr *discr = (fat32discr *) node->filesystem->discr;
+	fat32discr *discr = (fat32discr *) node->mi->discr;
 
-	if (!fs_del_mountpoint(node->filesystem)) return 0;
+	if (!fs_del_mountpoint(node->mi)) return 0;
 	free(discr->FAT);
 	free(discr);
 	free(node);
