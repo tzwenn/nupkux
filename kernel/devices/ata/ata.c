@@ -1,4 +1,3 @@
-#include <squaros.h>
 #include <time.h>
 #include <kernel/ktextio.h>
 #include <kernel/devices/ata.h>

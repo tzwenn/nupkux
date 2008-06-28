@@ -3,23 +3,24 @@
 # Copyright (c) 2007 Sven Köhler
 #
 
+PROJDIRS   =kernel lib mm fs
+INCLUDEDIR =include 
+
 AS	=as
 ASINT	=nasm
 ASINTFLAGS =-f aout
 
 CC	=gcc
-CFLAGS	=-c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -Iinclude
+CFLAGS	=-c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I$(INCLUDEDIR)
 
 LD	=ld
 LDFLAGS	=-T link.ld
 
-PROJDIRS=kernel lib mm fs
-
 SRCFILES = $(shell find $(PROJDIRS) -mindepth 1 -maxdepth 4 -name "*.c")
-HDRFILES = $(shell find include -mindepth 1 -maxdepth 4 -name "*.h")
+HDRFILES = $(shell find $(INCLUDEDIR) -mindepth 1 -maxdepth 4 -name "*.h")
 OBJFILES = $(patsubst %.c,%.c.o,$(SRCFILES))
 DEPFILES = $(HDRFILES)
-PRJFILES = $(HDRFILES) $(SRCFILES) boot/dts.asm boot/loader.s boot/process.asm Makefile link.ld NoteToMe squaros LICENSE
+PRJFILES = $(HDRFILES) $(SRCFILES) boot/dts.asm boot/loader.s boot/process.asm Makefile link.ld squaros LICENSE
 BACKUPTMP = ../backup-tmp
 BACKUPDIR = ../backups
 

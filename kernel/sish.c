@@ -8,7 +8,7 @@
 
 int sish();
 
-int ltrim(char *cmd)
+static int ltrim(char *cmd)
 {
 	char *str = cmd;
 
@@ -17,7 +17,7 @@ int ltrim(char *cmd)
 	return str-cmd;
 }
 
-int rtrim(char *cmd)
+static int rtrim(char *cmd)
 {
 	char *str = cmd;
 
@@ -30,7 +30,7 @@ int rtrim(char *cmd)
 	return str-cmd;
 }
 
-int _sish_split_par(char *cmd, char *args)
+static int _sish_split_par(char *cmd, char *args)
 {
 	char *astart;
 
@@ -45,13 +45,42 @@ int _sish_split_par(char *cmd, char *args)
 	return 0;
 }
 
+static void format_mode(fs_node *node, char *output)
+{
+	strcpy(output,"??????????");
+	
+	if (!node) return;
+	UINT mode = node->mode, i=3;
+	switch (node->flags) {
+		case FS_DIRECTORY:	output[0]='d';
+		break;
+		case FS_CHARDEVICE:	output[0]='c';
+		break;
+		case FS_BLOCKDEVICE:	output[0]='b';
+		break;
+		case FS_PIPE:		output[0]='p';
+		break;
+		case FS_SYMLINK:	output[0]='l';
+		break;
+		default:		output[0]='-';
+		break;
+	}
+	while (i--) {
+		output[(i+1)*3]=(mode&1)?'x':'-';
+		output[i*3+2]=(mode&2)?'w':'-';
+		output[i*3+1]=(mode&4)?'r':'-';
+		mode>>=3;
+	}
+}
 
-int sish_help()
+static int sish_help()
 {
 	printf("List of built-in commands:\n");
 	printf("\ttest\t\tRun the current development function\n");
-	printf("\tclear\t\tClean up the mess on the screen.\n");
+	printf("\tclear\t\tClean up the mess on the screen\n");
 	printf("\tlba28\t\tAccess IDE-ATA drives\n");
+	printf("\tls\t\tList directory contents\n");
+	printf("\tcat\t\tShow file content on stdout\n");
 	printf("\tpaging\t\tCreate a pagefault and crashes the kernel\n");
 	printf("\ttime\t\tGive information about time and date\n");
 	printf("\texit\t\tQuit sish\n"); 
@@ -61,7 +90,7 @@ int sish_help()
 	return 0;
 }
 
-int sish_time()
+static int sish_time()
 {
 	struct tm now;
 	time_t timestamp;
@@ -74,7 +103,7 @@ int sish_time()
 	return 1;
 }
 
-int sish_lba28()
+static int sish_lba28()
 {
 	UCHAR idelist = 0,drv,tcalc;
 	USHORT tmpword = 0, contrl;
@@ -150,7 +179,7 @@ int sish_lba28()
 	return 1;
 }
 
-int sish_paging()
+static int sish_paging()
 {
 	UINT *ptr = (UINT*) 0xA0000000;
 
@@ -159,98 +188,83 @@ int sish_paging()
 	return 1; 	
 }
 
-extern UINT initrd_location;
-
-static void format_mode(fs_node *node, char *output)
+static int sish_cat(char *args)
 {
-	strcpy(output,"??????????");
-	
-	if (!node) return;
-	UINT mode = node->mode, i=3;
-	switch (node->flags) {
-		case FS_DIRECTORY:	output[0]='d';
-					break;
-		case FS_CHARDEVICE:	output[0]='c';
-					break;
-		case FS_BLOCKDEVICE:	output[0]='b';
-					break;
-		case FS_PIPE:		output[0]='p';
-					break;
-		case FS_SYMLINK:	output[0]='l';
-					break;
-		default:		output[0]='-';
-					break;
-	}
-	while (i--) {
-		output[(i+1)*3]=(mode&1)?'x':'-';
-		output[i*3+2]=(mode&2)?'w':'-';
-		output[i*3+1]=(mode&4)?'r':'-';
-		mode>>=3;
-	}
-}
-
-int sish_test()
-{
-	printf("---initrd test---\n\n");
+	fs_node *node;
 	UCHAR *buf;
 	UINT i;
-	char input[STRLEN],args[STRLEN],the_mode[11];
-	fs_node *root,*testfile,*tmp;
+	
+	node=namei(args);
+	if (node) {
+		open_fs(node,1,0);
+		buf=(UCHAR *)malloc(node->size);
+		read_fs(node,0,node->size,buf);
+		for (i=0;i<node->size;i++)
+			printf("%c",buf[i]);
+		free(buf);
+		close_fs(node);
+	} else printf("Error: Cannot find file.\n");
+	return 1;	
+}
+
+static int sish_ls(char *args)
+{
+	fs_node *node, *tmp;
+	UINT i;
+	char the_mode[11];
 	struct dirent *pDirEnt;
 	
-	root=setup_initrd(initrd_location);
-	set_fs_root_node(root);
+	if (!*args) node=fs_root;
+		else node=namei(args);
+	if (node) {
+		i=0;
+		printf("Inode\tMode\t\tUID\tGID\tSize\tName\n");
+		if (node->flags!=FS_DIRECTORY) {
+			tmp=node;
+			format_mode(tmp,the_mode);
+			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,args);
+		} else while ((pDirEnt=readdir_fs(node,i))) {
+			tmp=finddir_fs(node,pDirEnt->d_name);
+			format_mode(tmp,the_mode);
+			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,pDirEnt->d_name);
+			i++;
+		}
+	} else printf("Error: Could not find file.\n");
 	
-	while (1) {
-		printf("> ");
-		_kin(input,STRLEN);
-		memset(args,0,STRLEN);
-		_sish_split_par(input,args);
-		if (!(*input)) {
-			printf("\n");
-			continue;
-		}
-		if (!strcmp(input,"exit")) break;
-		if (!strcmp(input,"read")) {
-			testfile=namei(args);
-			if (testfile) {
-				buf=(UCHAR *)malloc(testfile->size);
-				printf("----Open  file \"%s\"----\n",testfile->name);
-				read_fs(testfile,0,testfile->size,buf);
-				for (i=0;i<testfile->size;i++)
-					printf("%c",buf[i]);
-				printf("----Close file \"%s\"----\n",testfile->name);
-				free(testfile);
-			} else printf("Error: Could not open file.\n");
-		}
-		if (!strcmp(input,"ls")) {
-			if (!*args) testfile=root;
-				else testfile=namei(args);
-			if (testfile) {
-				i=0;
-				printf("Inode\tMode\t\tUID\tGID\tSize\tName\n");
-				if (testfile->flags!=FS_DIRECTORY) {
-					tmp=testfile;
-					format_mode(tmp,the_mode);
-					printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,tmp->name);
-				} else while ((pDirEnt=readdir_fs(testfile,i))) {
-					tmp=finddir_fs(testfile,pDirEnt->d_name);
-					format_mode(tmp,the_mode);
-					printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,tmp->name);
-					free(tmp);
-					i++;
-				}
-				if (*args) free(testfile);
-			} else printf("Error: Could not find file.\n");
-		}
-	}
-			
-	remove_initrd(root);
-	set_fs_root_node(0);
 	return 1;
 }
 
-int _sish_interpret(char *cmd)
+extern UINT initrd_location;
+
+static int sish_test()
+{
+	printf("---mount test---\n\n");
+	
+	UINT *check;
+	
+	check=malloc(sizeof(UINT));
+	printf("check @ 0x%X\n",check);
+	free(check);
+	
+	fs_node *initrd, *mountpoint=namei("/mnt");;
+	
+	if (!mountpoint) {
+		printf("Mountpoint /mnt not found\n");
+		return 1;
+	}
+	initrd=setup_initrd(initrd_location,mountpoint);
+	printf("root again mounted on /mnt ... do ls /mnt\n");
+	sish_ls("/mnt");
+	remove_initrd(initrd);
+	printf("/mnt unmounted ... do ls /mnt\n");
+	sish_ls("/mnt");
+	check=malloc(sizeof(UINT));
+	printf("check @ 0x%X\n",check);
+	free(check);
+	return 1;
+}
+
+static int _sish_interpret(char *cmd)
 {
 	char args[STRLEN];
 
@@ -262,6 +276,8 @@ int _sish_interpret(char *cmd)
 	if (!strcmp(cmd,"test")) return sish_test();
 	if (!strcmp(cmd,"clear")) return _kclear();
 	if (!strcmp(cmd,"lba28")) return sish_lba28();
+	if (!strcmp(cmd,"ls")) return sish_ls(args);
+	if (!strcmp(cmd,"cat")) return sish_cat(args);
 	if (!strcmp(cmd,"paging")) return sish_paging();
 	if (!strcmp(cmd,"time")) return sish_time();
 	if (!strcmp(cmd,"exit")) return SISH_EXIT;
@@ -277,10 +293,10 @@ int sish()
 	char input[STRLEN];
 	int ret;
 
-	asm ("int $0x21\n\t");
 	printf("\nSquaros intern shell (sish) started.\nType \"help\" for a list of built-in commands.\n\n");
 	while (1) {
-		printf("$ ");
+		printf("# ");
+		memset(input,0,STRLEN);
 		_kin(input,STRLEN);
 		ret=_sish_interpret(input);
 		if ((ret & 0xF0)==0xE0) break;

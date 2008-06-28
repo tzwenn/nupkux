@@ -5,7 +5,7 @@
 #ifndef _SISH_H
 #define _SISH_H
 
-#include <squaros.h>
+#include <kernel.h>
 
 #define SISH_EXIT	0xE0
 #define SISH_HALT	0xE1

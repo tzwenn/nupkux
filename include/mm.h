@@ -1,7 +1,7 @@
 #ifndef _MM_H
 #define _MM_H
 
-#include <squaros.h>
+#include <kernel.h>
 #include <paging.h>
 #include <lib/memory.h>
 

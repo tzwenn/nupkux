@@ -1,5 +1,5 @@
+#include <kernel.h>
 #include <kernel/ktextio.h>
-#include <squaros.h>
 
 void _init_pc_speaker()
 {

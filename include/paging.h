@@ -1,7 +1,7 @@
 #ifndef _PAGING_H
 #define _PAGING_H
 
-#include <squaros.h>
+#include <kernel.h>
 #include <mm.h>
 
 #define FRAME_SIZE		0x1000

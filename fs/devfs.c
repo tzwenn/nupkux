@@ -1,11 +1,9 @@
 #include <fs/devfs.h>
 #include <mm.h>
-#include <lib/string.h>
 
 fs_node *mkdevfs()
 {
-	fs_node *dev = (fs_node*) malloc(sizeof(fs_node));
-	strcpy(dev->name,"dev");
+	/*fs_node *dev = (fs_node*) malloc(sizeof(fs_node));
 	dev->mode=0x1ED;	//rwxr-xr-x
 	dev->flags=FS_DIRECTORY;
 	dev->uid=dev->gid=dev->inode=dev->size=0;
@@ -17,5 +15,6 @@ fs_node *mkdevfs()
 	//dev->finddir=&fat32_finddir;
 	dev->ptr=0;
 	
-	return dev;
+	return dev;*/
+	return 0;
 }

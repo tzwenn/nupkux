@@ -5,7 +5,7 @@
 #ifndef _KTEXTIO_H
 #define _KTEXTIO_H
 
-#include <squaros.h>
+#include <kernel.h>
 
 #define NEWLINE_RETURN
 #define NEWLINE_KIN

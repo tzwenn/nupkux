@@ -1,7 +1,7 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H
 
-#include <squaros.h>
+#include <kernel.h>
 
 //I've taken a look at a list for the Linux kernel (2.2 ;-P )
 //and newlib requirements

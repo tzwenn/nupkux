@@ -1,12 +1,16 @@
 #include <fs/initrd.h>
 #include <lib/memory.h>
 #include <lib/string.h>
-#include <kernel/ktextio.h>
 #include <mm.h>
 
-fs_node *filetonode(UINT inode, fs_node *node, char *name, initrd_discr *discr, mountinfo *mi);
+fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr *discr, mountinfo *mi);
 
 struct dirent dirent;
+
+static void initrd_open(fs_node *node)
+{
+	node->nlinks++;
+}
 
 static UINT initrd_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
 {
@@ -18,6 +22,16 @@ static UINT initrd_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
 		size=inode.size-offset;
 	memcpy(buffer,(UCHAR*)(inode.offset+offset+discr->location),size);
 	return size;
+}
+
+static UINT initrd_write(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+{
+	return 0;
+}
+
+static void initrd_close(fs_node *node)
+{
+	node->nlinks--;
 }
 
 static struct dirent *initrd_readdir(fs_node *node, UINT index)
@@ -40,67 +54,75 @@ static struct dirent *initrd_readdir(fs_node *node, UINT index)
 
 static fs_node *initrd_finddir(fs_node *node, char *name)
 {	
-	fs_node *res = malloc(sizeof(fs_node));
 	initrd_discr *discr = (initrd_discr *)(node->mi->discr);
 	initrd_inode inode = discr->initrd_inodes[node->inode];
 	initrd_folder_entry *entries = (initrd_folder_entry *) (inode.offset+discr->location);
 	UINT i = inode.size/sizeof(initrd_folder_entry);
 	
-	while (i--)
-		if (!strcmp(name,entries[i].filename)) {
-			filetonode(entries[i].inode,res,name,node->mi->discr,node->mi);
-			return res;
-		}
+	while (i--) 
+		if (!strcmp(name,entries[i].filename)) 
+			return &(discr->nodes->nodes[entries[i].inode]);
 	return 0;
 }
 
-fs_node *filetonode(UINT inode, fs_node *node, char *name, initrd_discr *discr, mountinfo *mi)
+node_operations initrd_operations = {&initrd_open,&initrd_read,&initrd_write,&initrd_close,&initrd_readdir,&initrd_finddir};
+
+fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr *discr, mountinfo *mi)
 {
-	initrd_inode *initrd_inodes = discr->initrd_inodes;
+	initrd_inode d_inode = discr->initrd_inodes[inode];
 	
-	node->mode=initrd_inodes[inode].mode;
-	node->gid=initrd_inodes[inode].gid;
-	node->uid=initrd_inodes[inode].uid;
-	node->flags=initrd_inodes[inode].flags;
-	node->inode=initrd_inodes[inode].inode;
-	node->size=initrd_inodes[inode].size;
-	strcpy(node->name,name);
-	node->read=&initrd_read;
-	node->write=0;
-	node->open=0;
-	node->close=0;
-	if (initrd_inodes[inode].flags==FS_DIRECTORY) {
-		node->readdir=&initrd_readdir;
-		node->finddir=&initrd_finddir;
-	} else {
-		node->readdir=0;
-		node->finddir=0;
-	}
+	node->mode=d_inode.mode;
+	node->gid=d_inode.gid;
+	node->uid=d_inode.uid;
+	node->flags=d_inode.flags;
+	node->inode=d_inode.inode;
+	node->size=d_inode.size;
+	node->nlinks=1;
 	node->ptr=0;
 	node->mi=mi;
+	node->f_op=&initrd_operations;
 	
 	return node;
 }
 
-fs_node *setup_initrd(UINT location)
+fs_node *setup_initrd(UINT location, fs_node *mountpoint)
 {
+	if (!location) return 0;
+	
 	initrd_discr *discr = malloc(sizeof(initrd_discr));
+	vfs_nodes *nodes = malloc(sizeof(vfs_nodes));
+	fs_node *root;
+	mountinfo *mi;
+	UINT i;
 	
 	discr->location=location;
 	discr->initrdheader=(initrd_header *)location;
 	discr->initrd_inodes=(initrd_inode *)(location+sizeof(initrd_header));
 	
-	discr->initrd_root=malloc(sizeof(fs_node));
-	filetonode(0,discr->initrd_root,"initrd",discr,0);
-	discr->initrd_root->mi=fs_add_mountpoint(FS_TYPE_INITRD,(void *)discr,0,0,discr->initrd_root);
-	return discr->initrd_root;
+	nodes->nodes=malloc(sizeof(fs_node)*discr->initrdheader->inodecount);
+	memset(nodes->nodes,0,discr->initrdheader->inodecount);
+	nodes->root=&(nodes->nodes[0]);
+	discr->nodes=nodes;
+	root=nodes->root;
+	initrd_inode_to_fs_node(0,root,discr,0);
+	mi=fs_add_mountpoint(FS_TYPE_INITRD,(void *)discr,mountpoint,0,nodes);
+	root->mi=mi;
+	
+	i=discr->initrdheader->inodecount;
+	while (--i)
+		initrd_inode_to_fs_node(i,&(nodes->nodes[i]),discr,mi);
+	
+	return root;
 }
 
 UINT remove_initrd(fs_node *node)
-{
-	if (node!=((initrd_discr *)(node->mi->discr))->initrd_root) return 1;
-	free(node->mi->discr);
+{	
+	if (!node) return 2;
+	if (node!=node->mi->nodes->root) return 1;
 	fs_del_mountpoint(node->mi);
-	free(node);
+	free(node->mi->discr);
+	free(node->mi->nodes->nodes);
+	free(node->mi->nodes);
+	free(node->mi);
 	return 0;
 }

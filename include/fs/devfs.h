@@ -1,7 +1,7 @@
 #ifndef _DEVFS_H
 #define _DEVFS_H
 
-#include <squaros.h>
+#include <kernel.h>
 #include <fs/fs.h>
 
 

@@ -1,7 +1,7 @@
 #ifndef _TIME_H
 #define _TIME_H
 
-#include <squaros.h>
+#include <kernel.h>
 
 #ifndef _TIME_T
 #define _TIME_T

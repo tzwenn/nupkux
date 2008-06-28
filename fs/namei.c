@@ -1,22 +1,10 @@
 #include <fs/fs.h>
 #include <lib/string.h>
-#include <mm.h>
-
-#include <kernel/ktextio.h>
-
-static fs_node *copy_node(fs_node *node)
-{
-	if (!node) return 0;
-	fs_node *res=malloc(sizeof(fs_node));
-	
-	memcpy(res,node,sizeof(fs_node));
-	return res;
-}
 
 fs_node *namei(char *filename)
 {
 	char sname[NODE_NAME_LEN], *end=filename, tmp;
-	fs_node *node = get_fs_root_node(), *newnode;
+	fs_node *node = fs_root;
 	
 	if (!node) return 0;
 	if (!filename) return 0;
@@ -30,15 +18,11 @@ fs_node *namei(char *filename)
 			*end=tmp;
 		} else strcpy(sname,filename);
 		filename=end+1;
-		newnode=finddir_fs(node,sname);
-		free(node);
-		if (!newnode) return 0;
-		//FIXME: According to this every file could be a mountpoint
-		if (newnode->flags&FS_MOUNTPOINT) {
-			node=copy_node(newnode->ptr);
-			free(newnode);
-		} else node=newnode;
+		if (!*sname) continue;		//A "//" is also valid
+		node=finddir_fs(node,sname);
+		if (!node) return 0;
+		if (node->flags&FS_MOUNTPOINT)
+			node=node->ptr;
 	}
-	printf("\n");
 	return node;
 }

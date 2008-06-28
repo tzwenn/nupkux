@@ -1,5 +1,4 @@
 #include <time.h>
-#include <squaros.h>
 #include <kernel/ktextio.h>
 
 #define tick_rate 100

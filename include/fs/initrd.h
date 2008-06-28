@@ -1,7 +1,7 @@
 #ifndef _INITRD_H
 #define _INITRD_H
 
-#include <squaros.h>
+#include <kernel.h>
 #include <fs/fs.h>
 
 #define INITRD_FILENAME_LEN	64
@@ -36,11 +36,11 @@ typedef struct _initrd_discr
 	UINT location;
 	initrd_header *initrdheader;
 	initrd_inode *initrd_inodes;
-	fs_node *initrd_root;
+	vfs_nodes *nodes;
 	UINT initrd_inode_count;
 } initrd_discr;
 
-extern fs_node *setup_initrd(UINT location);
+extern fs_node *setup_initrd(UINT location, fs_node *mountpoint);
 extern UINT remove_initrd(fs_node *node);
 
 #endif

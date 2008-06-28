@@ -1,7 +1,7 @@
 #ifndef _FS_H
 #define _FS_H
 
-#include <squaros.h>
+#include <kernel.h>
 
 #define NODE_NAME_LEN 256
 
@@ -21,7 +21,6 @@
 
 typedef struct _fs_node fs_node;
 typedef struct _mountinfo mountinfo;
-typedef struct file FILE;
 
 typedef void (*open_proto)(fs_node*);
 typedef UINT (*read_proto)(fs_node*,UINT,UINT,UCHAR*);
@@ -38,38 +37,49 @@ struct dirent
 	UCHAR d_type;
 };
 
-struct _fs_node {
-	char name[NODE_NAME_LEN];
-	UINT mode;
-	UINT uid;
-	UINT gid;
-	UCHAR flags;
-	UINT inode;
-	UINT size;
-	mountinfo *mi; //impl
-	UCHAR nlinks;
+typedef struct _node_operations {
 	open_proto open;
 	read_proto read;
 	write_proto write;
 	close_proto close;
 	readdir_proto readdir;
 	finddir_proto finddir;
-	fs_node *ptr; 
+} node_operations;
+
+struct _fs_node {
+	UINT mode;
+	UINT uid;
+	UINT gid;
+	UCHAR flags;
+	UINT inode;
+	UINT size;
+	UCHAR nlinks;
+	mountinfo *mi; //impl
+	node_operations *f_op;
+	fs_node *ptr;
 };
+
+//For every mountpoint there is such one
+
+typedef struct _vfs_nodes {
+	UINT count;
+	fs_node *nodes, *root;
+} vfs_nodes;
 
 struct _mountinfo {
 	UINT fs_type;
 	void *discr;
 	fs_node *device;
 	fs_node *mountpoint;
+	vfs_nodes *nodes;
 	mountinfo *next;
 };
 
-struct file {
+typedef struct file {
 	USHORT mode;
 	fs_node *node;
 	UINT offset;
-};
+} FILE;
 
 //VFS functions
 
@@ -82,14 +92,13 @@ extern fs_node *finddir_fs(fs_node *node, char *name);
 
 //Managment of mountpoints
 
-extern mountinfo *fs_add_mountpoint(UINT fs_type, void *discr, fs_node *mountpoint, fs_node *device, fs_node *root);
+extern mountinfo *fs_add_mountpoint(UINT fs_type, void *discr, fs_node *mountpoint, fs_node *device, vfs_nodes *nodes);
 extern UINT fs_del_mountpoint(mountinfo *mi);
-extern fs_node *get_fs_root_node();
-extern fs_node *set_fs_root_node(fs_node* new_root);
 
 //Variables
 
 extern FILE *filep[NR_OPEN];
+extern fs_node *fs_root;
 
 //functions NOT in fs.c
 

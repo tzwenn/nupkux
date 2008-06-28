@@ -1,4 +1,3 @@
-#include <squaros.h>
 #include <paging.h>
 #include <memory.h>
 #include <kernel/ktextio.h>
