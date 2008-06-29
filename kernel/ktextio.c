@@ -1,3 +1,22 @@
+/*
+ *  Copyright (C) 2007,2008 Sven Köhler
+ *
+ *  This file is part of Nupkux.
+ *
+ *  Nupkux is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  Nupkux is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <kernel/ktextio.h>
 #include <lib/stdarg.h>
 #include <mm.h>
@@ -59,7 +78,8 @@ int _kline_buffer_down()
 {
 	if (!_line_buffer_pos)	return 0;
 
-	_line_buffer_pos--;	printf("-(%d)",_line_buffer_pos);
+	_line_buffer_pos--;
+	printf("-(%d)",_line_buffer_pos);
 	return 1;
 }
 
@@ -69,7 +89,8 @@ int _kline_buffer_reset()
 	//while (_kline_buffer_down());
 	return 1;
 }
-extern int vsprintf(char *buf, const char *fmt, va_list args);
+
+extern int vsprintf(char *buf, const char *fmt, va_list args);
 
 int printf(const char *fmt, ...)
 {
@@ -222,7 +243,8 @@ int _ksetcursor(UCHAR x, UCHAR y)
 }
 
 int _kclear()
-{        int i=0;
+{
+        int i=0;
 
 	_kline_buffer_reset();
         while (i<(TXT_WIDTH*TXT_HEIGHT*2)) {
@@ -301,7 +323,8 @@ int _kin(char *instr, int maxlen)
 }
 
 int _kout(char *output) 
-{	UCHAR x = _cursor_pos.x, y = _cursor_pos.y;
+{
+	UCHAR x = _cursor_pos.x, y = _cursor_pos.y;
 	int i;
 
 	_kline_buffer_reset();

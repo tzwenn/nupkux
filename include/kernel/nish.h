@@ -17,14 +17,21 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _STRING_H
-#define _STRING_H
+/*
+	Nupkux intern shell
+*/
 
-typedef long size_t;
+#ifndef _NUPKUX_H
+#define _NUPKUX_H
 
-extern int strcmp(char *s1, char *s2);
-extern size_t strlen(char *str);
-extern char *strchr(char *str, char chr);
-extern char *strcpy(char *dest, char *src);
+#include <kernel.h>
+
+#define NISH_EXIT	0xE0
+#define NISH_HALT	0xE1
+#define NISH_REBOOT	0xE2
+
+extern int nish();
+extern void _echo_pc_speaker(UINT freq);
+extern void _stop_pc_speaker();
 
 #endif

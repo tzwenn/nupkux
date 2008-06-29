@@ -1,6 +1,7 @@
 /*
 GazOS Operating System
 Copyright (C) 1999  Gareth Owen <gaz@athene.co.uk>
+Copyright (C) 2007  Sven Köhler
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License

@@ -1,10 +1,11 @@
 #
-# Makefile for the Squaros kernel
-# Copyright (c) 2007 Sven Köhler
+# Makefile for the Nupkux kernel
+# Copyright (C) 2007, 2008 Sven Köhler
 #
 
 PROJDIRS   =kernel lib mm fs
 INCLUDEDIR =include 
+MAXDEPTH   =5
 
 AS	=as
 ASINT	=nasm
@@ -16,11 +17,11 @@ CFLAGS	=-c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I$(INCLU
 LD	=ld
 LDFLAGS	=-T link.ld
 
-SRCFILES = $(shell find $(PROJDIRS) -mindepth 1 -maxdepth 4 -name "*.c")
-HDRFILES = $(shell find $(INCLUDEDIR) -mindepth 1 -maxdepth 4 -name "*.h")
+SRCFILES = $(shell find $(PROJDIRS) -mindepth 1 -maxdepth $(MAXDEPTH) -name "*.c")
+HDRFILES = $(shell find $(INCLUDEDIR) -mindepth 1 -maxdepth $(MAXDEPTH) -name "*.h")
 OBJFILES = $(patsubst %.c,%.c.o,$(SRCFILES))
 DEPFILES = $(HDRFILES)
-PRJFILES = $(HDRFILES) $(SRCFILES) boot/dts.asm boot/loader.s boot/process.asm Makefile link.ld squaros LICENSE
+PRJFILES = $(HDRFILES) $(SRCFILES) boot/dts.asm boot/loader.s boot/process.asm Makefile link.ld COPYING
 BACKUPTMP = ../backup-tmp
 BACKUPDIR = ../backups
 
@@ -41,7 +42,7 @@ boot:
 
 link:	
 	@echo "Link ..."	
-	@($(LD) $(LDFLAGS) -o squaros boot/loader.o boot/dts.o boot/process.o $(OBJFILES))
+	@($(LD) $(LDFLAGS) -o nupkux boot/loader.o boot/dts.o boot/process.o $(OBJFILES))
 
 clean: 
 	@echo "Clean up ..."
@@ -55,8 +56,8 @@ backup: clean
 	@cp -axR . $(BACKUPTMP)
 	@for file in $(PRJFILES); do if [ -f $(BACKUPTMP)/$$file~ ]; then rm $(BACKUPTMP)/$$file~; fi; done
 	@echo "Make archive ..."
-	@(cd $(BACKUPTMP); tar -cf squaros.tar *; gzip squaros.tar)
+	@(cd $(BACKUPTMP); tar -cf nupkux.tar *; gzip nupkux.tar)
 	@echo "Save archive ..."
-	@cp $(BACKUPTMP)/squaros.tar.gz $(BACKUPDIR)/squaros-$(shell date +%y-%m-%d).tar.gz
+	@cp $(BACKUPTMP)/nupkux.tar.gz $(BACKUPDIR)/nupkux-snp$(shell date +%y%m%d).tar.gz
 	@echo "Remove temporary files ..."
 	@rm -r $(BACKUPTMP)

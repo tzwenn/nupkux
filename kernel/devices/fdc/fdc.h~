@@ -21,8 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef FDC_H
 #define FDC_H
 
-#include <kernel/devices/mytypes.h>
-#include <kernel.h>
+#include <../fdc/mytypes.h>
 
 /* datatypes */
 
@@ -67,13 +66,22 @@ typedef struct DrvGeom {
 
 /* function prototypes */
 
-BOOL fdc_read_block(int block,BYTE *blockbuff,unsigned long nosectors);
-BOOL fdc_write_block(int block,BYTE *blockbuff,unsigned long nosectors);
+void init_floppy();
 
+void ResetFloppy();
+void reset(void);
+BOOL diskchange(void);
+void motoron(void);
+void motoroff(void);
+void recalibrate(void);
+BOOL flseek(int track);
+BOOL log_disk(DrvGeom *g);
+BOOL read_block(int block,BYTE *blockbuff,unsigned long nosectors);
+BOOL write_block(int block,BYTE *blockbuff,unsigned long nosectors);
+BOOL format_track(BYTE track,DrvGeom *g);
 
 extern unsigned int motor;
 extern int mtick;
 extern int tmout;
-extern UCHAR floppy_drives;
 
 #endif /* FDC_H */

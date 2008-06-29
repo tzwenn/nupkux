@@ -1,4 +1,23 @@
-#include <kernel/sish.h>
+/*
+ *  Copyright (C) 2007,2008 Sven Köhler
+ *
+ *  This file is part of Nupkux.
+ *
+ *  Nupkux is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  Nupkux is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <kernel/nish.h>
 #include <kernel/ktextio.h>
 #include <time.h>
 #include <lib/string.h>
@@ -6,7 +25,7 @@
 #include <kernel/devices/ata.h>
 #include <mm.h>
 
-int sish();
+int nish();
 
 static int ltrim(char *cmd)
 {
@@ -30,7 +49,7 @@ static int rtrim(char *cmd)
 	return str-cmd;
 }
 
-static int _sish_split_par(char *cmd, char *args)
+static int _nish_split_par(char *cmd, char *args)
 {
 	char *astart;
 
@@ -73,7 +92,7 @@ static void format_mode(fs_node *node, char *output)
 	}
 }
 
-static int sish_help()
+static int nish_help()
 {
 	printf("List of built-in commands:\n");
 	printf("\ttest\t\tRun the current development function\n");
@@ -83,14 +102,14 @@ static int sish_help()
 	printf("\tcat\t\tShow file content on stdout\n");
 	printf("\tpaging\t\tCreate a pagefault and crashes the kernel\n");
 	printf("\ttime\t\tGive information about time and date\n");
-	printf("\texit\t\tQuit sish\n"); 
+	printf("\texit\t\tQuit nish\n"); 
 	printf("\thalt\t\tHalt system\n");
 	printf("\treboot\t\tReboot system\n");
 	printf("\thelp\t\tWhat do you read right now?\n");
 	return 0;
 }
 
-static int sish_time()
+static int nish_time()
 {
 	struct tm now;
 	time_t timestamp;
@@ -103,7 +122,7 @@ static int sish_time()
 	return 1;
 }
 
-static int sish_lba28()
+static int nish_lba28()
 {
 	UCHAR idelist = 0,drv,tcalc;
 	USHORT tmpword = 0, contrl;
@@ -179,7 +198,7 @@ static int sish_lba28()
 	return 1;
 }
 
-static int sish_paging()
+static int nish_paging()
 {
 	UINT *ptr = (UINT*) 0xA0000000;
 
@@ -188,7 +207,7 @@ static int sish_paging()
 	return 1; 	
 }
 
-static int sish_cat(char *args)
+static int nish_cat(char *args)
 {
 	fs_node *node;
 	UCHAR *buf;
@@ -207,7 +226,7 @@ static int sish_cat(char *args)
 	return 1;	
 }
 
-static int sish_ls(char *args)
+static int nish_ls(char *args)
 {
 	fs_node *node, *tmp;
 	UINT i;
@@ -236,7 +255,7 @@ static int sish_ls(char *args)
 
 extern UINT initrd_location;
 
-static int sish_test()
+static int nish_test()
 {
 	printf("---mount test---\n\n");
 	
@@ -254,51 +273,51 @@ static int sish_test()
 	}
 	initrd=setup_initrd(initrd_location,mountpoint);
 	printf("root again mounted on /mnt ... do ls /mnt\n");
-	sish_ls("/mnt");
+	nish_ls("/mnt");
 	remove_initrd(initrd);
 	printf("/mnt unmounted ... do ls /mnt\n");
-	sish_ls("/mnt");
+	nish_ls("/mnt");
 	check=malloc(sizeof(UINT));
 	printf("check @ 0x%X\n",check);
 	free(check);
 	return 1;
 }
 
-static int _sish_interpret(char *cmd)
+static int _nish_interpret(char *cmd)
 {
 	char args[STRLEN];
 
-	_sish_split_par(cmd,args);
+	_nish_split_par(cmd,args);
 	if (!(*cmd)) {
 		printf("\n");
 		return 0;
 	}
-	if (!strcmp(cmd,"test")) return sish_test();
+	if (!strcmp(cmd,"test")) return nish_test();
 	if (!strcmp(cmd,"clear")) return _kclear();
-	if (!strcmp(cmd,"lba28")) return sish_lba28();
-	if (!strcmp(cmd,"ls")) return sish_ls(args);
-	if (!strcmp(cmd,"cat")) return sish_cat(args);
-	if (!strcmp(cmd,"paging")) return sish_paging();
-	if (!strcmp(cmd,"time")) return sish_time();
-	if (!strcmp(cmd,"exit")) return SISH_EXIT;
-	if (!strcmp(cmd,"halt")) return SISH_HALT;
-	if (!strcmp(cmd,"reboot")) return SISH_REBOOT;
-	if (!strcmp(cmd,"help")) return sish_help();
-	printf("sish: %s: command not found\n",cmd);
+	if (!strcmp(cmd,"lba28")) return nish_lba28();
+	if (!strcmp(cmd,"ls")) return nish_ls(args);
+	if (!strcmp(cmd,"cat")) return nish_cat(args);
+	if (!strcmp(cmd,"paging")) return nish_paging();
+	if (!strcmp(cmd,"time")) return nish_time();
+	if (!strcmp(cmd,"exit")) return NISH_EXIT;
+	if (!strcmp(cmd,"halt")) return NISH_HALT;
+	if (!strcmp(cmd,"reboot")) return NISH_REBOOT;
+	if (!strcmp(cmd,"help")) return nish_help();
+	printf("nish: %s: command not found\n",cmd);
 	return 0;
 }
 
-int sish()
+int nish()
 {
 	char input[STRLEN];
 	int ret;
 
-	printf("\nSquaros intern shell (sish) started.\nType \"help\" for a list of built-in commands.\n\n");
+	printf("\nNupkux intern shell (nish) started.\nType \"help\" for a list of built-in commands.\n\n");
 	while (1) {
 		printf("# ");
 		memset(input,0,STRLEN);
 		_kin(input,STRLEN);
-		ret=_sish_interpret(input);
+		ret=_nish_interpret(input);
 		if ((ret & 0xF0)==0xE0) break;
 	}
 	return ret;

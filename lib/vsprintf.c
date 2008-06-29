@@ -1,9 +1,10 @@
-/* vsprintf.c -- Lars Wirzenius & Linus Torvalds. */
-/*
- * Wirzenius wrote this portably, Torvalds fucked it up :-)
- */
-/*
- * Postscriptum: Sven Koehler take this stuff and put it into his obsolete system
+/*  vsprintf.c -- Lars Wirzenius, Linus Torvalds & Sven Köhler
+ *
+ *  Wirzenius wrote this portably, Torvalds fucked it up :-)
+ *  Postscriptum: Köhler taked this stuff and put it into his obsolete system
+ *  changing nothing to zero.
+ *  He sees it as public domain, but keeps an GPL'ed buggy-version standing
+ *  just in case ...
  */
 
 #include <stdarg.h>
@@ -103,7 +104,7 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 				   number of chars for from string */
 	int qualifier;		/* 'h', 'l', or 'L' for integer fields */
 
-	for (str=buf ; *fmt ; ++fmt) {
+	for (str=buf;*fmt;++fmt) {
 		if (*fmt != '%') {
 			*str++ = *fmt;
 			continue;
@@ -227,6 +228,6 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 			break;
 		}
 	}
-	*str = '\0';
+	*str = 0;
 	return str-buf;
 }

@@ -1,7 +1,26 @@
+/*
+ *  Copyright (C) 2007,2008 Sven Köhler
+ *
+ *  This file is part of Nupkux.
+ *
+ *  Nupkux is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  Nupkux is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <multiboot.h>
 #include <kernel.h>
 #include <kernel/ktextio.h>
-#include <kernel/sish.h>
+#include <kernel/nish.h>
 #include <time.h>
 #include <kernel/devices/fdc.h>
 #include <mm.h>
@@ -41,7 +60,7 @@ int _kmain(multiboot_info_t* mbd, unsigned int magic)
 	_kclear();
 	if (mbd->flags&0x01) memory_end=mbd->mem_upper*1024;
 		else memory_end=0x400000;
-	printf("Kernel loaded ...\nAmount of RAM: %d Bytes.\nSet up Descriptors ... ",memory_end);
+	printf("Nupkux loaded ...\nAmount of RAM: %d Bytes.\nSet up Descriptors ... ",memory_end);
 	if (mbd->mods_count>0) {
 		initrd_location = *((UINT*)mbd->mods_addr);
 		__working_memstart=*(UINT*)(mbd->mods_addr+4);
@@ -71,16 +90,16 @@ int _kmain(multiboot_info_t* mbd, unsigned int magic)
 	if (!floppy_drives) printf("No drives found.\n");
 		else printf("%s found.\n",(floppy_drives & 0x0F)?"2 drives":"1 drive");
 	printf("Booted up!\n");
-	printf("sish returned with 0x%X.\n",ret=sish());
+	printf("nish returned with 0x%X.\n",ret=nish());
 	printf("\nUnmount initrd (root) ... ");
 	remove_initrd(root);
 	fs_root=0;
 	printf("OK\n");
 	switch (ret) {
-	  case SISH_REBOOT: reboot();
+	  case NISH_REBOOT: reboot();
 			    return 0;	
 			    break;
-	  case SISH_HALT:   halt();
+	  case NISH_HALT:   halt();
 			    return 0;
 			    break;
 	  default: 	    printf("Stop system");
