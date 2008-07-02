@@ -54,3 +54,12 @@ char *strcpy(char *dest, char *src)
 	*tmp=0;
 	return dest;
 }
+
+char *strncpy(char *dest, char *src, int num)
+{
+	char *tmp = dest;
+	while (*src && num--) *(tmp++)=*(src++);
+	while (num--) *(tmp++)=0;
+	
+	return dest;
+}

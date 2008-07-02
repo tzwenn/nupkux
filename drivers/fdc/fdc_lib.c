@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "dma.h"
-#include <kernel/devices/fdc.h>
+#include <drivers/fdc.h>
 #include <kernel/ktextio.h>
 #include <time.h>
 

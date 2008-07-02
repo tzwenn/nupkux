@@ -22,7 +22,7 @@
 #include <lib/string.h>
 #include <mm.h>
 
-fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr *discr, mountinfo *mi);
+static fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr *discr, mountinfo *mi);
 
 struct dirent dirent;
 
@@ -58,12 +58,12 @@ static struct dirent *initrd_readdir(fs_node *node, UINT index)
 	if (node->flags!=FS_DIRECTORY) return 0;
 	initrd_discr *discr = (initrd_discr *)(node->mi->discr);
 	initrd_inode inode = discr->initrd_inodes[node->inode], file_inode;
-	initrd_folder_entry *entries = (initrd_folder_entry *) (inode.offset+discr->location);
-	UINT count = inode.size/sizeof(initrd_folder_entry);
+	initrd_d_entry *entries = (initrd_d_entry *) (inode.offset+discr->location);
 	
-	if (index>=count) return 0;
+	if (index>=inode.size/sizeof(initrd_d_entry)) return 0;
 	file_inode=discr->initrd_inodes[entries[index].inode];
-	strcpy(dirent.d_name,entries[index].filename);
+	strncpy(dirent.d_name,entries[index].filename,INITRD_FILENAME_LEN);
+	dirent.d_name[INITRD_FILENAME_LEN-1]=0;
 	dirent.d_namlen=strlen(dirent.d_name);
 	dirent.d_ino=entries[index].inode;
 	dirent.d_type=file_inode.flags;
@@ -73,20 +73,21 @@ static struct dirent *initrd_readdir(fs_node *node, UINT index)
 
 static fs_node *initrd_finddir(fs_node *node, char *name)
 {	
+	if (node->flags!=FS_DIRECTORY) return 0;
 	initrd_discr *discr = (initrd_discr *)(node->mi->discr);
 	initrd_inode inode = discr->initrd_inodes[node->inode];
-	initrd_folder_entry *entries = (initrd_folder_entry *) (inode.offset+discr->location);
-	UINT i = inode.size/sizeof(initrd_folder_entry);
+	initrd_d_entry *entries = (initrd_d_entry *) (inode.offset+discr->location);
+	UINT i = inode.size/sizeof(initrd_d_entry);
 	
 	while (i--) 
 		if (!strcmp(name,entries[i].filename)) 
-			return &(discr->nodes->nodes[entries[i].inode]);
+			return &(discr->nodes[entries[i].inode]);
 	return 0;
 }
 
 node_operations initrd_operations = {&initrd_open,&initrd_read,&initrd_write,&initrd_close,&initrd_readdir,&initrd_finddir};
 
-fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr *discr, mountinfo *mi)
+static fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr *discr, mountinfo *mi)
 {
 	initrd_inode d_inode = discr->initrd_inodes[inode];
 	
@@ -97,6 +98,7 @@ fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr *discr,
 	node->inode=d_inode.inode;
 	node->size=d_inode.size;
 	node->nlinks=1;
+	node->p_data=0;
 	node->ptr=0;
 	node->mi=mi;
 	node->f_op=&initrd_operations;
@@ -109,8 +111,7 @@ fs_node *setup_initrd(UINT location, fs_node *mountpoint)
 	if (!location) return 0;
 	
 	initrd_discr *discr = malloc(sizeof(initrd_discr));
-	vfs_nodes *nodes = malloc(sizeof(vfs_nodes));
-	fs_node *root;
+	fs_node *root, *nodes;
 	mountinfo *mi;
 	UINT i;
 	
@@ -118,18 +119,16 @@ fs_node *setup_initrd(UINT location, fs_node *mountpoint)
 	discr->initrdheader=(initrd_header *)location;
 	discr->initrd_inodes=(initrd_inode *)(location+sizeof(initrd_header));
 	
-	nodes->nodes=malloc(sizeof(fs_node)*discr->initrdheader->inodecount);
-	memset(nodes->nodes,0,discr->initrdheader->inodecount);
-	nodes->root=&(nodes->nodes[0]);
+	root=nodes=(fs_node *)calloc(discr->initrdheader->inodecount,sizeof(fs_node));
 	discr->nodes=nodes;
-	root=nodes->root;
+	discr->root=root;
 	initrd_inode_to_fs_node(0,root,discr,0);
-	mi=fs_add_mountpoint(FS_TYPE_INITRD,(void *)discr,mountpoint,0,nodes);
+	mi=fs_add_mountpoint(FS_TYPE_INITRD,(void *)discr,mountpoint,0,root);
 	root->mi=mi;
 	
 	i=discr->initrdheader->inodecount;
 	while (--i)
-		initrd_inode_to_fs_node(i,&(nodes->nodes[i]),discr,mi);
+		initrd_inode_to_fs_node(i,&(nodes[i]),discr,mi);
 	
 	return root;
 }
@@ -137,11 +136,12 @@ fs_node *setup_initrd(UINT location, fs_node *mountpoint)
 UINT remove_initrd(fs_node *node)
 {	
 	if (!node) return 2;
-	if (node!=node->mi->nodes->root) return 1;
+	
+	initrd_discr *discr = (initrd_discr *)(node->mi->discr);
+	if (node!=discr->root) return 1;
 	fs_del_mountpoint(node->mi);
-	free(node->mi->discr);
-	free(node->mi->nodes->nodes);
-	free(node->mi->nodes);
+	free(discr->nodes);
+	free(discr);
 	free(node->mi);
 	return 0;
 }

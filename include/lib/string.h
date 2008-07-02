@@ -26,5 +26,6 @@ extern int strcmp(char *s1, char *s2);
 extern size_t strlen(char *str);
 extern char *strchr(char *str, char chr);
 extern char *strcpy(char *dest, char *src);
+extern char *strncpy(char *dest, char *src, int num);
 
 #endif

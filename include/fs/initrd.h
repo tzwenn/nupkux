@@ -43,20 +43,20 @@ typedef struct _initrd_inode
 	UINT size;
 } initrd_inode;
 
-typedef struct _initrd_folder_entry
+typedef struct _initrd_d_entry
 {
 	UINT inode;
 	char filename[INITRD_FILENAME_LEN];
 	
-} initrd_folder_entry;
+} initrd_d_entry;
 
 typedef struct _initrd_discr
 {
 	UINT location;
 	initrd_header *initrdheader;
 	initrd_inode *initrd_inodes;
-	vfs_nodes *nodes;
 	UINT initrd_inode_count;
+	fs_node *nodes, *root;
 } initrd_discr;
 
 extern fs_node *setup_initrd(UINT location, fs_node *mountpoint);

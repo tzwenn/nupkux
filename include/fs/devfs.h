@@ -23,6 +23,28 @@
 #include <kernel.h>
 #include <fs/fs.h>
 
+#define DEVFS_INODE_FREE	0xFFFFFFFF
+#define DEVFS_INODE_LINK	0xFFFFFFFE
+#define DEVFS_FILENAME_LEN	16
+#define DEVFS_INODES_PER_BLOCK	32
 
+typedef struct _devfs_d_entry
+{
+	UINT inode;
+	char filename[DEVFS_FILENAME_LEN];
+} devfs_d_entry;
+
+typedef struct _devfs_discr
+{
+	fs_node *nodes;  //Here is something special: just a linked list
+	fs_node *root;
+} devfs_discr;
+
+extern fs_node *setup_devfs(fs_node *mountpoint);
+//TODO A seperated mount may be achieved
+extern UINT remove_devfs(fs_node *devfs);
+
+extern fs_node *devfs_register_device(fs_node *dir, char *name, UINT mode, UINT uid, UINT gid, UINT type, node_operations *f_op);
+extern void devfs_unregister_device(fs_node *device);
 
 #endif

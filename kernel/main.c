@@ -22,7 +22,7 @@
 #include <kernel/ktextio.h>
 #include <kernel/nish.h>
 #include <time.h>
-#include <kernel/devices/fdc.h>
+#include <drivers/fdc.h>
 #include <mm.h>
 #include <fs/initrd.h>
 
@@ -44,7 +44,7 @@ void reboot()
 	outportb(0x64,0xFE);
 }
 
-void halt()
+static void halt()
 {	
 	printf("Will now halt");
 	printf("\n\nYou can turn off the computer.");
@@ -78,11 +78,12 @@ int _kmain(multiboot_info_t* mbd, unsigned int magic)
 	printf("Finished.\nEnable Paging and Memory Manager ... ");
 	paging_setup();
 	init_ktexto();
+	printf("Finished.\nSetup VFS ... ");
+	setup_vfs();
 	printf("Finished.\nMount initrd read-only on root ... ");
-	root=setup_initrd(initrd_location,0);
+	root=setup_initrd(initrd_location,get_root_fs_node());
 	if (root) printf("Finished.\n");
 		else printf("FAILED.\n");
-	fs_root=root;
 	printf("Set up timer ... ");
 	timer_install();
 	printf("Finished.\nFloppydrive support  ... ");
@@ -93,7 +94,8 @@ int _kmain(multiboot_info_t* mbd, unsigned int magic)
 	printf("nish returned with 0x%X.\n",ret=nish());
 	printf("\nUnmount initrd (root) ... ");
 	remove_initrd(root);
-	fs_root=0;
+	printf("\nClose VFS ... ");
+	close_vfs();
 	printf("OK\n");
 	switch (ret) {
 	  case NISH_REBOOT: reboot();

@@ -3,7 +3,7 @@
 # Copyright (C) 2007, 2008 Sven Köhler
 #
 
-PROJDIRS   =kernel lib mm fs
+PROJDIRS   =kernel drivers lib mm fs
 INCLUDEDIR =include 
 MAXDEPTH   =5
 
@@ -17,8 +17,8 @@ CFLAGS	=-c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I$(INCLU
 LD	=ld
 LDFLAGS	=-T link.ld
 
-SRCFILES = $(shell find $(PROJDIRS) -mindepth 1 -maxdepth $(MAXDEPTH) -name "*.c")
-HDRFILES = $(shell find $(INCLUDEDIR) -mindepth 1 -maxdepth $(MAXDEPTH) -name "*.h")
+SRCFILES = $(shell find $(PROJDIRS) -name "*.c")
+HDRFILES = $(shell find $(INCLUDEDIR) -name "*.h")
 OBJFILES = $(patsubst %.c,%.c.o,$(SRCFILES))
 DEPFILES = $(HDRFILES)
 PRJFILES = $(HDRFILES) $(SRCFILES) boot/dts.asm boot/loader.s boot/process.asm Makefile link.ld COPYING

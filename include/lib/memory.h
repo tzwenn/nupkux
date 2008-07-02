@@ -24,5 +24,6 @@
 
 extern void *memcpy(void *target, void *src, UINT count);
 extern void *memset(void *target, char value, UINT count);
+extern int memcmp(void *ptr1, void *ptr2, UINT count);
 
 #endif

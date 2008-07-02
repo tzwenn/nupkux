@@ -22,11 +22,11 @@
 UINT kmalloc_pos;
 heap *kheap = 0;
 
-void *heap_malloc(UINT size, UCHAR page_align, heap *aheap);
+static void *heap_malloc(UINT size, UCHAR page_align, heap *aheap);
 
 extern page_directory *kernel_directory;
 
-UINT _kmalloc_base(UINT sz, UINT *phys, UCHAR align)
+static UINT _kmalloc_base(UINT sz, UINT *phys, UCHAR align)
 {
 	UINT res;
 	
@@ -48,11 +48,6 @@ UINT _kmalloc_base(UINT sz, UINT *phys, UCHAR align)
 UINT _kmalloc(UINT sz)
 {
 	return _kmalloc_base(sz,0,0);
-}
-
-UINT _kmalloc_a(UINT sz)
-{
-	return _kmalloc_base(sz,0,1);
 }
 
 UINT _kmalloc_pa(UINT sz, UINT *phys)
@@ -93,7 +88,7 @@ heap *create_heap(UINT start, UINT end, UINT memend, UINT pageflags)
 	return newheap;
 }
 
-void expand_heap(UINT new_size, heap *aheap)
+static void expand_heap(UINT new_size, heap *aheap)
 {
 	UINT i;
 
@@ -105,7 +100,7 @@ void expand_heap(UINT new_size, heap *aheap)
 	aheap->end=aheap->start+new_size;
 }
 
-UINT contract_heap(UINT new_size, heap *aheap)
+static UINT contract_heap(UINT new_size, heap *aheap)
 {
 	UINT i;
 
@@ -118,7 +113,7 @@ UINT contract_heap(UINT new_size, heap *aheap)
 	return new_size;
 }
 
-void heap_add_entry(mm_header *entry, heap *aheap)
+static void heap_add_entry(mm_header *entry, heap *aheap)
 {
 	UINT i;
 	mm_header *tmp, *tmp2;
@@ -138,7 +133,7 @@ void heap_add_entry(mm_header *entry, heap *aheap)
 	}	
 }
 
-void heap_del_entry(UINT i, heap *aheap)
+static void heap_del_entry(UINT i, heap *aheap)
 {
 	if (i==MM_NO_HOLE) return;
 	for (;i<aheap->entrycount;i++)
@@ -146,7 +141,7 @@ void heap_del_entry(UINT i, heap *aheap)
 	aheap->entrycount--;
 }
 
-UINT heap_find_entry(mm_header *entry, heap *aheap)
+static UINT heap_find_entry(mm_header *entry, heap *aheap)
 {
 	UINT i;
 	for (i=0;i<aheap->entrycount;i++)
@@ -154,7 +149,7 @@ UINT heap_find_entry(mm_header *entry, heap *aheap)
 	return MM_NO_HOLE;
 }
 
-UINT find_smallest_hole(UINT size, UCHAR page_align, heap *aheap)  //Binary search?
+static UINT find_smallest_hole(UINT size, UCHAR page_align, heap *aheap)  //Binary search?
 {
 	UINT i,location;
 	mm_header *entry;
@@ -173,7 +168,7 @@ UINT find_smallest_hole(UINT size, UCHAR page_align, heap *aheap)  //Binary sear
 	return MM_NO_HOLE;
 }
 
-void *heap_malloc(UINT size, UCHAR page_align, heap *aheap)
+static void *heap_malloc(UINT size, UCHAR page_align, heap *aheap)
 {
 	UINT newsize=size+sizeof(mm_header)+sizeof(mm_footer);
 	UINT hole_pos=find_smallest_hole(newsize,page_align,aheap),oldsize,oldpos,newpos,oldend;
@@ -252,7 +247,7 @@ void *heap_malloc(UINT size, UCHAR page_align, heap *aheap)
 	return (void *) ((UINT)header+sizeof(mm_header));
 }
 
-void heap_free(void *ptr, heap *aheap)
+static void heap_free(void *ptr, heap *aheap)
 {
 	mm_header *header, *tmpheader;
 	mm_footer *footer, *tmpfooter;
@@ -293,7 +288,7 @@ void heap_free(void *ptr, heap *aheap)
 	if (opt) heap_add_entry(header,aheap); 
 }
 
-void *heap_realloc(void *ptr, UINT size, heap *aheap)
+static void *heap_realloc(void *ptr, UINT size, heap *aheap)
 {
 	mm_header *header, *tmpheader;
 	mm_footer *footer, *tmpfooter;

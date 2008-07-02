@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef FDC_H
 #define FDC_H
 
-#include <kernel/devices/mytypes.h>
+#include <drivers/mytypes.h>
 #include <kernel.h>
 
 /* datatypes */

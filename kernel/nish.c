@@ -21,8 +21,8 @@
 #include <kernel/ktextio.h>
 #include <time.h>
 #include <lib/string.h>
-#include <fs/initrd.h>
-#include <kernel/devices/ata.h>
+#include <fs/devfs.h>
+#include <drivers/ata.h>
 #include <mm.h>
 
 int nish();
@@ -233,10 +233,11 @@ static int nish_ls(char *args)
 	char the_mode[11];
 	struct dirent *pDirEnt;
 	
-	if (!*args) node=fs_root;
+	if (!*args) node=get_root_fs_node();
 		else node=namei(args);
 	if (node) {
 		i=0;
+		printf("ls for inode %d\n",node->inode);
 		printf("Inode\tMode\t\tUID\tGID\tSize\tName\n");
 		if (node->flags!=FS_DIRECTORY) {
 			tmp=node;
@@ -257,29 +258,17 @@ extern UINT initrd_location;
 
 static int nish_test()
 {
-	printf("---mount test---\n\n");
+	printf("---devfs test---\n\n");
 	
-	UINT *check;
-	
-	check=malloc(sizeof(UINT));
-	printf("check @ 0x%X\n",check);
-	free(check);
-	
-	fs_node *initrd, *mountpoint=namei("/mnt");;
-	
+	fs_node *devfs, *mountpoint=namei("/dev");;
 	if (!mountpoint) {
-		printf("Mountpoint /mnt not found\n");
+		printf("Mountpoint /dev not found\n");
 		return 1;
 	}
-	initrd=setup_initrd(initrd_location,mountpoint);
-	printf("root again mounted on /mnt ... do ls /mnt\n");
-	nish_ls("/mnt");
-	remove_initrd(initrd);
-	printf("/mnt unmounted ... do ls /mnt\n");
-	nish_ls("/mnt");
-	check=malloc(sizeof(UINT));
-	printf("check @ 0x%X\n",check);
-	free(check);
+	devfs=setup_devfs(mountpoint);
+	nish_ls("/dev");
+	remove_devfs(devfs);
+	nish_ls("/dev");
 	return 1;
 }
 

@@ -19,7 +19,7 @@
 
 #include <time.h>
 #include <kernel/ktextio.h>
-#include <kernel/devices/ata.h>
+#include <drivers/ata.h>
 
 int lba28_init(USHORT controller, UCHAR drive, UINT addr, UCHAR sectorcount) 
 {

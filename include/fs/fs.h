@@ -24,17 +24,27 @@
 
 #define NODE_NAME_LEN 256
 
-#define FS_FILE        0x01
-#define FS_DIRECTORY   0x02
-#define FS_CHARDEVICE  0x03
-#define FS_BLOCKDEVICE 0x04
-#define FS_PIPE        0x05
-#define FS_SYMLINK     0x06
-#define FS_MOUNTPOINT  0x08
+#define FS_FILE		0x01
+#define FS_DIRECTORY	0x02
+#define FS_CHARDEVICE	0x03
+#define FS_BLOCKDEVICE	0x04
+#define FS_PIPE		0x05
+#define FS_SYMLINK 	0x06
+#define FS_MOUNTPOINT	0x08
 
 #define FS_TYPE_FAT32	0xB
 #define FS_TYPE_INITRD	0x1120
 #define FS_TYPE_DEVFS	0xDEF5
+
+#define FS_MODE_R	4
+#define FS_MODE_RX	5
+#define FS_MODE_RW	6
+#define FS_MODE_RWX	7
+#define FS_MODE_USER	6
+#define FS_MODE_GROUP	3
+#define FS_MODE_OTHER	0
+#define FS_UID_ROOT	0
+#define FS_GID_ROOT	0
 
 #define NR_OPEN		64
 
@@ -75,22 +85,18 @@ struct _fs_node {
 	UCHAR nlinks;
 	mountinfo *mi; //impl
 	node_operations *f_op;
+	void *p_data;   //This is filesystem specific stuff. DO NOT ACCESS FROM "OUTSIDE"(VFS)
 	fs_node *ptr;
 };
 
 //For every mountpoint there is such one
-
-typedef struct _vfs_nodes {
-	UINT count;
-	fs_node *nodes, *root;
-} vfs_nodes;
 
 struct _mountinfo {
 	UINT fs_type;
 	void *discr;
 	fs_node *device;
 	fs_node *mountpoint;
-	vfs_nodes *nodes;
+	fs_node *root;
 	mountinfo *next;
 };
 
@@ -109,15 +115,15 @@ extern void close_fs(fs_node *node);
 extern struct dirent *readdir_fs(fs_node *node, UINT index);
 extern fs_node *finddir_fs(fs_node *node, char *name);
 
+extern fs_node *get_root_fs_node();
+
 //Managment of mountpoints
 
-extern mountinfo *fs_add_mountpoint(UINT fs_type, void *discr, fs_node *mountpoint, fs_node *device, vfs_nodes *nodes);
+extern UINT setup_vfs();
+extern mountinfo *fs_add_mountpoint(UINT fs_type, void *discr, fs_node *mountpoint, fs_node *device, fs_node *root);
 extern UINT fs_del_mountpoint(mountinfo *mi);
-
-//Variables
-
-extern FILE *filep[NR_OPEN];
-extern fs_node *fs_root;
+extern UINT close_vfs();
+extern fs_node *resolve_node(fs_node *node);
 
 //functions NOT in fs.c
 

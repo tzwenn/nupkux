@@ -21,8 +21,8 @@
 #include <mm.h>
 #include <errno.h>
 
-fs_node *fs_root = 0;
-mountinfo *mountinfos = 0;
+static fs_node *fs_root = 0;
+static mountinfo *mountinfos = 0;
 
 void open_fs(fs_node *node, UCHAR read, UCHAR write)
 {
@@ -58,25 +58,41 @@ fs_node *finddir_fs(fs_node *node, char *name)
 		else return 0;
 }
 
-mountinfo *fs_add_mountpoint(UINT fs_type, void *discr, fs_node *mountpoint, fs_node *device, vfs_nodes *nodes)
+UINT setup_vfs()
 {
-	mountinfo *mi = malloc(sizeof(mountinfo));
+	if (fs_root) return 1;
+	fs_root=calloc(1,sizeof(fs_node)); //Sets zero everywhere too
+	fs_root->mode=(FS_MODE_RWX << FS_MODE_USER) | (FS_MODE_RX << FS_MODE_GROUP) | (FS_MODE_RX << FS_MODE_OTHER);
+	fs_root->uid=FS_UID_ROOT;
+	fs_root->gid=FS_GID_ROOT;
+	fs_root->flags=FS_DIRECTORY;
+	
+	return 0;
+}
+
+mountinfo *fs_add_mountpoint(UINT fs_type, void *discr, fs_node *mountpoint, fs_node *device, fs_node *root)
+{
+	mountinfo *mi = (mountinfo *) malloc(sizeof(mountinfo));
 	
 	mi->fs_type=fs_type;
 	mi->discr=discr;
 	mi->mountpoint=mountpoint;
 	mi->device=device;
+	mi->root=root;
 	mi->next=mountinfos;
-	mi->nodes=nodes;
 	mountinfos=mi;
 	if (mountpoint) {
-		//FIXME I could mount another time on this node and make a lot of trouble
+		/*FIXME I could mount another time on this node and make a lot of trouble
+		  UPDATE: namei() resolves the problem in a good way:
+			  B is mounted on A and C also (for the caller) on A, it will
+		          found itself on B (understood? sorry ...)
+		*/
 		if (mountpoint->flags!=FS_DIRECTORY) {
 			errno=-ENOTDIR;
 			return 0;
 		}
 		mountpoint->flags|=FS_MOUNTPOINT;
-		mountpoint->ptr=nodes->root;
+		mountpoint->ptr=root;
 	}
 
 	return mi;
@@ -99,4 +115,25 @@ UINT fs_del_mountpoint(mountinfo *mi)
 		mi->mountpoint->ptr=0;
 	}
 	return 1;
+}
+
+UINT close_vfs()
+{
+	free(fs_root);
+	fs_root=0;
+	
+	return 0;
+}
+
+fs_node *resolve_node(fs_node *node)
+{
+	if (!node) return 0;
+	if (node->flags&FS_MOUNTPOINT || node->flags==FS_SYMLINK)
+		return resolve_node(node->ptr);
+	else return node;
+}
+
+fs_node *get_root_fs_node()
+{
+	return resolve_node(fs_root);
 }
