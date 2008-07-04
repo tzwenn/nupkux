@@ -21,13 +21,13 @@
 #include <lib/stdarg.h>
 #include <mm.h>
 
-int _ksetcursor(UCHAR x, UCHAR y);
+static int _ksetcursor(UCHAR x, UCHAR y);
 int _kin(char *instr, int maxlen);
 int _kclear();
-UCHAR _kkeyboard_layout(UCHAR key, int layout);
-UCHAR _kinterpret_key(UCHAR key, int layout);
+static UCHAR _kkeyboard_layout(UCHAR key, int layout);
+static UCHAR _kinterpret_key(UCHAR key, int layout);
 
-int _kout(char *output);
+static int _kout(char *output);
 
 CURSOR_POS _cursor_pos;
 CURSOR_POS _cursor_max;
@@ -64,7 +64,7 @@ inline USHORT inportw(USHORT port)
 	return value;
 }
 
-int _kline_buffer_up() 
+static int _kline_buffer_up() 
 {
 	if (((_line_buffer_end>=0) && (_line_buffer_pos==_line_buffer_end)) || 
 	   ((_line_buffer_end<0) && (_line_buffer_pos==-_line_buffer_end-1) )) return 0;
@@ -74,7 +74,7 @@ int _kline_buffer_up()
 	return 1;
 }
 
-int _kline_buffer_down() 
+static int _kline_buffer_down() 
 {
 	if (!_line_buffer_pos)	return 0;
 
@@ -84,7 +84,7 @@ int _kline_buffer_down()
 }
 
 
-int _kline_buffer_reset() 
+static int _kline_buffer_reset() 
 {
 	//while (_kline_buffer_down());
 	return 1;
@@ -107,7 +107,7 @@ int printf(const char *fmt, ...)
 
 void init_ktexto()
 {
-	_line_buffer=(UCHAR *)calloc(2*TXT_WIDTH,LINE_BUFFER_LEN);
+	_line_buffer=(UCHAR *)calloc(2*TXT_WIDTH,LINE_BUFFER_LEN); //becomes obsolete if we have got tty
 }
 
 int str2d(char *str)
@@ -121,7 +121,7 @@ int str2d(char *str)
 	return res;
 }
 
-UCHAR _kkeyboard_layout(UCHAR key, int layout)
+static UCHAR _kkeyboard_layout(UCHAR key, int layout)
 {
 	UCHAR german_keymap[90] = 	{0,1,'1','2','3','4','5','6','7','8','9','0',223/*ß*/,0/*´*/,'\b',
 					'\t','q','w','e','r','t','z','u','i','o','p',0/*ü*/,'+','\n',
@@ -136,7 +136,7 @@ UCHAR _kkeyboard_layout(UCHAR key, int layout)
 
 extern void reboot();
 
-UCHAR _kinterpret_key(UCHAR key, int layout)
+static UCHAR _kinterpret_key(UCHAR key, int layout)
 {
 	if (_key_states[key])
 		switch (key) {
@@ -216,7 +216,7 @@ UCHAR _kinterpret_key(UCHAR key, int layout)
 }
 
 
-int _ksetcursor(UCHAR x, UCHAR y)
+static int _ksetcursor(UCHAR x, UCHAR y)
 {
 	USHORT position;
 
@@ -257,7 +257,7 @@ int _kclear()
 	return 0;
 }
 
-int _kiomove(int x, int y, int len)
+static int _kiomove(int x, int y, int len)
 {
 	int i;
 
@@ -270,7 +270,7 @@ int _kiomove(int x, int y, int len)
 	return 0;
 }
 
-void irq_keyboard(struct regs *r) 
+void irq_keyboard(struct regs *r)
 {
 	UCHAR input = inportb(0x60);
 	char keyprint[2] = " ";
@@ -322,7 +322,7 @@ int _kin(char *instr, int maxlen)
 	return 0;
 }
 
-int _kout(char *output) 
+static int _kout(char *output)
 {
 	UCHAR x = _cursor_pos.x, y = _cursor_pos.y;
 	int i;
@@ -388,4 +388,10 @@ int _kout(char *output)
 	}
 	_ksetcursor(x,y);
 	return 0;
+}
+
+int _kputc(const char chr)
+{
+	char buf[2] = {chr,0};
+	return _kout(buf);
 }

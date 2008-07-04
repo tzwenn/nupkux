@@ -21,7 +21,7 @@
 #include <kernel/ktextio.h>
 #include <time.h>
 #include <lib/string.h>
-#include <fs/devfs.h>
+#include <drivers/drivers.h>
 #include <drivers/ata.h>
 #include <mm.h>
 
@@ -70,7 +70,7 @@ static void format_mode(fs_node *node, char *output)
 	
 	if (!node) return;
 	UINT mode = node->mode, i=3;
-	switch (node->flags) {
+	switch (node->flags&0x7) {
 		case FS_DIRECTORY:	output[0]='d';
 		break;
 		case FS_CHARDEVICE:	output[0]='c';
@@ -219,7 +219,7 @@ static int nish_cat(char *args)
 		buf=(UCHAR *)malloc(node->size);
 		read_fs(node,0,node->size,buf);
 		for (i=0;i<node->size;i++)
-			printf("%c",buf[i]);
+			_kputc(buf[i]);
 		free(buf);
 		close_fs(node);
 	} else printf("Error: Cannot find file.\n");
@@ -237,17 +237,16 @@ static int nish_ls(char *args)
 		else node=namei(args);
 	if (node) {
 		i=0;
-		printf("ls for inode %d\n",node->inode);
 		printf("Inode\tMode\t\tUID\tGID\tSize\tName\n");
-		if (node->flags!=FS_DIRECTORY) {
+		if ((node->flags&0x7)!=FS_DIRECTORY) {
 			tmp=node;
 			format_mode(tmp,the_mode);
 			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,args);
-		} else while ((pDirEnt=readdir_fs(node,i))) {
+		} else while ((pDirEnt=readdir_fs(node,i++))) {
+			if (!strcmp(pDirEnt->d_name,".") || !strcmp(pDirEnt->d_name,"..")) continue;
 			tmp=finddir_fs(node,pDirEnt->d_name);
 			format_mode(tmp,the_mode);
 			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,pDirEnt->d_name);
-			i++;
 		}
 	} else printf("Error: Could not find file.\n");
 	
@@ -258,17 +257,9 @@ extern UINT initrd_location;
 
 static int nish_test()
 {
-	printf("---devfs test---\n\n");
+	printf("---devfs & drivers test---\n\n");
 	
-	fs_node *devfs, *mountpoint=namei("/dev");;
-	if (!mountpoint) {
-		printf("Mountpoint /dev not found\n");
-		return 1;
-	}
-	devfs=setup_devfs(mountpoint);
-	nish_ls("/dev");
-	remove_devfs(devfs);
-	nish_ls("/dev");
+	
 	return 1;
 }
 

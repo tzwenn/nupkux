@@ -1,6 +1,7 @@
 /*
 GazOS Operating System
 Copyright (C) 1999  Gareth Owen <gaz@athene.co.uk>
+Copyright (C) 2008  Sven Köhler
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -20,15 +21,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef FDC_H
 #define FDC_H
 
-#include <drivers/mytypes.h>
+#include <drivers/fdc.h>
+#include <kernel.h>
 
 /* datatypes */
 
 /* drive geometry */
 typedef struct DrvGeom {
-   BYTE heads;
-   BYTE tracks;
-   BYTE spt;     /* sectors per track */
+	UCHAR heads;
+	UCHAR tracks;
+	UCHAR spt;     /* sectors per track */
 } DrvGeom;
 
 /* drive geometries */
@@ -62,24 +64,22 @@ typedef struct DrvGeom {
 #define CMD_SEEK    (0x0f)  /* seek track */
 #define CMD_VERSION (0x10)  /* FDC version */
 
+#define FLOPPY_SECTOR_SIZE	512
+#define FLOPPY_144IN_SIZE	1474560
 
 /* function prototypes */
 
-void init_floppy();
-
 void ResetFloppy();
 void reset(void);
-BOOL diskchange(void);
+UINT diskchange(void);
 void motoron(void);
 void motoroff(void);
 void recalibrate(void);
-BOOL flseek(int track);
-BOOL log_disk(DrvGeom *g);
-BOOL read_block(int block,BYTE *blockbuff,unsigned long nosectors);
-BOOL write_block(int block,BYTE *blockbuff,unsigned long nosectors);
-BOOL format_track(BYTE track,DrvGeom *g);
+UINT flseek(int track);
+UINT log_disk(DrvGeom *g);
+UINT format_track(UCHAR track,DrvGeom *g);
 
-extern unsigned int motor;
+extern UINT motor;
 extern int mtick;
 extern int tmout;
 

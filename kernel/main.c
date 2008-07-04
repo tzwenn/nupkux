@@ -25,6 +25,7 @@
 #include <drivers/fdc.h>
 #include <mm.h>
 #include <fs/initrd.h>
+#include <drivers/drivers.h>
 
 char _kabort_func = 0;
 int errno;
@@ -55,7 +56,7 @@ static void halt()
 int _kmain(multiboot_info_t* mbd, unsigned int magic) 
 {
 	int ret;
-	fs_node *root;
+	fs_node *root, *devfs;
 	
 	_kclear();
 	if (mbd->flags&0x01) memory_end=mbd->mem_upper*1024;
@@ -75,6 +76,7 @@ int _kmain(multiboot_info_t* mbd, unsigned int magic)
 	input_setup();
 	printf("Finished.\nEnable Interrupts ... ");
 	sti();
+	timer_install();
 	printf("Finished.\nEnable Paging and Memory Manager ... ");
 	paging_setup();
 	init_ktexto();
@@ -83,18 +85,21 @@ int _kmain(multiboot_info_t* mbd, unsigned int magic)
 	printf("Finished.\nMount initrd read-only on root ... ");
 	root=setup_initrd(initrd_location,get_root_fs_node());
 	if (root) printf("Finished.\n");
-		else printf("FAILED.\n");
-	printf("Set up timer ... ");
-	timer_install();
-	printf("Finished.\nFloppydrive support  ... ");
-	init_floppy();
-	if (!floppy_drives) printf("No drives found.\n");
-		else printf("%s found.\n",(floppy_drives & 0x0F)?"2 drives":"1 drive");
+		else printf("FAILED.\n");	
+	if ((devfs=namei("/dev"))) {
+		printf("Populating Devfs ... ");
+		devfs=setup_devfs(devfs);
+		setup_drivers(devfs);
+		if (devfs) printf("Finished.\n");
+			else printf("FAILED.\n");	
+	}
 	printf("Booted up!\n");
-	printf("nish returned with 0x%X.\n",ret=nish());
-	printf("\nUnmount initrd (root) ... ");
+	printf("nish returned with 0x%X.\n\n",ret=nish());
+	printf("Unmount devfs (/dev) ... \n");
+	remove_devfs(devfs);
+	printf("Unmount initrd (/) ... \n");
 	remove_initrd(root);
-	printf("\nClose VFS ... ");
+	printf("Close VFS ... \n");
 	close_vfs();
 	printf("OK\n");
 	switch (ret) {

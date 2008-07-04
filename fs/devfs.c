@@ -41,7 +41,8 @@ static void devfs_add_d_entry(fs_node *dir, char *name, UINT inode)
 {
 	UINT entr_num = (dir->size/sizeof(devfs_d_entry));
 	
-	dir->p_data=realloc(dir->p_data,(entr_num+1)*sizeof(devfs_d_entry));
+	dir->size=(entr_num+1)*sizeof(devfs_d_entry);
+	dir->p_data=realloc(dir->p_data,dir->size);
 	((devfs_d_entry*)dir->p_data)[entr_num].inode=inode;
 	strncpy(((devfs_d_entry*)dir->p_data)[entr_num].filename,name,DEVFS_FILENAME_LEN);
 	((devfs_d_entry*)dir->p_data)[entr_num].filename[DEVFS_FILENAME_LEN-1]=0;

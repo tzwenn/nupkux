@@ -1,7 +1,7 @@
 /*
 GazOS Operating System
 Copyright (C) 1999  Gareth Owen <gaz@athene.co.uk>
-Copyright (C) 2007  Sven Köhler
+Copyright (C) 2007,2008  Sven Köhler
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -19,31 +19,33 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "dma.h"
-#include <drivers/fdc.h>
+#include "fdc.h"
 #include <kernel/ktextio.h>
 #include <time.h>
+#include <fs/devfs.h>
+#include <lib/memory.h>
 
 void ResetFloppy();
 void reset(void);
-BOOL diskchange(void);
+UINT diskchange(void);
 void motoron(void);
 void motoroff(void);
 void recalibrate(void);
-BOOL flseek(int track);
-BOOL log_disk(DrvGeom *g);
-BOOL format_track(BYTE track,DrvGeom *g);
+UINT flseek(int track);
+UINT log_disk(DrvGeom *g);
+UINT format_track(UCHAR track,DrvGeom *g);
+UINT fdc_read_block(int block,UCHAR *blockbuff, ULONG nosectors);
 
 /* globals */
-static volatile BOOL done = FALSE;
-static BOOL dchange = FALSE;
-BOOL motor = FALSE;
+static volatile UCHAR done = 0;
+static UCHAR dchange = 0;
+UINT motor = 0;
 int mtick = 0;
 int tmout = 0;
-UCHAR floppy_drives;
-static BYTE status[7] = { 0 };
-static BYTE statsz = 0;
-static BYTE sr0 = 0;
-static BYTE fdc_track = 0xff;
+static UCHAR status[7] = { 0 };
+static UCHAR statsz = 0;
+static UCHAR sr0 = 0;
+static UCHAR fdc_track = 0xff;
 static DrvGeom geometry = { DG144_HEADS,DG144_TRACKS,DG144_SPT };
 
 unsigned long tbaddr = 0x80000L;    /* physical address of track buffer located below 1M */
@@ -55,29 +57,10 @@ extern void _int1c();
 void sendbyte(int byte);
 int getbyte();
 void FloppyIRQ( struct regs* r );
-BOOL waitfdc(BOOL sensei);
-BOOL fdc_rw(int block,BYTE *blockbuff,BOOL read,unsigned long nosectors);
+UINT waitfdc(UINT sensei);
+UINT fdc_rw(int block,UCHAR *blockbuff,UINT read,ULONG nosectors);
 
 /* helper functions */
-
-/* init driver */
-void init_floppy(void)
-{
-	int i;
-	/* allocate track buffer (must be located below 1M) */
-	/* see above for address assignment, floppy DMA buffer is at 0x80000) */
-
-	outportb(0x70,0x10);
-	floppy_drives=inportb(0x71);
-	if (!floppy_drives) return;
-	/* install IRQ6 handler */
-	irq_install_handler(6,FloppyIRQ);
-	reset();
-
-	/* get floppy controller version */
-	sendbyte(CMD_VERSION);
-	i = getbyte();
-}
 
 void sendbyte(int byte)
 {
@@ -112,12 +95,12 @@ int getbyte()
 }
 
 /* this waits for FDC command to complete */
-BOOL waitfdc(BOOL sensei)
+UINT waitfdc(UINT sensei)
 {
    tmout = 1000;   /* set timeout to 1 second */
      
    /* wait for IRQ6 handler to signal command finished */
-   while ( done == FALSE && tmout )
+   while (!done && tmout )
      ;
    /* read in command result bytes */
    statsz = 0;
@@ -132,22 +115,22 @@ BOOL waitfdc(BOOL sensei)
       fdc_track = getbyte();
    }
    
-   done = FALSE;
+   done = 0;
    
    if (!tmout) {
       /* timed out! */
       if (inportb(FDC_DIR) & 0x80)  /* check for diskchange */
-	dchange = TRUE;
-      return FALSE;
+	dchange = 1;
+      return 0;
    } else
-     return TRUE;
+     return 1;
 }
 
 /* This is the IRQ6 handler */
 void FloppyIRQ( struct regs* r )
 {
    /* signal operation finished */
-   done = TRUE;
+   done = 1;
 
    /* EOI the PIC */
    outportb(0x20,0x20);
@@ -191,39 +174,22 @@ void ResetFloppy()
 /* this gets the FDC to a known state */
 void reset(void)
 {
-#ifdef DEBUG
-	kputs( "resetting fdc...\n" );
-#endif
-
-   /* stop the motor and disable IRQ/DMA */
    outportb(FDC_DOR,0);
-   
    mtick = 0;
-   motor = FALSE;
-
-   /* program data rate (500K/s) */
+   motor = 0;
    outportb(FDC_DRS,0);
-
-   /* re-enable interrupts */
    outportb(FDC_DOR,0x0c);
-
-   /* resetting triggered an interrupt - handle it */
-   done = TRUE;
-
-   /* specify drive timings (got these off the BIOS) */
+   done = 1;
    sendbyte(CMD_SPECIFY);
    sendbyte(0xdf);  /* SRT = 3ms, HUT = 240ms */
    sendbyte(0x02);  /* HLT = 16ms, ND = 0 */
-   
-   /* clear "disk change" status */
    flseek(1);
    recalibrate();
-
-   dchange = FALSE;
+   dchange = 0;
 }
 
 /* this returns whether there was a disk change */
-BOOL diskchange()
+UINT diskchange()
 {
 	return dchange;
 }
@@ -248,67 +214,37 @@ void motoroff()
 /* recalibrate the drive */
 void recalibrate(void)
 {
-
-   /* turn the motor on */
-  // motoron();
-   
    /* send actual command bytes */
    sendbyte(CMD_RECAL);
    sendbyte(0);
-
-
    /* wait until seek finished */
-   waitfdc(TRUE);
-
-   
+   waitfdc(1);
    /* turn the motor off */
   // motoroff();
 }
 
 /* seek to track */
-BOOL flseek(int track)
+UINT flseek(int track)
 {
    if (fdc_track == track)  /* already there? */
-     return TRUE;
-   
+     return 1;
    if( !motor )
      motoron();
-   
    /* send actual command bytes */
    sendbyte(CMD_SEEK);
    sendbyte(0);
    sendbyte(track);
-
-#ifdef DEBUG
-	kputs( "seeking...\n" );
-#endif
-
    /* wait until seek finished */
-   if (!waitfdc(TRUE))
-     return FALSE;     /* timeout! */
-
-#ifdef DEBUG
-	kputs( "head settles...\n" );
-#endif
-
+   if (!waitfdc(1))
+     return 0;     /* timeout! */
    /* now let head settle for 15ms */
    sleep(15);
-   
-  // motoroff();
-
-#ifdef DEBUG
-	kputs( "seek complete!...\n" );
-#endif
-   
    /* check that seek worked */
-   if ((sr0 != 0x20) || (fdc_track != track))
-     return FALSE;
-   else
-     return TRUE;
+   return  !((sr0 != 0x20) || (fdc_track != track));
 }
 
 /* checks drive geometry - call this after any disk change */
-BOOL log_disk(DrvGeom *g)
+UINT log_disk(DrvGeom *g)
 {
    /* get drive in a known status before we do anything */
    reset();
@@ -318,75 +254,69 @@ BOOL log_disk(DrvGeom *g)
    geometry.tracks = DG168_TRACKS;
    geometry.spt = DG168_SPT;
 
-   if (fdc_read_block(20,NULL,1)) {
+   if (fdc_read_block(20,0,1)) {
       /* disk is a 1.68M disk */
       if (g) {
 	 g->heads = geometry.heads;
 	 g->tracks = geometry.tracks;
 	 g->spt = geometry.spt;
       }
-      return TRUE;             
+      return 1;
    }
-   
    /* OK, not 1.68M - try again for 1.44M reading block #18 on first track */
    geometry.heads = DG144_HEADS;
    geometry.tracks = DG144_TRACKS;
    geometry.spt = DG144_SPT;
 
-   if (fdc_read_block(17,NULL,1)) {
+   if (fdc_read_block(17,0,1)) {
       /* disk is a 1.44M disk */
       if (g) {
 	 g->heads = geometry.heads;
 	 g->tracks = geometry.tracks;
 	 g->spt = geometry.spt;
       }
-      return TRUE;
+      return 1;
    }
    
    /* it's not 1.44M or 1.68M - we don't support it */
-   return FALSE;
+   return 1;
 }
 
 /* read block (blockbuff is 512 byte buffer) */
-BOOL fdc_read_block(int block,BYTE *blockbuff, unsigned long nosectors)
+UINT fdc_read_block(int block,UCHAR *blockbuff, ULONG nosectors)
 {
-	int track=0, sector=0, head=0, track2=0, result=0, loop=0;
-
-	if (!floppy_drives) return FALSE;
-// The FDC can read multiple sides at once but not multiple tracks
-	
+	int track=0, sector=0, head=0, track2=0, result=0, loop=0;	
 	block2hts(block, &head, &track, &sector);
 	block2hts(block+nosectors, &head, &track2, &sector);
 	
 	if(track!=track2)
 	{
 		for(loop=0; loop<nosectors; loop++)
-			result = fdc_rw(block+loop, blockbuff+(loop*512), TRUE, 1);
+			result = fdc_rw(block+loop, blockbuff+(loop*512), 1, 1);
 		return result;
 	}
-   return fdc_rw(block,blockbuff,TRUE,nosectors);
+	return fdc_rw(block,blockbuff,1,nosectors);
 }
 
 /* write block (blockbuff is 512 byte buffer) */
-BOOL fdc_write_block(int block,BYTE *blockbuff, unsigned long nosectors)
+UINT fdc_write_block(int block,UCHAR *blockbuff, ULONG nosectors)
 {
-   if (!floppy_drives) return TRUE;
-   return fdc_rw(block,blockbuff,FALSE, nosectors);
+	return fdc_rw(block,blockbuff,0,nosectors);
 }
 
 /*
  * since reads and writes differ only by a few lines, this handles both.  This
  * function is called by read_block() and write_block()
  */
-BOOL fdc_rw(int block,BYTE *blockbuff,BOOL read,unsigned long nosectors)
+UINT fdc_rw(int block,UCHAR *blockbuff,UINT read,ULONG nosectors)
 {
    int head,track,sector,tries, copycount = 0;
-   unsigned char *p_tbaddr = (unsigned char *)0x80000;
-   unsigned char *p_blockbuff = blockbuff;
-   
+   UCHAR *p_tbaddr = (UCHAR *)0x80000;
+   UCHAR *p_blockbuff = blockbuff;
+
    /* convert logical address into physical address */
    block2hts(block,&head,&track,&sector);
-   
+
    /* spin up the disk */
    motoron();
 
@@ -398,11 +328,11 @@ BOOL fdc_rw(int block,BYTE *blockbuff,BOOL read,unsigned long nosectors)
       	p_tbaddr++;
       }
    }
-   
+
    for (tries = 0;tries < 3;tries++) {
       /* check for diskchange */
       if (inportb(FDC_DIR) & 0x80) {
-	 dchange = TRUE;
+	 dchange = 1;
 	 flseek(1);  /* clear "disk change" status */
 	 recalibrate();
 	 motoroff();
@@ -412,7 +342,7 @@ BOOL fdc_rw(int block,BYTE *blockbuff,BOOL read,unsigned long nosectors)
       /* move head to right track */
       if (!flseek(track)) {
 	 motoroff();
-	 return FALSE;
+	 return 0;
       }
       
       /* program data rate (500K/s) */
@@ -420,13 +350,13 @@ BOOL fdc_rw(int block,BYTE *blockbuff,BOOL read,unsigned long nosectors)
       
       /* send command */
       if (read) {
-	 dma_xfer(2,tbaddr,nosectors*512,FALSE);
+	 dma_xfer(2,tbaddr,nosectors*512,0);
 	 sendbyte(CMD_READ);
       } else {
-	 dma_xfer(2,tbaddr,nosectors*512,TRUE);
+	 dma_xfer(2,tbaddr,nosectors*512,1);
 	 sendbyte(CMD_WRITE);
       }
-      
+
       sendbyte(head << 2);
       sendbyte(track);
       sendbyte(head);
@@ -441,7 +371,7 @@ BOOL fdc_rw(int block,BYTE *blockbuff,BOOL read,unsigned long nosectors)
       
       /* wait for command completion */
       /* read/write don't need "sense interrupt status" */
-      if (!waitfdc(TRUE)) {
+      if (!waitfdc(1)) {
 	reset();
 	return fdc_rw(block, blockbuff, read, nosectors);
       }
@@ -469,16 +399,16 @@ BOOL fdc_rw(int block,BYTE *blockbuff,BOOL read,unsigned long nosectors)
 }
 
 /* this formats a track, given a certain geometry */
-BOOL format_track(BYTE track,DrvGeom *g)
+UINT format_track(UCHAR track,DrvGeom *g)
 {
    int i,h,r,r_id,split;
-   BYTE tmpbuff[256];
-   unsigned char *p_tbaddr = (unsigned char *)0x8000;
-   unsigned int copycount = 0;
+   UCHAR tmpbuff[256];
+   UCHAR *p_tbaddr = (UCHAR *)0x8000;
+   UINT copycount = 0;
 
    /* check geometry */
    if (g->spt != DG144_SPT && g->spt != DG168_SPT)
-     return FALSE;
+     return 0;
    
    /* spin up the disk */
    motoron();
@@ -493,15 +423,12 @@ BOOL format_track(BYTE track,DrvGeom *g)
    if (g->spt & 1) split++;
    
    for (h = 0;h < g->heads;h++) {
-      /* for each head... */
-      
-      /* check for diskchange */
       if (inportb(FDC_DIR) & 0x80) {
-	 dchange = TRUE;
+	 dchange = 1;
 	 flseek(1);  /* clear "disk change" status */
 	 recalibrate();
 	 motoroff();
-	 return FALSE;
+	 return 0;
       }
 
       i = 0;   /* reset buffer index */
@@ -541,7 +468,7 @@ BOOL format_track(BYTE track,DrvGeom *g)
 //      movedata(_my_ds(),(long)tmpbuff,_dos_ds,tbaddr,i);
       
       /* start dma xfer */
-      dma_xfer(2,tbaddr,i,TRUE);
+      dma_xfer(2,tbaddr,i,1);
       
       /* prepare "format track" command */
       sendbyte(CMD_FORMAT);
@@ -555,16 +482,49 @@ BOOL format_track(BYTE track,DrvGeom *g)
       sendbyte(0);     /* filler byte */
 	 
       /* wait for command to finish */
-      if (!waitfdc(FALSE))
-	return FALSE;
-      
+      if (!waitfdc(0))
+	return 0;
       if (status[0] & 0xc0) {
 	 motoroff();
-	 return FALSE;
+	 return 0;
       }
    }
-   
    motoroff();
-   
-   return TRUE;
+   return 1;
+}
+
+static UINT drv_floppy_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+{
+	UCHAR tmpbuf[FLOPPY_SECTOR_SIZE];
+	UINT block_s = offset/FLOPPY_SECTOR_SIZE,block_e;
+	
+	if (node->p_data) return 0; //A loop would be better on multitasking
+	node->p_data=(void *)1;
+	if (offset>FLOPPY_144IN_SIZE) return 0;
+	if (offset+size>FLOPPY_144IN_SIZE) size=FLOPPY_144IN_SIZE-offset;
+	block_e=(offset+size)/FLOPPY_SECTOR_SIZE;
+	
+	fdc_read_block(block_e,tmpbuf,1);
+	memcpy(buffer+(((offset+size)/FLOPPY_SECTOR_SIZE)*FLOPPY_SECTOR_SIZE-offset),tmpbuf,FLOPPY_SECTOR_SIZE-(offset%FLOPPY_SECTOR_SIZE));
+	
+	fdc_read_block(block_s,tmpbuf,1);
+	memcpy(buffer,tmpbuf+(offset%FLOPPY_SECTOR_SIZE),FLOPPY_SECTOR_SIZE-(offset%FLOPPY_SECTOR_SIZE));
+	node->p_data=0;
+	return 0;
+}
+
+static UINT drv_floppy_write(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+{
+	return 0;
+}
+
+node_operations floppy_ops = {0,&drv_floppy_read,&drv_floppy_write,0,0,0};
+
+void init_floppy(fs_node *devfs)
+{
+	outportb(0x70,0x10);
+	if (!inportb(0x71)) return;
+	irq_install_handler(6,FloppyIRQ);
+	reset();
+	devfs_register_device(devfs,"fd0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_BLOCKDEVICE,&floppy_ops);
 }
