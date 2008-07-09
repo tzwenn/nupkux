@@ -20,6 +20,7 @@
 #include <paging.h>
 #include <memory.h>
 #include <kernel/ktextio.h>
+#include <kernel/dts.h>
 
 page_directory *current_directory, *kernel_directory;
 page_table *table;
@@ -32,15 +33,7 @@ extern UINT _kmalloc_pa(UINT sz, UINT *phys);
 extern heap *kheap;
 extern void copy_page_physical(UINT src, UINT dest);
 
-/*#define set_page_directory(PAGE_DIR)	current_directory=PAGE_DIR;			\
-					asm volatile ("cli\n\t"				\
-						      "movl %%eax,%%cr3\n\t"		\
-						      "movl %%cr0,%%eax\n\t"		\
-						      "orl  $0x80000000,%%eax\n\t"	\
-						      "movl %%eax,%%cr0\n\t"		\
-						      "sti"::"a"(PAGE_DIR->physTabs));*/
-
-void set_page_directory(page_directory* PAGE_DIR) 
+void set_page_directory(page_directory *PAGE_DIR) 
 {
 	current_directory=PAGE_DIR;
 	asm volatile (	"cli\n\t"
@@ -48,7 +41,7 @@ void set_page_directory(page_directory* PAGE_DIR)
 			"movl %%cr0,%%eax\n\t"
 			"orl  $0x80000000,%%eax\n\t"
 			"movl %%eax,%%cr0\n\t"
-			"sti"::"a"(PAGE_DIR->physTabs));
+			"sti"::"a"(PAGE_DIR->physPos));
 }
 
 void disable_paging()
@@ -152,9 +145,6 @@ page_directory* clone_directory(page_directory* src)
 			dir->physTabs[i]=phys | PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | PAGE_FLAG_USERMODE;
 		}
 	}
-	/////////////////////////////////
-	printf("cloned directory at 0x%X (0x%X)\n",phys,dir->physPos);
-	/////////////////////////////////
 	return dir;
 }
 
@@ -170,14 +160,15 @@ page *get_page(UINT address, int make, page_directory *directory)
 	return 0;
 }
 
-void paging_setup()
+void setup_paging()
 {
 	UINT i = 0;
 	
 	framecount=WORKING_MEMEND/FRAME_SIZE;
-	framemap=(UINT *)_kmalloc(framecount/32);
-	memset(framemap,0,framecount/32);
+	framemap=(UINT *)_kmalloc(framecount/8);  // sizeof(UINT)*fc/32
+	memset(framemap,0,framecount/8);
 	kernel_directory=(page_directory *)_kmalloc_pa(sizeof(page_directory),&i);
+	memset(kernel_directory,0,sizeof(page_directory));
 	memset(kernel_directory->physTabs,0,FRAME_SIZE);
 	kernel_directory->physPos=(UINT)kernel_directory->physTabs;
 	i=MM_KHEAP_START+kmalloc_pos;
@@ -192,18 +183,17 @@ void paging_setup()
 	       alloc_frame(get_page(i,1,kernel_directory),PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT);
 	set_page_directory(kernel_directory);
 	kheap=create_heap(MM_KHEAP_START+kmalloc_pos,MM_KHEAP_START+MM_KHEAP_SIZE+kmalloc_pos,WORKING_MEMEND,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE);
-	//current_directory=
-	//clone_directory(kernel_directory);
-	set_page_directory(kernel_directory);
+	current_directory=clone_directory(kernel_directory);
+	set_page_directory(current_directory);
 }
 
-int page_fault_handler(struct regs *r)
+int page_fault_handler(registers regs)
 {
 	UINT faultaddr;
 
  	asm volatile ("mov %%cr2,%%eax":"=a"(faultaddr));
 
-	printf("\nPagefault at 0x%X: %s%s%s%s\n",faultaddr,(!(r->err_code&1))?"present ":"",(r->err_code&2)?"read-only ":"",(r->err_code&4)?"user-mode ":"",(r->err_code&8)?"reserved ":"");
+	printf("\nPagefault at 0x%X: %s%s%s%s\n",faultaddr,(!(regs.err_code&1))?"present ":"",(regs.err_code&2)?"read-only ":"",(regs.err_code&4)?"user-mode ":"",(regs.err_code&8)?"reserved ":"");
 	printf("System halted.\n");
 	cli();
 	hlt();

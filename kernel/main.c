@@ -22,14 +22,16 @@
 #include <kernel/ktextio.h>
 #include <kernel/nish.h>
 #include <time.h>
-#include <drivers/fdc.h>
+#include <task.h>
 #include <mm.h>
 #include <fs/initrd.h>
 #include <drivers/drivers.h>
+#include <kernel/dts.h>
 
 char _kabort_func = 0;
 int errno;
 UINT initrd_location = 0;
+UINT initial_esp;
 ULONG memory_end = 0;
 UINT __working_memstart = 0;
 extern UINT kmalloc_pos;
@@ -53,7 +55,7 @@ static void halt()
 	hlt();
 }
 
-int _kmain(multiboot_info_t* mbd, unsigned int magic) 
+int _kmain(multiboot_info_t* mbd, UINT initial_stack, UINT magic)
 {
 	int ret;
 	fs_node *root, *devfs;
@@ -61,29 +63,28 @@ int _kmain(multiboot_info_t* mbd, unsigned int magic)
 	_kclear();
 	if (mbd->flags&0x01) memory_end=mbd->mem_upper*1024;
 		else memory_end=0x400000;
-	printf("Nupkux loaded ...\nAmount of RAM: %d Bytes.\nSet up Descriptors ... ",memory_end);
+	initial_esp=initial_stack;
+	printf("Nupkux loaded ... Stack at 0x%X\nAmount of RAM: %d Bytes.\nSet up Descriptors ... ",initial_esp,memory_end);
 	if (mbd->mods_count>0) {
 		initrd_location = *((UINT*)mbd->mods_addr);
 		__working_memstart=*(UINT*)(mbd->mods_addr+4);
 	} else __working_memstart=(UINT) &kernel_end;
 	kmalloc_pos=__working_memstart;
-	gdt_install();
-	idt_install();
-	printf("Finished.\nInstall IRQ & ISRS ... ");
-	isrs_install();
-	irq_install();
-	printf("Finished.\nStart Keyboard Controller ... ");
-	input_setup();
-	printf("Finished.\nEnable Interrupts ... ");
+	setup_dts();
+	setup_input();
+	printf("Finished.\nEnable Interrupts and PIC ... ");
 	sti();
-	timer_install();
+	setup_timer();
 	printf("Finished.\nEnable Paging and Memory Manager ... ");
-	paging_setup();
-	init_ktexto();
+	setup_paging();
+	setup_ktexto();
+	printf("Finished.\nSetup Tasking ... ");
+	setup_tasking();
 	printf("Finished.\nSetup VFS ... ");
 	setup_vfs();
 	printf("Finished.\nMount initrd read-only on root ... ");
 	root=setup_initrd(initrd_location,get_root_fs_node());
+	current_task->pwd=root;
 	if (root) printf("Finished.\n");
 		else printf("FAILED.\n");	
 	if ((devfs=namei("/dev"))) {

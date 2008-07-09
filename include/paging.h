@@ -65,9 +65,12 @@ struct _page_directory {
 extern UINT kernel_end;		//Defined in link.ld
 extern ULONG memory_end;	//Defined in main.c
 extern UINT __working_memstart;
+extern page_directory *current_directory;
 
+extern page_directory* clone_directory(page_directory* src);
 extern page *make_page(UINT address, UINT flags, page_directory *directory, int alloc);
 extern page *get_page(UINT address, int make, page_directory *directory);
 extern page *free_page(UINT address, page_directory *directory);
+extern void setup_paging();
 
 #endif

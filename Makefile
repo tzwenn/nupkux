@@ -54,7 +54,8 @@ clean:
 backup: clean
 	@echo "Copy development directory ..."
 	@cp -axR . $(BACKUPTMP)
-	@for file in $(PRJFILES); do if [ -f $(BACKUPTMP)/$$file~ ]; then rm $(BACKUPTMP)/$$file~; fi; done
+#	@for file in $(PRJFILES); do if [ -f $(BACKUPTMP)/$$file~ ]; then rm $(BACKUPTMP)/$$file~; fi; done
+	@for file in $(shell find -name "*~"); do if [ -f $(BACKUPTMP)/$$file ]; then rm $(BACKUPTMP)/$$file; fi; done
 	@echo "Make archive ..."
 	@(cd $(BACKUPTMP); tar -cf nupkux.tar *; gzip nupkux.tar)
 	@echo "Save archive ..."

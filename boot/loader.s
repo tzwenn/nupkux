@@ -31,28 +31,13 @@
 .long FLAGS_MBH
 .long CHECKSUM
 
-.set STACKSIZE, 0x4000
-.comm stack, STACKSIZE, 32 
-
 _loader:
-   mov   $(stack + STACKSIZE), %esp 
-   push  %eax
-   push  %ebx
-   cli
+	push  %eax
+	push  %esp
+	push  %ebx
+	cli
 
 #Start Kernel's main-function
-   call  _kmain
-   cli
-   hlt
-
-.global att_lgdt
-.extern gp
-att_lgdt:
-   lgdt gp
-   ret
-
-.global idt_load
-.extern idtp
-idt_load:
-    lidt idtp
-    ret
+	call  _kmain
+	cli
+	hlt

@@ -60,7 +60,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern int fdc_read_block(int block,UCHAR *blockbuff,ULONG nosectors);
 extern int fdc_write_block(int block,UCHAR *blockbuff,ULONG nosectors);
-extern void init_floppy(fs_node *devfs);
+extern void setup_floppy(fs_node *devfs);
 
 
 extern unsigned int motor;

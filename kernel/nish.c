@@ -23,6 +23,7 @@
 #include <lib/string.h>
 #include <drivers/drivers.h>
 #include <drivers/ata.h>
+#include <task.h>
 #include <mm.h>
 
 int nish();
@@ -100,7 +101,7 @@ static int nish_help()
 	printf("\tlba28\t\tAccess IDE-ATA drives\n");
 	printf("\tls\t\tList directory contents\n");
 	printf("\tcat\t\tShow file content on stdout\n");
-	printf("\tpaging\t\tCreate a pagefault and crashes the kernel\n");
+	printf("\tcd\t\tChange working directory\n");
 	printf("\ttime\t\tGive information about time and date\n");
 	printf("\texit\t\tQuit nish\n"); 
 	printf("\thalt\t\tHalt system\n");
@@ -198,15 +199,6 @@ static int nish_lba28()
 	return 1;
 }
 
-static int nish_paging()
-{
-	UINT *ptr = (UINT*) 0xA0000000;
-
-	printf("I will crash, If I work fine ...\n");
-	printf("*ptr: 0x%X, btw: Kernel is still running, so there must be a problem.\n",*ptr); 	//Kernel should never print this
-	return 1; 	
-}
-
 static int nish_cat(char *args)
 {
 	fs_node *node;
@@ -233,7 +225,7 @@ static int nish_ls(char *args)
 	char the_mode[11];
 	struct dirent *pDirEnt;
 	
-	if (!*args) node=get_root_fs_node();
+	if (!*args) node=current_task->pwd;
 		else node=namei(args);
 	if (node) {
 		i=0;
@@ -243,13 +235,28 @@ static int nish_ls(char *args)
 			format_mode(tmp,the_mode);
 			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,args);
 		} else while ((pDirEnt=readdir_fs(node,i++))) {
-			if (!strcmp(pDirEnt->d_name,".") || !strcmp(pDirEnt->d_name,"..")) continue;
+			if (pDirEnt->d_name[0]=='.') continue;
 			tmp=finddir_fs(node,pDirEnt->d_name);
 			format_mode(tmp,the_mode);
 			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,pDirEnt->d_name);
 		}
-	} else printf("Error: Could not find file.\n");
+	} else printf("Error: Could not find file %s.\n",args);
 	
+	return 1;
+}
+
+static int nish_cd(char *args)
+{
+	fs_node *node;
+	
+	cli();
+	node=namei(args);
+	if (node) {
+		if ((node->flags&0x07)==FS_DIRECTORY) {
+			current_task->pwd=node;
+		} else printf("Error: \"%s\" isn't a directory.\n");
+	} else printf("Error: Could not find directory.\n");
+	sti();
 	return 1;
 }
 
@@ -257,9 +264,23 @@ extern UINT initrd_location;
 
 static int nish_test()
 {
-	printf("---devfs & drivers test---\n\n");
+	printf("---multitasking test---\n\n");
 	
-	
+	if (!fork()) {
+		while (1) {
+			printf(".");
+		}
+	} else {
+		if (!fork()) {
+			while (1) {
+				printf("x");
+			}
+		} else {
+			while (1) {
+				printf("O");
+			}
+		}
+	}	
 	return 1;
 }
 
@@ -272,12 +293,17 @@ static int _nish_interpret(char *cmd)
 		printf("\n");
 		return 0;
 	}
+	if (!strcmp(cmd,"switch")) {
+		//switch_task();
+		printf("%d ticks \n",ticks);
+		return 1;
+	}
 	if (!strcmp(cmd,"test")) return nish_test();
 	if (!strcmp(cmd,"clear")) return _kclear();
 	if (!strcmp(cmd,"lba28")) return nish_lba28();
 	if (!strcmp(cmd,"ls")) return nish_ls(args);
 	if (!strcmp(cmd,"cat")) return nish_cat(args);
-	if (!strcmp(cmd,"paging")) return nish_paging();
+	if (!strcmp(cmd,"cd")) return nish_cd(args);
 	if (!strcmp(cmd,"time")) return nish_time();
 	if (!strcmp(cmd,"exit")) return NISH_EXIT;
 	if (!strcmp(cmd,"halt")) return NISH_HALT;

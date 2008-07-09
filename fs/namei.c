@@ -19,17 +19,21 @@
 
 #include <fs/fs.h>
 #include <lib/string.h>
+#include <task.h>
 
 fs_node *namei(char *filename)
 {
 	char sname[NODE_NAME_LEN], *end=filename, tmp;
-	fs_node *node = get_root_fs_node();
+	fs_node *node;
 	
 	if (!filename) return 0;
-	if (!node) return 0;
-	if (!strcmp(filename,"/")) return node;
-	//FIXME I just guess my working dir is /
-	if (filename[0]=='/') filename++;
+	if (!current_task || !(current_task->pwd)) node=get_root_fs_node();
+		else node=current_task->pwd;
+	if (filename[0]=='/') {
+		node=get_root_fs_node();
+		filename++;
+	}
+	if (!filename) return 0;
 	while (end) {
 		if ((end=strchr(filename,'/'))) {
 			tmp=*end;

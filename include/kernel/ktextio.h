@@ -80,8 +80,9 @@ extern int _kin(char *instr, int maxlen);
 extern int _kclear();
 extern int printf(const char *fmt, ...);
 extern int _kputc(const char chr);
-extern void input_setup();
 extern int str2d(char *str);
+extern void setup_input();
+extern void setup_ktexto();
 
 extern CURSOR_POS _cursor_pos;
 extern CURSOR_POS _cursor_max;

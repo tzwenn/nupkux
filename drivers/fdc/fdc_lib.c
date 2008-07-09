@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <time.h>
 #include <fs/devfs.h>
 #include <lib/memory.h>
+#include <kernel/dts.h>
 
 void ResetFloppy();
 void reset(void);
@@ -56,7 +57,7 @@ extern void _int1c();
 
 void sendbyte(int byte);
 int getbyte();
-void FloppyIRQ( struct regs* r );
+void FloppyIRQ(registers regs);
 UINT waitfdc(UINT sensei);
 UINT fdc_rw(int block,UCHAR *blockbuff,UINT read,ULONG nosectors);
 
@@ -127,7 +128,7 @@ UINT waitfdc(UINT sensei)
 }
 
 /* This is the IRQ6 handler */
-void FloppyIRQ( struct regs* r )
+void FloppyIRQ(registers regs)
 {
    /* signal operation finished */
    done = 1;
@@ -520,11 +521,11 @@ static UINT drv_floppy_write(fs_node *node, UINT offset, UINT size, UCHAR *buffe
 
 node_operations floppy_ops = {0,&drv_floppy_read,&drv_floppy_write,0,0,0};
 
-void init_floppy(fs_node *devfs)
+void setup_floppy(fs_node *devfs)
 {
 	outportb(0x70,0x10);
 	if (!inportb(0x71)) return;
-	irq_install_handler(6,FloppyIRQ);
+	register_interrupt_handler(IRQ6,FloppyIRQ);
 	reset();
 	devfs_register_device(devfs,"fd0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_BLOCKDEVICE,&floppy_ops);
 }

@@ -20,6 +20,7 @@
 #include <kernel/ktextio.h>
 #include <lib/stdarg.h>
 #include <mm.h>
+#include <kernel/dts.h>
 
 static int _ksetcursor(UCHAR x, UCHAR y);
 int _kin(char *instr, int maxlen);
@@ -105,7 +106,7 @@ int printf(const char *fmt, ...)
 	return res;
 }
 
-void init_ktexto()
+void setup_ktexto()
 {
 	_line_buffer=(UCHAR *)calloc(2*TXT_WIDTH,LINE_BUFFER_LEN); //becomes obsolete if we have got tty
 }
@@ -270,7 +271,7 @@ static int _kiomove(int x, int y, int len)
 	return 0;
 }
 
-void irq_keyboard(struct regs *r)
+void irq_keyboard(registers regs)
 {
 	UCHAR input = inportb(0x60);
 	char keyprint[2] = " ";
@@ -286,11 +287,11 @@ void irq_keyboard(struct regs *r)
 	}
 }
 
-void input_setup()
+void setup_input()
 {
 	int i = 0;
 
-	irq_install_handler(1,irq_keyboard);
+	register_interrupt_handler(IRQ1,&irq_keyboard);
 	i=128;
 	while (i--)
 		_key_states[i]=0;

@@ -19,8 +19,10 @@
 
 #include <time.h>
 #include <kernel/ktextio.h>
+#include <kernel/dts.h>
+#include <task.h>
 
-#define tick_rate 100
+#define tick_rate 50
 
 int _ktimezone = 1;
 int _kdaylight_saving_time = 1; //It's the 27th of July
@@ -32,21 +34,22 @@ ULONG ticks = 0;
 
 void set_pic_timer(int freq)
 {
-    int divisor = 1193180/freq;     
-    outportb(0x43,0x36);            
-    outportb(0x40,divisor & 0xFF);   
-    outportb(0x40,divisor >> 8);     
+    int divisor = 1193180/freq;
+    outportb(0x43,0x36);
+    outportb(0x40,divisor&0xFF);
+    outportb(0x40,(divisor >> 8)&0xFF);
 }
 
-void timer_handler(struct regs *r)
+void timer_handler(registers regs)
 {
 	ticks++;
+	switch_task();
 }
 
-void timer_install()
+void setup_timer()
 {
 	set_pic_timer(tick_rate);
-	irq_install_handler(0,timer_handler);
+	register_interrupt_handler(IRQ0,&timer_handler);
 }
 
 UCHAR DateBCD(UCHAR value, int is_bcd)

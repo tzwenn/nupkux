@@ -46,7 +46,7 @@
 #define FS_UID_ROOT	0
 #define FS_GID_ROOT	0
 
-#define NR_OPEN		64
+#define NR_OPEN		32
 
 typedef struct _fs_node fs_node;
 typedef struct _mountinfo mountinfo;
