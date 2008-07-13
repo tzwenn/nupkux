@@ -23,12 +23,19 @@
 #include <lib/memory.h>
 #include <kernel/ktextio.h>
 
+#define IDT_SET_GATE_ISR(nr)	idt_set_gate(nr,(UINT)isr##nr,0x08,0x8E);
+#define IDT_SET_GATE_IRQ(nr)	idt_set_gate(IRQ##nr,(UINT)irq##nr,0x08,0x8E);
+
 extern void gdt_flush(UINT);
 extern void idt_flush(UINT);
+extern void tss_flush();
 static void init_gdt();
 static void init_idt();
 static void gdt_set_gate(int,UINT,UINT,UCHAR,UCHAR);
 static void idt_set_gate(UCHAR,UINT,USHORT,UCHAR);
+static void write_tss(int,UINT,UINT);
+
+tss_entry tss_ent;
 
 extern void isr0();
 extern void isr1();
@@ -78,6 +85,7 @@ extern void irq12();
 extern void irq13();
 extern void irq14();
 extern void irq15();
+extern void isr128();
 
 gdt_entry gdt_entries[5];
 gdt_pointer gdt_ptr;
@@ -95,14 +103,16 @@ void setup_dts()
 
 static void init_gdt()
 {
-	gdt_ptr.limit=(sizeof(gdt_entry)*5)-1;
+	gdt_ptr.limit=(sizeof(gdt_entry)*6)-1;
 	gdt_ptr.base=(UINT)&gdt_entries;
 	gdt_set_gate(0,0,0,0,0);
 	gdt_set_gate(1,0,0xFFFFFFFF,0x9A,0xCF);
 	gdt_set_gate(2,0,0xFFFFFFFF,0x92,0xCF);
 	gdt_set_gate(3,0,0xFFFFFFFF,0xFA,0xCF);
 	gdt_set_gate(4,0,0xFFFFFFFF,0xF2,0xCF);
+	write_tss(5,0x10,0x0);
 	gdt_flush((UINT)&gdt_ptr);
+	tss_flush();
 }
 
 
@@ -132,54 +142,55 @@ static void init_idt()
 	outportb(0xA1,0x01);
 	outportb(0x21,0x0);
 	outportb(0xA1,0x0);
-	idt_set_gate( 0,(UINT)isr0,0x08,0x8E);
-	idt_set_gate( 1,(UINT)isr1,0x08,0x8E);
-	idt_set_gate( 2,(UINT)isr2,0x08,0x8E);
-	idt_set_gate( 3,(UINT)isr3,0x08,0x8E);
-	idt_set_gate( 4,(UINT)isr4,0x08,0x8E);
-	idt_set_gate( 5,(UINT)isr5,0x08,0x8E);
-	idt_set_gate( 6,(UINT)isr6,0x08,0x8E);
-	idt_set_gate( 7,(UINT)isr7,0x08,0x8E);
-	idt_set_gate( 8,(UINT)isr8,0x08,0x8E);
-	idt_set_gate( 9,(UINT)isr9,0x08,0x8E);
-	idt_set_gate(10,(UINT)isr10,0x08,0x8E);
-	idt_set_gate(11,(UINT)isr11,0x08,0x8E);
-	idt_set_gate(12,(UINT)isr12,0x08,0x8E);
-	idt_set_gate(13,(UINT)isr13,0x08,0x8E);
-	idt_set_gate(14,(UINT)isr14,0x08,0x8E);
-	idt_set_gate(15,(UINT)isr15,0x08,0x8E);
-	idt_set_gate(16,(UINT)isr16,0x08,0x8E);
-	idt_set_gate(17,(UINT)isr17,0x08,0x8E);
-	idt_set_gate(18,(UINT)isr18,0x08,0x8E);
-	idt_set_gate(19,(UINT)isr19,0x08,0x8E);
-	idt_set_gate(20,(UINT)isr20,0x08,0x8E);
-	idt_set_gate(21,(UINT)isr21,0x08,0x8E);
-	idt_set_gate(22,(UINT)isr22,0x08,0x8E);
-	idt_set_gate(23,(UINT)isr23,0x08,0x8E);
-	idt_set_gate(24,(UINT)isr24,0x08,0x8E);
-	idt_set_gate(25,(UINT)isr25,0x08,0x8E);
-	idt_set_gate(26,(UINT)isr26,0x08,0x8E);
-	idt_set_gate(27,(UINT)isr27,0x08,0x8E);
-	idt_set_gate(28,(UINT)isr28,0x08,0x8E);
-	idt_set_gate(29,(UINT)isr29,0x08,0x8E);
-	idt_set_gate(30,(UINT)isr30,0x08,0x8E);
-	idt_set_gate(31,(UINT)isr31,0x08,0x8E);
-	idt_set_gate(32,(UINT)irq0,0x08,0x8E);
-	idt_set_gate(33,(UINT)irq1,0x08,0x8E);
-	idt_set_gate(34,(UINT)irq2,0x08,0x8E);
-	idt_set_gate(35,(UINT)irq3,0x08,0x8E);
-	idt_set_gate(36,(UINT)irq4,0x08,0x8E);
-	idt_set_gate(37,(UINT)irq5,0x08,0x8E);
-	idt_set_gate(38,(UINT)irq6,0x08,0x8E);
-	idt_set_gate(39,(UINT)irq7,0x08,0x8E);
-	idt_set_gate(40,(UINT)irq8,0x08,0x8E);
-	idt_set_gate(41,(UINT)irq9,0x08,0x8E);
-	idt_set_gate(42,(UINT)irq10,0x08,0x8E);
-	idt_set_gate(43,(UINT)irq11,0x08,0x8E);
-	idt_set_gate(44,(UINT)irq12,0x08,0x8E);
-	idt_set_gate(45,(UINT)irq13,0x08,0x8E);
-	idt_set_gate(46,(UINT)irq14,0x08,0x8E);
-	idt_set_gate(47,(UINT)irq15,0x08,0x8E);
+	IDT_SET_GATE_ISR(0);
+	IDT_SET_GATE_ISR(1);
+	IDT_SET_GATE_ISR(2);
+	IDT_SET_GATE_ISR(3);
+	IDT_SET_GATE_ISR(4);
+	IDT_SET_GATE_ISR(5);
+	IDT_SET_GATE_ISR(6);
+	IDT_SET_GATE_ISR(7);
+	IDT_SET_GATE_ISR(8);
+	IDT_SET_GATE_ISR(9);
+	IDT_SET_GATE_ISR(10);
+	IDT_SET_GATE_ISR(11);
+	IDT_SET_GATE_ISR(12);
+	IDT_SET_GATE_ISR(13);
+	IDT_SET_GATE_ISR(14);
+	IDT_SET_GATE_ISR(15);
+	IDT_SET_GATE_ISR(16);
+	IDT_SET_GATE_ISR(17);
+	IDT_SET_GATE_ISR(18);
+	IDT_SET_GATE_ISR(19);
+	IDT_SET_GATE_ISR(20);
+	IDT_SET_GATE_ISR(21);
+	IDT_SET_GATE_ISR(22);
+	IDT_SET_GATE_ISR(23);
+	IDT_SET_GATE_ISR(24);
+	IDT_SET_GATE_ISR(25);
+	IDT_SET_GATE_ISR(26);
+	IDT_SET_GATE_ISR(27);
+	IDT_SET_GATE_ISR(28);
+	IDT_SET_GATE_ISR(29);
+	IDT_SET_GATE_ISR(30);
+	IDT_SET_GATE_ISR(31);
+	IDT_SET_GATE_IRQ(0);
+	IDT_SET_GATE_IRQ(1);
+	IDT_SET_GATE_IRQ(2);
+	IDT_SET_GATE_IRQ(3);
+	IDT_SET_GATE_IRQ(4);
+	IDT_SET_GATE_IRQ(5);
+	IDT_SET_GATE_IRQ(6);
+	IDT_SET_GATE_IRQ(7);
+	IDT_SET_GATE_IRQ(8);
+	IDT_SET_GATE_IRQ(9);
+	IDT_SET_GATE_IRQ(10);
+	IDT_SET_GATE_IRQ(11);
+	IDT_SET_GATE_IRQ(12);
+	IDT_SET_GATE_IRQ(13);
+	IDT_SET_GATE_IRQ(14);
+	IDT_SET_GATE_IRQ(15);
+	IDT_SET_GATE_ISR(128);
 	idt_flush((UINT)&idt_ptr);
 }
 
@@ -192,21 +203,81 @@ static void idt_set_gate(UCHAR num, UINT base, USHORT sel, UCHAR flags)
 	idt_entries[num].flags=flags; //|0x60
 }
 
+static void write_tss(int num, UINT ss0, UINT esp0)
+{
+	UINT base=(UINT)&tss_ent;
+	UINT limit=base+sizeof(tss_entry);
+	gdt_set_gate(num, base, limit, 0xE9, 0x00);
+	memset(&tss_ent,0,sizeof(tss_entry));
+	tss_ent.ss0=ss0;
+	tss_ent.esp0=esp0;
+	tss_ent.cs=0x0b;
+	tss_ent.ss=tss_ent.ds=tss_ent.es=tss_ent.fs=tss_ent.gs=0x13;
+}
+
+void set_kernel_stack(UINT stack)
+{
+	tss_ent.esp0=stack;
+}
+
 //Interrupt Service Routines and related stuff
+
+char *exception_messages[] = {
+	"Division By Zero",
+	"Debug",
+	"Non Maskable Interrupt",
+	"Breakpoint",
+	"Into Detected Overflow",
+	"Out of Bounds",
+	"Invalid Opcode",
+	"No Coprocessor",
+
+	"Double Fault",
+	"Coprocessor Segment Overrun",
+	"Bad TSS",
+	"Segment Not Present",
+	"Stack Fault",
+	"General Protection Fault",
+	"Page Fault",
+	"Unknown Interrupt",
+
+	"Coprocessor Fault",
+	"Alignment Check",
+	"Machine Check",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved"
+};
 
 void register_interrupt_handler(UCHAR n, isr_t handler)
 {
-    interrupt_handlers[n]=handler;
+	interrupt_handlers[n]=handler;
 }
 
 void isr_handler(registers regs)
 {
-    if (interrupt_handlers[regs.int_no]) {
-        isr_t handler=interrupt_handlers[regs.int_no];
-        handler(regs);
-    } else {
-        printf("unhandled interrupt: %d\n",regs.int_no);
-    }
+	UCHAR int_no = regs.int_no&0xFF;
+	if (interrupt_handlers[int_no]) {
+		isr_t handler=interrupt_handlers[int_no];
+		handler(&regs);
+	} else {
+		if (int_no<32) {
+			printf("%s Exception. System Halted!\n",exception_messages[int_no]);
+			cli();
+			hlt();
+		} else printf("unhandled interrupt: %d\n",int_no);
+	}
 }
 
 void irq_handler(registers regs)
@@ -217,6 +288,6 @@ void irq_handler(registers regs)
     outportb(0x20,0x20);
     if (interrupt_handlers[regs.int_no]) {
         isr_t handler=interrupt_handlers[regs.int_no];
-        handler(regs);
+        handler(&regs);
     }
 }

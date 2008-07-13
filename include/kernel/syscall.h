@@ -21,12 +21,13 @@
 #define _SYSCALL_H
 
 #include <kernel.h>
+#include <kernel/dts.h>
 
-//I've taken a look at a list for the Linux kernel (2.2 ;-P )
-//and newlib requirements
+//I've taken a look at a list for the Linux kernel, so I hope there is
+//any resemblence to POSIX here
 
-
-//Das ist deutsch, da es für mich ist: Mach ein "environ,sbrk,isatty,wait"
+//and some newlib requirements
+//Das ist deutsch, da es für mich ist: Mach ein "environ,isatty"
 #define SYS_PUTCHAR	0
 #define SYS_EXIT	1
 #define SYS_FORK	2
@@ -39,14 +40,30 @@
 #define SYS_LINK	9
 #define SYS_UNLINK	10
 #define	SYS_EXECVE	11
+#define SYS_CHDIR	12
+#define SYS_TIME	13
+#define SYS_MKNOD	14
+#define SYS_CHMOD	15
+#define SYS_CHOWN	16
+#define SYS_BREAK	17
 #define SYS_STAT	18
 #define SYS_LSEEK	19
 #define SYS_GETPID	20
+#define SYS_MOUNT	21
+#define SYS_UMOUNT	22
 #define SYS_FSTAT	28
 #define SYS_KILL	37
 #define SYS_TIMES	43
+#define SYS_BRK		45
 
+#define NR_SYSCALLS	64
 
-extern int SysCallHandler(struct regs *r);
+extern void setup_syscalls();
+
+extern int sys_putchar(char chr);
+extern int sys_fork();
+extern int sys_getpid();
+extern int sys_chdir(char *name);
+extern int sys_execve(char *file,char **argv,char **envp);
 
 #endif

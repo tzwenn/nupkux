@@ -20,6 +20,7 @@
 #include <task.h>
 #include <lib/memory.h>
 #include <fs/fs.h>
+#include <errno.h>
 
 volatile task *current_task = 0;
 volatile task tasks[NR_TASKS];
@@ -105,11 +106,11 @@ void switch_task()
 			"jmp *%%ecx\n\t"::"r"(eip),"r"(esp),"r"(ebp),"r"(current_directory->physPos));
 }
 
-long fork()
+int fork()
 {
 	cli();
 	task *parent_task=(task *)current_task;
-	long i=0;
+	int i=0;
 	while (++i<NR_TASKS)
 		if (tasks[i].pid==TASK_NOTASK) break;
 	if (i==NR_TASKS) return -1;
@@ -141,7 +142,69 @@ long fork()
 	}
 }
 
-long getpid()
+int getpid()
 {
 	return current_task->pid;
+}
+
+void switch_to_user_mode()
+{
+	asm volatile(	"cli\n\t"
+			"mov $0x23, %ax\n\t"
+			"mov %ax, %ds\n\t"
+			"mov %ax, %es\n\t"
+			"mov %ax, %fs\n\t"
+			"mov %ax, %gs\n\t"
+			"mov %esp, %eax\n\t"
+			"pushl $0x23\n\t"
+			"pushl %eax\n\t"
+			"pushf\n\t"
+			/*"pop %eax\n\t"
+			"or $0x200,%eax\n\t"
+			"push %eax\n\t"*/
+			"pushl $0x1B\n\t"
+			"push $1f\n\t"
+			"iret\n\t"
+			"1:");
+}
+
+int sys_getpid()
+{
+	return current_task->pid;
+}
+
+int sys_fork()
+{
+	return fork();
+}
+
+int sys_chdir(char *name)
+{
+	if (!current_task) return -1;
+	fs_node *node;
+	
+	node=namei(name);
+	if (node) {
+		if ((node->flags&0x07)==FS_DIRECTORY) 
+			current_task->pwd=node;
+			else return 0;//-ENOTDIR;
+	} //return -ENOENT;
+	return 0;
+}
+
+int sys_execve(char *file,char **argv,char **envp)
+{
+	UCHAR *buf;
+	int ret;
+	int (*main)();
+	fs_node *node=namei(file);
+	if (!node) return -ENOENT;
+	open_fs(node,1,0);
+	buf=(UCHAR *)malloc(node->size);
+	read_fs(node,0,node->size,buf);
+	main=(int (*)())buf;
+	ret=main();
+	free(buf);
+	close_fs(node);
+	return ret;
 }

@@ -18,6 +18,7 @@
  */
 
 #include <kernel/nish.h>
+#include <errno.h>
 #include <kernel/ktextio.h>
 #include <time.h>
 #include <lib/string.h>
@@ -25,6 +26,7 @@
 #include <drivers/ata.h>
 #include <task.h>
 #include <mm.h>
+#include <kernel/syscall.h>
 
 int nish();
 
@@ -102,6 +104,7 @@ static int nish_help()
 	printf("\tls\t\tList directory contents\n");
 	printf("\tcat\t\tShow file content on stdout\n");
 	printf("\tcd\t\tChange working directory\n");
+	printf("\texec\t\tExecutes a binary file\n");
 	printf("\ttime\t\tGive information about time and date\n");
 	printf("\texit\t\tQuit nish\n"); 
 	printf("\thalt\t\tHalt system\n");
@@ -163,7 +166,7 @@ static int nish_lba28()
 	printf("Finished. Start loop, [^C] stops.\n");
 	while (1) {
 		printf("Controller (1/2): ");
-		if (_kin(input,STRLEN)==_kaborted) break;
+		if (_kgets(input,STRLEN)==_kaborted) break;
 		if (!strcmp(input,"1")) contrl=0x1F0;
 			else if (!strcmp(input,"2")) contrl=0x170;
 			else {
@@ -171,7 +174,7 @@ static int nish_lba28()
 				continue;
 			     }
 		printf("Drive (A/B): ");
-		if (_kin(input,STRLEN)==_kaborted) break;
+		if (_kgets(input,STRLEN)==_kaborted) break;
 		if (!strcmp(input,"A")) drv=0x00;
 			else if (!strcmp(input,"B")) drv=0x01;
 			else {
@@ -185,7 +188,7 @@ static int nish_lba28()
 			continue;
 		}
 		printf("Enter address: ");
-		if (_kin(input,STRLEN)==_kaborted) break;
+		if (_kgets(input,STRLEN)==_kaborted) break;
 		addr=str2d(input);
 		if (!lba28_read(buffer,contrl,drv,addr,0)) {
 			printf("Read-Error\n");
@@ -247,40 +250,34 @@ static int nish_ls(char *args)
 
 static int nish_cd(char *args)
 {
-	fs_node *node;
-	
-	cli();
-	node=namei(args);
-	if (node) {
-		if ((node->flags&0x07)==FS_DIRECTORY) {
-			current_task->pwd=node;
-		} else printf("Error: \"%s\" isn't a directory.\n");
-	} else printf("Error: Could not find directory.\n");
-	sti();
+	int ret = sys_chdir(args);
+	switch (ret) {
+		case -ENOENT: 	printf("cd: %s: No such file or directory\n");
+				break;
+		case -ENOTDIR: 	printf("cd: %s: Is no directory\n");
+				break;
+	}
+
 	return 1;
 }
 
-extern UINT initrd_location;
+static int nish_exec(char *args)
+{
+	sys_execve(args,0,0);
+	return 1;	
+}
 
 static int nish_test()
 {
-	printf("---multitasking test---\n\n");
-	
-	if (!fork()) {
-		while (1) {
-			printf(".");
-		}
-	} else {
-		if (!fork()) {
-			while (1) {
-				printf("x");
-			}
-		} else {
-			while (1) {
-				printf("O");
-			}
-		}
-	}	
+	//printf("---execve tested---\n\n");
+	//sys_execve("/bin/test",0,0);
+	fs_node *node=namei("/dev/zero");
+	UCHAR buf[256];
+	UINT i;
+	read_fs(node,0,256,buf);
+	for (i=0;i<256;i++)
+		printf("%.2X",buf[i]);
+	printf("\n");
 	return 1;
 }
 
@@ -293,17 +290,13 @@ static int _nish_interpret(char *cmd)
 		printf("\n");
 		return 0;
 	}
-	if (!strcmp(cmd,"switch")) {
-		//switch_task();
-		printf("%d ticks \n",ticks);
-		return 1;
-	}
 	if (!strcmp(cmd,"test")) return nish_test();
 	if (!strcmp(cmd,"clear")) return _kclear();
 	if (!strcmp(cmd,"lba28")) return nish_lba28();
 	if (!strcmp(cmd,"ls")) return nish_ls(args);
 	if (!strcmp(cmd,"cat")) return nish_cat(args);
 	if (!strcmp(cmd,"cd")) return nish_cd(args);
+	if (!strcmp(cmd,"exec")) return nish_exec(args);
 	if (!strcmp(cmd,"time")) return nish_time();
 	if (!strcmp(cmd,"exit")) return NISH_EXIT;
 	if (!strcmp(cmd,"halt")) return NISH_HALT;
@@ -322,7 +315,7 @@ int nish()
 	while (1) {
 		printf("# ");
 		memset(input,0,STRLEN);
-		_kin(input,STRLEN);
+		_kgets(input,STRLEN);
 		ret=_nish_interpret(input);
 		if ((ret & 0xF0)==0xE0) break;
 	}

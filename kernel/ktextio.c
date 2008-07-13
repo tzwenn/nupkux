@@ -30,12 +30,12 @@ static UCHAR _kinterpret_key(UCHAR key, int layout);
 
 static int _kout(char *output);
 
-CURSOR_POS _cursor_pos;
-CURSOR_POS _cursor_max;
-UINT _line_buffer_pos = 0, _line_buffer_end = 0;
-UCHAR *_line_buffer = 0;
-char _key_states[128];
-char _print_pressed_keys = 0;
+static CURSOR_POS _cursor_pos;
+static UINT _line_buffer_pos = 0, _line_buffer_end = 0;
+static UCHAR *_line_buffer = 0;
+static char _key_states[128];
+static char _print_pressed_keys = 0;
+static char _key_recieved = 0;
 
 char *mem = (char *) VIDEO_MEM_ENTRY;
 
@@ -271,7 +271,7 @@ static int _kiomove(int x, int y, int len)
 	return 0;
 }
 
-void irq_keyboard(registers regs)
+void irq_keyboard(registers *regs)
 {
 	UCHAR input = inportb(0x60);
 	char keyprint[2] = " ";
@@ -281,6 +281,7 @@ void irq_keyboard(registers regs)
 			_key_states[input]=1;
 			keyprint[0]=_kinterpret_key(input,KEYBOARD_LAY_DE);
 			if ((_print_pressed_keys) && (keyprint[0]!='\n')) _kout(keyprint);
+			//_key_recieved=input;//keyprint[0];
 		}
 	} else if (_key_states[input-128]) {
 		_key_states[input-128]=0;
@@ -297,9 +298,17 @@ void setup_input()
 		_key_states[i]=0;
 }
 
-int _kin(char *instr, int maxlen)
+int _kgetc()
 {
-	CURSOR_POS cstart = _cursor_pos;	
+	//_print_pressed_key=0;
+	_key_recieved=0;
+	while (!_key_recieved);
+	return _kinterpret_key(_key_recieved,KEYBOARD_LAY_DE);
+}
+
+int _kgets(char *instr, int maxlen)
+{
+	CURSOR_POS cstart = _cursor_pos;
 
 	int i = 0;
 

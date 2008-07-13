@@ -37,7 +37,7 @@ typedef struct _task task;
 
 struct _task
 {
-	long pid,parent;
+	int pid,parent;
 	UINT esp,ebp;
 	UINT eip;
 	page_directory *directory;
@@ -50,8 +50,9 @@ struct _task
 extern volatile task *current_task;
 extern void setup_tasking();
 extern void switch_task();
-extern long fork();
+extern int fork();
 extern void move_stack(void *new_stack, UINT size);
-extern long getpid();
+extern int getpid();
+extern void switch_to_user_mode();
 
 #endif

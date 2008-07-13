@@ -21,12 +21,12 @@
 #include <kernel.h>
 #include <kernel/ktextio.h>
 #include <kernel/nish.h>
+#include <kernel/syscall.h>
 #include <time.h>
 #include <task.h>
 #include <mm.h>
 #include <fs/initrd.h>
 #include <drivers/drivers.h>
-#include <kernel/dts.h>
 
 char _kabort_func = 0;
 int errno;
@@ -94,6 +94,7 @@ int _kmain(multiboot_info_t* mbd, UINT initial_stack, UINT magic)
 		if (devfs) printf("Finished.\n");
 			else printf("FAILED.\n");	
 	}
+	setup_syscalls();
 	printf("Booted up!\n");
 	printf("nish returned with 0x%X.\n\n",ret=nish());
 	printf("Unmount devfs (/dev) ... \n");

@@ -40,7 +40,7 @@ void set_pic_timer(int freq)
     outportb(0x40,(divisor >> 8)&0xFF);
 }
 
-void timer_handler(registers regs)
+void timer_handler(registers *regs)
 {
 	ticks++;
 	switch_task();

@@ -160,6 +160,18 @@ page *get_page(UINT address, int make, page_directory *directory)
 	return 0;
 }
 
+void page_fault_handler(registers *regs)
+{
+	UINT faultaddr;
+
+	asm volatile ("mov %%cr2,%%eax":"=a"(faultaddr));
+
+	printf("\nPagefault at 0x%X: %s%s%s%s\n",faultaddr,(!(regs->err_code&1))?"present ":"",(regs->err_code&2)?"read-only ":"",(regs->err_code&4)?"user-mode ":"",(regs->err_code&8)?"reserved ":"");
+	printf("System halted.\n");
+	cli();
+	hlt();
+}
+
 void setup_paging()
 {
 	UINT i = 0;
@@ -181,23 +193,12 @@ void setup_paging()
 	ASSERT_ALIGN(i);
 	for (;i<MM_KHEAP_START+MM_KHEAP_SIZE+(kmalloc_pos&0xFFFFF000)+FRAME_SIZE;i+=FRAME_SIZE)
 	       alloc_frame(get_page(i,1,kernel_directory),PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT);
+	register_interrupt_handler(14,page_fault_handler);
 	set_page_directory(kernel_directory);
 	kheap=create_heap(MM_KHEAP_START+kmalloc_pos,MM_KHEAP_START+MM_KHEAP_SIZE+kmalloc_pos,WORKING_MEMEND,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE);
 	current_directory=clone_directory(kernel_directory);
 	set_page_directory(current_directory);
 }
 
-int page_fault_handler(registers regs)
-{
-	UINT faultaddr;
-
- 	asm volatile ("mov %%cr2,%%eax":"=a"(faultaddr));
-
-	printf("\nPagefault at 0x%X: %s%s%s%s\n",faultaddr,(!(regs.err_code&1))?"present ":"",(regs.err_code&2)?"read-only ":"",(regs.err_code&4)?"user-mode ":"",(regs.err_code&8)?"reserved ":"");
-	printf("System halted.\n");
-	cli();
-	hlt();
-	return 0;
-}
 
 

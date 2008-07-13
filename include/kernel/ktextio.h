@@ -40,6 +40,8 @@
 
 #define TAB_WIDTH	8
 
+#define EOF		(-1)
+
 #define KEYBOARD_LAY_DE 10
 
 #define SPEC_KEY_ESC 	1
@@ -76,17 +78,13 @@ extern inline void outportb(USHORT port, UCHAR value);
 extern inline UCHAR inportb(USHORT port);
 extern inline void outportw(USHORT port, USHORT value);
 extern inline USHORT inportw(USHORT port); 
-extern int _kin(char *instr, int maxlen);
+extern int _kgets(char *instr, int maxlen);
 extern int _kclear();
 extern int printf(const char *fmt, ...);
 extern int _kputc(const char chr);
 extern int str2d(char *str);
 extern void setup_input();
 extern void setup_ktexto();
-
-extern CURSOR_POS _cursor_pos;
-extern CURSOR_POS _cursor_max;
-extern char _key_states[128];
 
 #endif
 

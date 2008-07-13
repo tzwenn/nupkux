@@ -31,6 +31,7 @@ typedef struct _gdt_entry gdt_entry;
 typedef struct _gdt_pointer gdt_pointer;
 typedef struct _idt_entry idt_entry;
 typedef struct _idt_pointer idt_pointer;
+typedef struct _tss_entry tss_entry;
 
 struct _gdt_entry {
 	USHORT limit_low;
@@ -83,7 +84,37 @@ typedef struct _registers {
 	UINT eip,cs,eflags,useresp,ss;
 } registers;
 
-typedef void (*isr_t)(registers);
+typedef void (*isr_t)(registers*);
 void register_interrupt_handler(UCHAR n, isr_t handler);
+
+struct _tss_entry {
+	UINT prev_tss;   // The previous TSS - if we used hardware task switching this would form a linked list.
+	UINT esp0;       // The stack pointer to load when we change to kernel mode.
+	UINT ss0;        // The stack segment to load when we change to kernel mode.
+	UINT esp1;       // Unused...
+	UINT ss1;
+	UINT esp2;
+	UINT ss2;
+	UINT cr3;
+	UINT eip;
+	UINT eflags;
+	UINT eax;
+	UINT ecx;
+	UINT edx;
+	UINT ebx;
+	UINT esp;
+	UINT ebp;
+	UINT esi;
+	UINT edi;
+	UINT es;         // The value to load into ES when we change to kernel mode.
+	UINT cs;         // The value to load into CS when we change to kernel mode.
+	UINT ss;         // The value to load into SS when we change to kernel mode.
+	UINT ds;         // The value to load into DS when we change to kernel mode.
+	UINT fs;         // The value to load into FS when we change to kernel mode.
+	UINT gs;         // The value to load into GS when we change to kernel mode.
+	UINT ldt;        // Unused...
+	USHORT trap;
+	USHORT iomap_base;
+} __attribute__((packed));
 
 #endif

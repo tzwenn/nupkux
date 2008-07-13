@@ -57,7 +57,6 @@ extern void _int1c();
 
 void sendbyte(int byte);
 int getbyte();
-void FloppyIRQ(registers regs);
 UINT waitfdc(UINT sensei);
 UINT fdc_rw(int block,UCHAR *blockbuff,UINT read,ULONG nosectors);
 
@@ -127,25 +126,12 @@ UINT waitfdc(UINT sensei)
      return 1;
 }
 
-/* This is the IRQ6 handler */
-void FloppyIRQ(registers regs)
+void FloppyIRQ(registers *regs)
 {
-   /* signal operation finished */
-   done = 1;
-
-   /* EOI the PIC */
-   outportb(0x20,0x20);
+	done=1;
+	outportb(0x20,0x20);
 }
 
-/*
- * converts linear block address to head/track/sector
- * 
- * blocks are numbered 0..heads*tracks*spt-1
- * blocks 0..spt-1 are serviced by head #0
- * blocks spt..spt*2-1 are serviced by head 1
- * 
- * WARNING: garbage in == garbage out
- */
 void block2hts(int block,int *head,int *track,int *sector)
 {
    *head = (block % (geometry.spt * geometry.heads)) / (geometry.spt);
@@ -158,18 +144,12 @@ void block2hts(int block,int *head,int *track,int *sector)
 // reset the floppy disk - this is MY way!
 void ResetFloppy()
 {
-	// reset the drive
-	outportb( FDC_DOR, 0x00 );
-	outportb( FDC_DOR, 0x0C );
-	outportb( FDC_CCR, 0x00 );
-
-	// set the flag
-	done = 1;
-
-	// wait for the interrupt...
-	while( done == 1 );
-
-	outportb( FDC_DOR, 0x0C );
+	outportb(FDC_DOR,0x00);
+	outportb(FDC_DOR,0x0C);
+	outportb(FDC_CCR,0x00);
+	done=1;
+	while (done);
+	outportb(FDC_DOR,0x0C);
 }
 
 /* this gets the FDC to a known state */
