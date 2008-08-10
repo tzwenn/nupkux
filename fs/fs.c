@@ -29,13 +29,13 @@ void open_fs(fs_node *node, UCHAR read, UCHAR write)
 	if (node->f_op && node->f_op->open) return node->f_op->open(node);
 }
 
-UINT read_fs(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+UINT read_fs(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 {
 	if (node->f_op && node->f_op->read) return node->f_op->read(node,offset,size,buffer);
 		else return 0;
 }
 
-UINT write_fs(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+UINT write_fs(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 {
 	if (node->f_op && node->f_op->write) return node->f_op->write(node,offset,size,buffer);
 		else return 0;
@@ -138,4 +138,7 @@ fs_node *get_root_fs_node()
 	return resolve_node(fs_root);
 }
 
-
+int sys_close(int fd)
+{
+	return 0;
+}

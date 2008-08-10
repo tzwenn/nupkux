@@ -85,7 +85,8 @@ typedef struct _registers {
 } registers;
 
 typedef void (*isr_t)(registers*);
-void register_interrupt_handler(UCHAR n, isr_t handler);
+extern void register_interrupt_handler(UCHAR n, isr_t handler);
+extern void set_kernel_stack(UINT stack);
 
 struct _tss_entry {
 	UINT prev_tss;   // The previous TSS - if we used hardware task switching this would form a linked list.

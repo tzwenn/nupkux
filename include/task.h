@@ -33,6 +33,8 @@
 #define TASK_NOTASK		-1
 #define NR_TASKS 64
 
+#define KERNEL_STACK_SIZE 2048
+
 typedef struct _task task;
 
 struct _task
@@ -41,6 +43,7 @@ struct _task
 	UINT esp,ebp;
 	UINT eip;
 	page_directory *directory;
+	UINT kernel_stack;
 	USHORT uid, gid;
 	long priority,state;
 	FILE files[NR_OPEN];
@@ -50,9 +53,9 @@ struct _task
 extern volatile task *current_task;
 extern void setup_tasking();
 extern void switch_task();
-extern int fork();
+extern int sys_fork();
 extern void move_stack(void *new_stack, UINT size);
-extern int getpid();
+extern int sys_getpid();
 extern void switch_to_user_mode();
 
 #endif

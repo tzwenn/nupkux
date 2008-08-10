@@ -3,58 +3,56 @@
 # Copyright (C) 2007, 2008 Sven Köhler
 #
 
-PROJDIRS   =kernel drivers lib mm fs
+PROJDIRS   =boot kernel mm drivers fs lib
 INCLUDEDIR =include 
-MAXDEPTH   =5
 
 AS	=as
+
 ASINT	=nasm
 ASINTFLAGS =-f aout
 
 CC	=gcc
-CFLAGS	=-c -Wall -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I$(INCLUDEDIR)
+CFLAGS	=-c -Wall -Werror -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I$(INCLUDEDIR)
 
 LD	=ld
 LDFLAGS	=-T link.ld
 
-SRCFILES = $(shell find $(PROJDIRS) -name "*.c")
-HDRFILES = $(shell find $(INCLUDEDIR) -name "*.h")
-OBJFILES = $(patsubst %.c,%.c.o,$(SRCFILES))
-DEPFILES = $(HDRFILES)
-PRJFILES = $(HDRFILES) $(SRCFILES) boot/dts.asm boot/loader.s boot/process.asm Makefile link.ld COPYING
+AFILES = $(shell find $(PROJDIRS) -name "*.s")
+SFILES = $(shell find $(PROJDIRS) -name "*.S")
+CFILES = $(shell find $(PROJDIRS) -name "*.c")
+SRCFILES = $(AFILES) $(SFILES) $(CFILES)
+O1FILES = $(patsubst %.s,%.o,$(SRCFILES))
+O2FILES = $(patsubst %.S,%.o,$(O1FILES))
+OBJFILES = $(patsubst %.c,%.o,$(O2FILES))
 BACKUPTMP = ../backup-tmp
 BACKUPDIR = ../backups
 
-.PHONY: boot kernel
+all:	$(OBJFILES) link
+	
+.s.o:
+	@echo "  AS	  $@"
+	@$(AS) -o $@ $<
 
-all:	kernel boot link clean
-	@echo "Finished ..."
+.S.o:
+	@echo "  AS	  $@"
+	@$(ASINT) $(ASINTFLAGS) -o $@ $<
 
-kernel: 
-	@echo "Start compilation ..."
-	-@for file in $(SRCFILES); do $(CC) $$file $(CFLAGS) -o $$file.o; done; true
-
-boot:
-	@echo "Assemble ..."
-	@($(AS) -o boot/loader.o boot/loader.s)
-	@($(ASINT) $(ASINTFLAGS) -o boot/dts.o boot/dts.asm)
-	@($(ASINT) $(ASINTFLAGS) -o boot/process.o boot/process.asm)
+.c.o:
+	@echo "  CC	  $@"
+	@$(CC) $(CFLAGS) -o $@ $<
 
 link:	
-	@echo "Link ..."	
-	@($(LD) $(LDFLAGS) -o nupkux boot/loader.o boot/dts.o boot/process.o $(OBJFILES))
+	@echo "  LD	  nupkux"
+	@($(LD) $(LDFLAGS) -o nupkux $(OBJFILES))
 
 clean: 
-	@echo "Clean up ..."
-	-@if [ -f boot/loader.o ]; then rm boot/loader.o; fi
-	-@if [ -f boot/dts.o ]; then rm boot/dts.o; fi
-	-@if [ -f boot/process.o ]; then rm boot/process.o; fi
-	-@for file in $(OBJFILES); do if [ -f $$file ]; then rm $$file; fi; done
+	@echo "  CLEAN	  src"
+	-@for file in $(OBJFILES); do if [ -f $$file ]; then rm -f $$file; fi; done; true
+	-@if [ -f nupkux ]; then rm -f nupkux; fi
 
 backup: clean
 	@echo "Copy development directory ..."
 	@cp -axR . $(BACKUPTMP)
-#	@for file in $(PRJFILES); do if [ -f $(BACKUPTMP)/$$file~ ]; then rm $(BACKUPTMP)/$$file~; fi; done
 	@for file in $(shell find -name "*~"); do if [ -f $(BACKUPTMP)/$$file ]; then rm $(BACKUPTMP)/$$file; fi; done
 	@echo "Make archive ..."
 	@(cd $(BACKUPTMP); tar -cf nupkux.tar *; gzip nupkux.tar)
@@ -62,3 +60,4 @@ backup: clean
 	@cp $(BACKUPTMP)/nupkux.tar.gz $(BACKUPDIR)/nupkux-snp$(shell date +%y%m%d).tar.gz
 	@echo "Remove temporary files ..."
 	@rm -r $(BACKUPTMP)
+

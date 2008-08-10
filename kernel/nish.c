@@ -28,7 +28,7 @@
 #include <mm.h>
 #include <kernel/syscall.h>
 
-int nish();
+#define MAX_ARGS	16
 
 static int ltrim(char *cmd)
 {
@@ -65,6 +65,24 @@ static int _nish_split_par(char *cmd, char *args)
 		rtrim(args);
 	}
 	return 0;
+}
+
+int split_to_argv(char *str, char *argv[])
+{
+	if (!str) return -1;
+	if (!*str) return 0;
+	char cmd[STRLEN],args[STRLEN];
+	UINT i=0;
+	strcpy(cmd,str);
+	do {
+		memset(args,0,STRLEN);
+		_nish_split_par(cmd,args);
+		strcpy(argv[i],cmd);
+		strcpy(cmd,args);
+		i++;
+	} while (*cmd);
+	argv[i]=0;
+	return i;
 }
 
 static void format_mode(fs_node *node, char *output)
@@ -104,7 +122,6 @@ static int nish_help()
 	printf("\tls\t\tList directory contents\n");
 	printf("\tcat\t\tShow file content on stdout\n");
 	printf("\tcd\t\tChange working directory\n");
-	printf("\texec\t\tExecutes a binary file\n");
 	printf("\ttime\t\tGive information about time and date\n");
 	printf("\texit\t\tQuit nish\n"); 
 	printf("\thalt\t\tHalt system\n");
@@ -202,13 +219,14 @@ static int nish_lba28()
 	return 1;
 }
 
-static int nish_cat(char *args)
+static int nish_cat(int argc, char *argv[])
 {
 	fs_node *node;
 	UCHAR *buf;
 	UINT i;
 	
-	node=namei(args);
+	if (argc==1) return 1;
+	node=namei(argv[1]);
 	if (node) {
 		open_fs(node,1,0);
 		buf=(UCHAR *)malloc(node->size);
@@ -218,92 +236,103 @@ static int nish_cat(char *args)
 		free(buf);
 		close_fs(node);
 	} else printf("Error: Cannot find file.\n");
-	return 1;	
+	return 1;
 }
 
-static int nish_ls(char *args)
+static int nish_ls(int argc, char *argv[])
 {
 	fs_node *node, *tmp;
 	UINT i;
 	char the_mode[11];
 	struct dirent *pDirEnt;
 	
-	if (!*args) node=current_task->pwd;
-		else node=namei(args);
+	if (argc==1) node=current_task->pwd;
+		else node=namei(argv[1]);
 	if (node) {
 		i=0;
 		printf("Inode\tMode\t\tUID\tGID\tSize\tName\n");
 		if ((node->flags&0x7)!=FS_DIRECTORY) {
 			tmp=node;
 			format_mode(tmp,the_mode);
-			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,args);
+			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,argv[1]);
 		} else while ((pDirEnt=readdir_fs(node,i++))) {
 			if (pDirEnt->d_name[0]=='.') continue;
 			tmp=finddir_fs(node,pDirEnt->d_name);
 			format_mode(tmp,the_mode);
 			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,pDirEnt->d_name);
 		}
-	} else printf("Error: Could not find file %s.\n",args);
+	} else printf("Error: Could not find file %s.\n",argv[1]);
 	
 	return 1;
 }
 
-static int nish_cd(char *args)
+static int nish_cd(int argc, char *argv[])
 {
-	int ret = sys_chdir(args);
-	switch (ret) {
-		case -ENOENT: 	printf("cd: %s: No such file or directory\n");
-				break;
-		case -ENOTDIR: 	printf("cd: %s: Is no directory\n");
-				break;
+	if (argc==1);
+	int ret = sys_chdir(argv[1]);
+	if (ret==-1) {
+		switch (errno) {
+			case -ENOENT: 	printf("cd: %s: No such file or directory\n");
+					break;
+			case -ENOTDIR: 	printf("cd: %s: Is no directory\n");
+					break;
+		}
 	}
 
 	return 1;
-}
-
-static int nish_exec(char *args)
-{
-	sys_execve(args,0,0);
-	return 1;	
 }
 
 static int nish_test()
 {
-	//printf("---execve tested---\n\n");
-	//sys_execve("/bin/test",0,0);
-	fs_node *node=namei("/dev/zero");
-	UCHAR buf[256];
-	UINT i;
-	read_fs(node,0,256,buf);
-	for (i=0;i<256;i++)
-		printf("%.2X",buf[i]);
-	printf("\n");
+	printf("---usermode test---\n\n");
+	
+	if (!sys_fork()) {
+		switch_to_user_mode();
+		asm volatile ("int $0x80\n\t"::"a"(0),"b"(66));
+		for (;;);
+	} else {
+		for (;;) _kputc('.');
+	}
 	return 1;
 }
 
-static int _nish_interpret(char *cmd)
+static int nish_run(char *cmd, char **argv)
 {
-	char args[STRLEN];
+	//TODO Fork it!
+	if ((sys_execve(cmd,argv,0)==-1) && (errno==-ENOENT))
+		printf("nish: %s: command not found\n",cmd);
+	return 1;
+}
 
-	_nish_split_par(cmd,args);
+static int _nish_interpret(char *str)
+{
+	char **argv=calloc(MAX_ARGS,sizeof(char *)),*cmd;
+	int i,ret=0,argc;
+	for (i=0;i<MAX_ARGS;i++) 
+		argv[i]=malloc(STRLEN);
+	argc=split_to_argv(str,argv);
+	cmd=argv[0];
 	if (!(*cmd)) {
 		printf("\n");
 		return 0;
 	}
-	if (!strcmp(cmd,"test")) return nish_test();
-	if (!strcmp(cmd,"clear")) return _kclear();
-	if (!strcmp(cmd,"lba28")) return nish_lba28();
-	if (!strcmp(cmd,"ls")) return nish_ls(args);
-	if (!strcmp(cmd,"cat")) return nish_cat(args);
-	if (!strcmp(cmd,"cd")) return nish_cd(args);
-	if (!strcmp(cmd,"exec")) return nish_exec(args);
-	if (!strcmp(cmd,"time")) return nish_time();
-	if (!strcmp(cmd,"exit")) return NISH_EXIT;
-	if (!strcmp(cmd,"halt")) return NISH_HALT;
-	if (!strcmp(cmd,"reboot")) return NISH_REBOOT;
-	if (!strcmp(cmd,"help")) return nish_help();
-	printf("nish: %s: command not found\n",cmd);
-	return 0;
+	if (!strcmp(cmd,"test")) ret=nish_test();
+		else if (!strcmp(cmd,"clear")) ret=_kclear();
+		else if (!strcmp(cmd,"lba28")) ret=nish_lba28();
+		else if (!strcmp(cmd,"ls")) ret=nish_ls(argc,argv);
+		else if (!strcmp(cmd,"cat")) ret=nish_cat(argc,argv);
+		else if (!strcmp(cmd,"cd")) ret=nish_cd(argc,argv);
+		else if (!strcmp(cmd,"time")) ret=nish_time();
+		else if (!strcmp(cmd,"exit")) ret=NISH_EXIT;
+		else if (!strcmp(cmd,"halt")) ret=NISH_HALT;
+		else if (!strcmp(cmd,"reboot")) ret=NISH_REBOOT;
+		else if (!strcmp(cmd,"help")) ret=nish_help();
+		else ret=nish_run(cmd,argv);
+	for (i=0;i<MAX_ARGS;i++) {
+		free(argv[i]);
+	}
+	free(argv);
+	return ret;
 }
 
 int nish()

@@ -274,13 +274,13 @@ static int _kiomove(int x, int y, int len)
 void irq_keyboard(registers *regs)
 {
 	UCHAR input = inportb(0x60);
-	char keyprint[2] = " ";
+	char keyprint;
 
 	if (!(input & 0x80)) {
 		if (!_key_states[input]) {
 			_key_states[input]=1;
-			keyprint[0]=_kinterpret_key(input,KEYBOARD_LAY_DE);
-			if ((_print_pressed_keys) && (keyprint[0]!='\n')) _kout(keyprint);
+			keyprint=_kinterpret_key(input,KEYBOARD_LAY_DE);
+			if ((_print_pressed_keys) && (keyprint!='\n')) _kputc(keyprint);
 			//_key_recieved=input;//keyprint[0];
 		}
 	} else if (_key_states[input-128]) {

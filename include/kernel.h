@@ -31,6 +31,9 @@ typedef unsigned short USHORT;
 typedef unsigned int   UINT;
 typedef unsigned long  ULONG;
 
+typedef unsigned int size_t;
+typedef unsigned int off_t;
+
 extern char _kabort_func;
 
 #define _kabort_func_break()	if (_kabort_func) { \

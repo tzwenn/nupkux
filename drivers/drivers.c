@@ -25,9 +25,9 @@ extern void setup_floppy(fs_node *);
 extern void setup_urandom_file(fs_node *);
 
 
-static UINT drv_stdout_write(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+static UINT drv_stdout_write(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 {
-	UINT i=size;
+	size_t i=size;
 	
 	while (i--) 
 		_kputc(*(buffer++));
@@ -35,17 +35,17 @@ static UINT drv_stdout_write(fs_node *node, UINT offset, UINT size, UCHAR *buffe
 	return size;
 }
 
-static UINT drv_null_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+static UINT drv_null_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 {
 	return 0;
 }
 
-UINT drv_null_write(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+UINT drv_null_write(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 {
 	return size;
 }
 
-static UINT drv_zero_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+static UINT drv_zero_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 {
 	memset(buffer,0,size);
 	return size;

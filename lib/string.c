@@ -32,9 +32,9 @@ int strcmp(char *s1, char *s2)
 	return 0;
 }
 
-size_t strlen(char *str)
+int strlen(char *str)
 {
-	size_t res = 0;
+	int res = 0;
 	
 	while (*(str++)) res++;
 	return res;

@@ -45,6 +45,11 @@ static UINT _kmalloc_base(UINT sz, UINT *phys, UCHAR align)
 	return res;
 }
 
+UINT _kmalloc_a(UINT sz)
+{
+	return _kmalloc_base(sz,0,1);
+}
+
 UINT _kmalloc(UINT sz)
 {
 	return _kmalloc_base(sz,0,0);

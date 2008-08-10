@@ -61,9 +61,12 @@
 extern void setup_syscalls();
 
 extern int sys_putchar(char chr);
+extern int sys_exit(int status);
 extern int sys_fork();
-extern int sys_getpid();
-extern int sys_chdir(char *name);
+extern int sys_close(int fd);
 extern int sys_execve(char *file,char **argv,char **envp);
+extern int sys_chdir(char *name);
+extern int sys_mknod(char *name, int mode, int addr);
+extern int sys_getpid();
 
 #endif

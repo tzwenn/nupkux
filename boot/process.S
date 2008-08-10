@@ -23,8 +23,8 @@ read_eip:
     jmp eax                     ; Return. Can't use RET because return
                                 ; address popped off the stack. 
 
-[GLOBAL copy_page_physical]
-copy_page_physical:
+[GLOBAL clone_page]
+clone_page:
     push ebx              ; According to __cdecl, we must preserve the contents of EBX.
     pushf                 ; push EFLAGS, so we can pop it and reenable interrupts
                           ; later, if they were enabled anyway.

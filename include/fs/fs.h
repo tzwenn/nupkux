@@ -47,13 +47,14 @@
 #define FS_GID_ROOT	0
 
 #define NR_OPEN		32
+#define NO_FILE		NR_OPEN+1
 
 typedef struct _fs_node fs_node;
 typedef struct _mountinfo mountinfo;
 
 typedef void (*open_proto)(fs_node*);
-typedef UINT (*read_proto)(fs_node*,UINT,UINT,UCHAR*);
-typedef UINT (*write_proto)(fs_node*,UINT,UINT,UCHAR*);
+typedef UINT (*read_proto)(fs_node*,off_t,size_t,UCHAR*);
+typedef UINT (*write_proto)(fs_node*,off_t,size_t,UCHAR*);
 typedef void (*close_proto)(fs_node*);
 typedef struct dirent *(*readdir_proto)(fs_node*,UINT);
 typedef fs_node *(*finddir_proto)(fs_node*,char *name);
@@ -81,7 +82,7 @@ struct _fs_node {
 	UINT gid;
 	UCHAR flags;
 	UINT inode;
-	UINT size;
+	size_t size;
 	UCHAR nlinks;
 	mountinfo *mi; //impl
 	node_operations *f_op;
@@ -101,16 +102,17 @@ struct _mountinfo {
 };
 
 typedef struct file {
+	UINT fd;
 	USHORT mode;
 	fs_node *node;
-	UINT offset;
+	off_t offset;
 } FILE;
 
 //VFS functions
 
 extern void open_fs(fs_node *node, UCHAR read, UCHAR write);
-extern UINT read_fs(fs_node *node, UINT offset, UINT size, UCHAR *buffer);
-extern UINT write_fs(fs_node *node, UINT offset, UINT size, UCHAR *buffer);
+extern UINT read_fs(fs_node *node, off_t offset, size_t size, UCHAR *buffer);
+extern UINT write_fs(fs_node *node, off_t offset, size_t size, UCHAR *buffer);
 extern void close_fs(fs_node *node);
 extern struct dirent *readdir_fs(fs_node *node, UINT index);
 extern fs_node *finddir_fs(fs_node *node, char *name);

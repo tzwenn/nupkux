@@ -19,8 +19,10 @@
 
 #include <task.h>
 #include <lib/memory.h>
+#include <kernel/dts.h>
 #include <fs/fs.h>
 #include <errno.h>
+#include <kernel/syscall.h>
 
 volatile task *current_task = 0;
 volatile task tasks[NR_TASKS];
@@ -28,6 +30,9 @@ volatile task tasks[NR_TASKS];
 //paging.c
 extern page_directory *kernel_directory;
 extern page_directory *current_directory;
+
+//mm.c
+extern UINT _kmalloc_a(UINT sz);
 
 extern UINT read_eip(); //process.asm
 extern UINT initial_esp; //defined in main.c
@@ -72,6 +77,9 @@ void setup_tasking()
 	current_task->directory=current_directory;
 	current_task->gid=current_task->uid=0; //root runs it
 	current_task->pwd=0;//get_root_fs_node();
+	for (i=NR_OPEN;i--;)
+		current_task->files[i].fd=NO_FILE;
+	current_task->kernel_stack=_kmalloc_a(KERNEL_STACK_SIZE);
 	sti();
 }
 
@@ -86,7 +94,6 @@ void switch_task()
 	current_task->eip=eip;
 	current_task->esp=esp;
 	current_task->ebp=ebp;
-	
 	i=current_task->pid;
 	while (++i<NR_TASKS)
 		if (tasks[i].pid!=TASK_NOTASK) break;
@@ -96,6 +103,7 @@ void switch_task()
 	esp=current_task->esp;
 	ebp=current_task->ebp;
 	current_directory=current_task->directory;
+	set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);
 	asm volatile(	"cli\n\t"
 			"mov %0,%%ecx\n\t"
 			"mov %1,%%esp\n\t"
@@ -106,7 +114,7 @@ void switch_task()
 			"jmp *%%ecx\n\t"::"r"(eip),"r"(esp),"r"(ebp),"r"(current_directory->physPos));
 }
 
-int fork()
+int sys_fork()
 {
 	cli();
 	task *parent_task=(task *)current_task;
@@ -125,7 +133,8 @@ int fork()
 	newtask->uid=parent_task->uid;
 	newtask->directory=directory;
 	newtask->pwd=parent_task->pwd;
-		
+	memcpy(&newtask->files,&parent_task->files,NR_OPEN*sizeof(FILE));
+	current_task->kernel_stack=_kmalloc_a(KERNEL_STACK_SIZE);
 	UINT eip=read_eip();
 	if (current_task==parent_task) {
 		UINT esp,ebp;
@@ -142,13 +151,9 @@ int fork()
 	}
 }
 
-int getpid()
-{
-	return current_task->pid;
-}
-
 void switch_to_user_mode()
 {
+	set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);
 	asm volatile(	"cli\n\t"
 			"mov $0x23, %ax\n\t"
 			"mov %ax, %ds\n\t"
@@ -173,11 +178,6 @@ int sys_getpid()
 	return current_task->pid;
 }
 
-int sys_fork()
-{
-	return fork();
-}
-
 int sys_chdir(char *name)
 {
 	if (!current_task) return -1;
@@ -187,24 +187,51 @@ int sys_chdir(char *name)
 	if (node) {
 		if ((node->flags&0x07)==FS_DIRECTORY) 
 			current_task->pwd=node;
-			else return 0;//-ENOTDIR;
-	} //return -ENOENT;
+			else {
+				errno=-ENOTDIR;
+				return -1;
+			}
+	} else { 
+		errno=-ENOENT;
+		return -1;
+	}
 	return 0;
 }
 
 int sys_execve(char *file,char **argv,char **envp)
 {
+	//TODO: permission check, PATH, only './' for programs in .
 	UCHAR *buf;
-	int ret;
-	int (*main)();
+	int ret,argc=0;
+	int (*main)(int,char **,char **);
 	fs_node *node=namei(file);
-	if (!node) return -ENOENT;
+	
+	if (!node)
+		node=finddir_fs(namei("/bin"),file);
+	if (!node) {
+		errno=-ENOENT;
+		return -1;	
+	}
 	open_fs(node,1,0);
 	buf=(UCHAR *)malloc(node->size);
 	read_fs(node,0,node->size,buf);
-	main=(int (*)())buf;
-	ret=main();
+	while (argv[argc]) argc++;
+	main=(int (*)(int,char **,char **))buf;
+	ret=main(argc,argv,envp);
 	free(buf);
 	close_fs(node);
 	return ret;
+}
+
+int sys_exit(int status)
+{
+	cli(); //switch_task does sti()
+	UINT i;
+	current_task->pid=TASK_NOTASK;
+	for (i=NR_OPEN;i--;)
+		if (current_task->files[i].fd!=NO_FILE)
+			sys_close(i);
+	free_directory(current_task->directory);
+	switch_task(); //Fare Well!
+	return status; //We will never reach this :-(
 }

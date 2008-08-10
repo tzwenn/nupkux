@@ -31,7 +31,7 @@ static void initrd_open(fs_node *node)
 	node->nlinks++;
 }
 
-static UINT initrd_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+static UINT initrd_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 {
 	initrd_discr *discr = (initrd_discr *)(node->mi->discr);
 	initrd_inode inode = discr->initrd_inodes[node->inode];
@@ -43,7 +43,7 @@ static UINT initrd_read(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
 	return size;
 }
 
-static UINT initrd_write(fs_node *node, UINT offset, UINT size, UCHAR *buffer)
+static UINT initrd_write(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 {
 	return 0;
 }

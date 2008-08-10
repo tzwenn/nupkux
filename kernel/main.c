@@ -47,10 +47,14 @@ void reboot()
 	outportb(0x64,0xFE);
 }
 
+extern int setup_ACPI();
+extern void acpiPowerOff();
+
 static void halt()
 {	
 	printf("Will now halt");
-	printf("\n\nYou can turn off the computer.");
+	acpiPowerOff();
+	printf("\nACPI Power off failed!\nTurn off the computer manually!");  //Just in case
 	cli();
 	hlt();
 }
@@ -75,6 +79,7 @@ int _kmain(multiboot_info_t* mbd, UINT initial_stack, UINT magic)
 	printf("Finished.\nEnable Interrupts and PIC ... ");
 	sti();
 	setup_timer();
+	setup_ACPI();
 	printf("Finished.\nEnable Paging and Memory Manager ... ");
 	setup_paging();
 	setup_ktexto();
@@ -96,7 +101,9 @@ int _kmain(multiboot_info_t* mbd, UINT initial_stack, UINT magic)
 	}
 	setup_syscalls();
 	printf("Booted up!\n");
+	
 	printf("nish returned with 0x%X.\n\n",ret=nish());
+	
 	printf("Unmount devfs (/dev) ... \n");
 	remove_devfs(devfs);
 	printf("Unmount initrd (/) ... \n");

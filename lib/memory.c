@@ -21,7 +21,7 @@
 
 void *memcpy(void *target, void *src, UINT count);
 void *memset(void *target, char value, UINT count);
-int memcmp(void *ptr1, void *ptr2, UINT count);
+int memcmp(void *s1, void *s2, UINT n);
 
 void *memcpy(void *target, void *src, UINT count)
 {	
@@ -41,13 +41,14 @@ void *memset(void *target, char value, UINT count)
 	return target;
 }
 
-int memcmp(void *ptr1, void *ptr2, UINT count)
+int memcmp(void *s1, void *s2, UINT n)
 {
-	while (count--) {
-		if (*(UCHAR *)ptr1<*(UCHAR *)ptr2) return -1;
-			else if (*(UCHAR *)ptr1>*(UCHAR *)ptr2) return 1;
-		ptr1++;
-		ptr2++;
+	if (n) {
+		register const UCHAR *p1 = s1, *p2 = s2;
+		do {
+			if (*p1++ != *p2++)
+				return (*--p1 - *--p2);
+		} while (--n);
 	}
 	return 0;
 }

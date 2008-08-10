@@ -17,7 +17,7 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//                       Based on code from Bran's and JamesM'S kernel development tutorials.
+//                       Based on code from Bran's and JamesM's kernel development tutorials.
 
 #include <kernel/dts.h>
 #include <lib/memory.h>
@@ -196,8 +196,8 @@ static void init_idt()
 
 static void idt_set_gate(UCHAR num, UINT base, USHORT sel, UCHAR flags)
 {
-	idt_entries[num].base_lo=base & 0xFFFF;
-	idt_entries[num].base_hi=(base >> 16) & 0xFFFF;
+	idt_entries[num].base_lo=base&0xFFFF;
+	idt_entries[num].base_hi=(base>>16)&0xFFFF;
 	idt_entries[num].sel=sel;
 	idt_entries[num].always0=0;
 	idt_entries[num].flags=flags; //|0x60
@@ -207,7 +207,7 @@ static void write_tss(int num, UINT ss0, UINT esp0)
 {
 	UINT base=(UINT)&tss_ent;
 	UINT limit=base+sizeof(tss_entry);
-	gdt_set_gate(num, base, limit, 0xE9, 0x00);
+	gdt_set_gate(num,base,limit,0xE9,0x00);
 	memset(&tss_ent,0,sizeof(tss_entry));
 	tss_ent.ss0=ss0;
 	tss_ent.esp0=esp0;
@@ -276,14 +276,14 @@ void isr_handler(registers regs)
 			printf("%s Exception. System Halted!\n",exception_messages[int_no]);
 			cli();
 			hlt();
-		} else printf("unhandled interrupt: %d\n",int_no);
+		} else printf("unhandled interrupt: 0x%X\n",int_no);
 	}
 }
 
 void irq_handler(registers regs)
 {
-    if (regs.int_no >= 40) {
-        outportb(0xA0, 0x20);
+    if (regs.int_no>=40) {
+        outportb(0xA0,0x20);
     }
     outportb(0x20,0x20);
     if (interrupt_handlers[regs.int_no]) {

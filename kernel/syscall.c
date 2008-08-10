@@ -30,7 +30,7 @@ int sys_putchar(char chr)
 	return chr;
 }
 
-int sys_mknod()
+int sys_mknod(char *name, int mode, int addr)
 {
 	return -ENOSYS;
 }
@@ -69,6 +69,7 @@ void setup_syscalls()
 	memset(sys_call_table,0,NR_SYSCALLS*sizeof(void *));
 	
 	sys_call_table[SYS_PUTCHAR]=&sys_putchar;
+	sys_call_table[SYS_EXIT]=&sys_exit;
 	sys_call_table[SYS_FORK]=&sys_fork;
 	sys_call_table[SYS_EXECVE]=&sys_execve;
 	sys_call_table[SYS_CHDIR]=&sys_chdir;
