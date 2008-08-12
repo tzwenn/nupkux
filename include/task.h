@@ -30,8 +30,8 @@
 #define TASK_ZOMBIE		3
 #define TASK_STOPPED		4
 
-#define TASK_NOTASK		-1
-#define NR_TASKS 64
+#define NR_TASKS	64
+#define NO_TASK		(-1)
 
 #define KERNEL_STACK_SIZE 2048
 
@@ -57,5 +57,6 @@ extern int sys_fork();
 extern void move_stack(void *new_stack, UINT size);
 extern int sys_getpid();
 extern void switch_to_user_mode();
+extern void abort_current_process();
 
 #endif

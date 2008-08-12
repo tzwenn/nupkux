@@ -21,6 +21,7 @@
 #include <memory.h>
 #include <kernel/ktextio.h>
 #include <kernel/dts.h>
+#include <task.h>
 
 page_directory *current_directory, *kernel_directory;
 page_table *table;
@@ -180,9 +181,7 @@ void page_fault_handler(registers *regs)
 	asm volatile ("mov %%cr2,%%eax":"=a"(faultaddr));
 
 	printf("\nPagefault at 0x%X: %s%s%s%s\n",faultaddr,(!(regs->err_code&1))?"present ":"",(regs->err_code&2)?"read-only ":"",(regs->err_code&4)?"user-mode ":"",(regs->err_code&8)?"reserved ":"");
-	printf("System halted.\n");
-	cli();
-	hlt();
+	abort_current_process();
 }
 
 void setup_paging()

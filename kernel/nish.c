@@ -22,7 +22,6 @@
 #include <kernel/ktextio.h>
 #include <time.h>
 #include <lib/string.h>
-#include <drivers/drivers.h>
 #include <drivers/ata.h>
 #include <task.h>
 #include <mm.h>
@@ -282,16 +281,19 @@ static int nish_cd(int argc, char *argv[])
 	return 1;
 }
 
-static int nish_test()
+static int nish_test(int argc, char **argv)
 {
 	printf("---usermode test---\n\n");
 	
 	if (!sys_fork()) {
-		switch_to_user_mode();
-		asm volatile ("int $0x80\n\t"::"a"(0),"b"(66));
-		for (;;);
+		/*switch_to_user_mode();
+		asm volatile ("int $0x80"::"a"(SYS_EXECVE),"b"((int)"utest"),"c"(0),"d"(0));
+		asm volatile ("int $0x80"::"a"(SYS_EXIT),"b"(0));
+		for (;;) asm volatile ("int $0x80"::"a"(SYS_PUTCHAR),"b"('A'));*/
+		UINT *ptr = (UINT *)0xA000000;
+		printf("%d",*ptr);
 	} else {
-		for (;;) _kputc('.');
+		//for (;;) _kputc('.');
 	}
 	return 1;
 }
@@ -316,7 +318,7 @@ static int _nish_interpret(char *str)
 		printf("\n");
 		return 0;
 	}
-	if (!strcmp(cmd,"test")) ret=nish_test();
+	if (!strcmp(cmd,"test")) ret=nish_test(argc,argv);
 		else if (!strcmp(cmd,"clear")) ret=_kclear();
 		else if (!strcmp(cmd,"lba28")) ret=nish_lba28();
 		else if (!strcmp(cmd,"ls")) ret=nish_ls(argc,argv);

@@ -20,6 +20,7 @@
 #include <fs/fs.h>
 #include <mm.h>
 #include <errno.h>
+#include <task.h>
 
 static fs_node *fs_root = 0;
 static mountinfo *mountinfos = 0;
@@ -62,7 +63,7 @@ UINT setup_vfs()
 {
 	if (fs_root) return 1;
 	fs_root=calloc(1,sizeof(fs_node)); //Sets zero everywhere too
-	fs_root->mode=(FS_MODE_RWX << FS_MODE_USER) | (FS_MODE_RX << FS_MODE_GROUP) | (FS_MODE_RX << FS_MODE_OTHER);
+	fs_root->mode=0755;
 	fs_root->uid=FS_UID_ROOT;
 	fs_root->gid=FS_GID_ROOT;
 	fs_root->flags=FS_DIRECTORY;
@@ -120,8 +121,7 @@ UINT fs_del_mountpoint(mountinfo *mi)
 UINT close_vfs()
 {
 	free(fs_root);
-	fs_root=0;
-	
+	fs_root=0;	
 	return 0;
 }
 
@@ -137,8 +137,27 @@ fs_node *get_root_fs_node()
 {
 	return resolve_node(fs_root);
 }
-
+int sys_open(char *filename,int flag,int mode)
+{
+	//TODO Check access
+	int fd;
+	for (fd=0;fd<NR_OPEN;fd++)
+		if (current_task->files[fd].fd==NO_FILE) break;
+	if (fd==NR_OPEN) return -1;
+	current_task->files[fd].fd=fd;
+	current_task->files[fd].flags=flag;
+	
+	/////////////////////////////////////
+	// A lot more //like offset
+	/////////////////////////////////////
+	
+	return fd;
+}
+	
 int sys_close(int fd)
 {
+	if (fd<0 || fd>=NR_OPEN) return -1;
+	current_task->files[fd].fd=NO_FILE;
+	close_fs(current_task->files[fd].node);
 	return 0;
 }

@@ -23,6 +23,7 @@
 #include <fs/fs.h>
 #include <errno.h>
 #include <kernel/syscall.h>
+#include <kernel/ktextio.h>
 
 volatile task *current_task = 0;
 volatile task tasks[NR_TASKS];
@@ -34,8 +35,9 @@ extern page_directory *current_directory;
 //mm.c
 extern UINT _kmalloc_a(UINT sz);
 
-extern UINT read_eip(); //process.asm
-extern UINT initial_esp; //defined in main.c
+extern volatile task* schedule();	//sched.c
+extern UINT read_eip();			//process.S
+extern UINT initial_esp;		//main.c
 
 void move_stack(void *new_stack, UINT size)
 {
@@ -66,7 +68,7 @@ void setup_tasking()
 	move_stack((void*)0xE0000000, 0x2000);
 	UINT i;
 	for (i=1;i<NR_TASKS;i++)
-		tasks[i].pid=TASK_NOTASK;
+		tasks[i].pid=NO_TASK;
 	current_task=tasks;
 	//Kernel has pid 0, stupid,
 	//but init on Linux an other Unix-likes seems to have pid 1
@@ -75,7 +77,8 @@ void setup_tasking()
 	current_task->esp=current_task->ebp=0;
 	current_task->eip=0;
 	current_task->directory=current_directory;
-	current_task->gid=current_task->uid=0; //root runs it
+	current_task->gid=FS_GID_ROOT; //root runs it
+	current_task->uid=FS_UID_ROOT;
 	current_task->pwd=0;//get_root_fs_node();
 	for (i=NR_OPEN;i--;)
 		current_task->files[i].fd=NO_FILE;
@@ -86,19 +89,18 @@ void setup_tasking()
 void switch_task()
 {
 	if (!current_task) return;
-	UINT esp, ebp, eip,i;
+	UINT esp,ebp,eip;
 	asm volatile("mov %%esp,%0":"=r"(esp));
 	asm volatile("mov %%ebp,%0":"=r"(ebp));
 	eip=read_eip();
-	if (eip==0x2DF) return; //Just switched
+	if (eip==0x2DF) {
+		sti();
+		return; //Just switched
+	}
 	current_task->eip=eip;
 	current_task->esp=esp;
 	current_task->ebp=ebp;
-	i=current_task->pid;
-	while (++i<NR_TASKS)
-		if (tasks[i].pid!=TASK_NOTASK) break;
-	if (i==NR_TASKS) current_task=tasks;
-		else current_task=&(tasks[i]);
+	current_task=schedule();
 	eip=current_task->eip;
 	esp=current_task->esp;
 	ebp=current_task->ebp;
@@ -110,7 +112,6 @@ void switch_task()
 			"mov %2,%%ebp\n\t"
 			"mov %3,%%cr3\n\t"
 			"mov $0x2DF,%%eax\n\t"
-			"sti\n\t"
 			"jmp *%%ecx\n\t"::"r"(eip),"r"(esp),"r"(ebp),"r"(current_directory->physPos));
 }
 
@@ -118,9 +119,9 @@ int sys_fork()
 {
 	cli();
 	task *parent_task=(task *)current_task;
-	int i=0;
-	while (++i<NR_TASKS)
-		if (tasks[i].pid==TASK_NOTASK) break;
+	int i;
+	for (i=0;i<NR_TASKS;i++)
+		if (tasks[i].pid==NO_TASK) break;
 	if (i==NR_TASKS) return -1;
 	page_directory *directory=clone_directory(current_directory);
 	volatile task *newtask=(&(tasks[i]));
@@ -164,9 +165,9 @@ void switch_to_user_mode()
 			"pushl $0x23\n\t"
 			"pushl %eax\n\t"
 			"pushf\n\t"
-			/*"pop %eax\n\t"
+			"pop %eax\n\t"
 			"or $0x200,%eax\n\t"
-			"push %eax\n\t"*/
+			"push %eax\n\t"
 			"pushl $0x1B\n\t"
 			"push $1f\n\t"
 			"iret\n\t"
@@ -223,14 +224,23 @@ int sys_execve(char *file,char **argv,char **envp)
 	return ret;
 }
 
+void abort_current_process()
+{
+	sys_exit(0);
+}
+
 int sys_exit(int status)
 {
-	cli(); //switch_task does sti()
 	UINT i;
-	current_task->pid=TASK_NOTASK;
+	cli(); //switch_task does sti()
 	for (i=NR_OPEN;i--;)
 		if (current_task->files[i].fd!=NO_FILE)
 			sys_close(i);
+	if (!sys_getpid()) {
+		printf("Kernel Aborted. Halt System!\n");
+		hlt();
+	}
+	current_task->pid=NO_TASK;
 	free_directory(current_task->directory);
 	switch_task(); //Fare Well!
 	return status; //We will never reach this :-(

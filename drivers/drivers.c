@@ -23,7 +23,7 @@
 
 extern void setup_floppy(fs_node *);
 extern void setup_urandom_file(fs_node *);
-
+extern void setup_serial(fs_node *);
 
 static UINT drv_stdout_write(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 {
@@ -59,11 +59,12 @@ UINT setup_drivers(fs_node *devfs)
 {
 	if (!devfs) return 2;
 	
+	devfs_register_device(devfs,"stdout",0222,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&stdout_ops);
+	devfs_register_device(devfs,"stderr",0222,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&stdout_ops);
 	devfs_register_device(devfs,"null",0666,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&null_ops);
 	devfs_register_device(devfs,"zero",0666,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&zero_ops);
 	setup_urandom_file(devfs);
-	devfs_register_device(devfs,"stdout",0222,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&stdout_ops);
-	devfs_register_device(devfs,"stderr",0222,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&stdout_ops);
+	setup_serial(devfs);
 	setup_floppy(devfs);
 	return 0;
 }

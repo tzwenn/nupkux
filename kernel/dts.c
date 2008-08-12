@@ -22,6 +22,8 @@
 #include <kernel/dts.h>
 #include <lib/memory.h>
 #include <kernel/ktextio.h>
+#include <kernel/syscall.h>
+#include <task.h>
 
 #define IDT_SET_GATE_ISR(nr)	idt_set_gate(nr,(UINT)isr##nr,0x08,0x8E);
 #define IDT_SET_GATE_IRQ(nr)	idt_set_gate(IRQ##nr,(UINT)irq##nr,0x08,0x8E);
@@ -110,7 +112,7 @@ static void init_gdt()
 	gdt_set_gate(2,0,0xFFFFFFFF,0x92,0xCF);
 	gdt_set_gate(3,0,0xFFFFFFFF,0xFA,0xCF);
 	gdt_set_gate(4,0,0xFFFFFFFF,0xF2,0xCF);
-	write_tss(5,0x10,0x0);
+	write_tss(5,0x10,0x00);
 	gdt_flush((UINT)&gdt_ptr);
 	tss_flush();
 }
@@ -200,7 +202,7 @@ static void idt_set_gate(UCHAR num, UINT base, USHORT sel, UCHAR flags)
 	idt_entries[num].base_hi=(base>>16)&0xFFFF;
 	idt_entries[num].sel=sel;
 	idt_entries[num].always0=0;
-	idt_entries[num].flags=flags; //|0x60
+	idt_entries[num].flags=flags|0x60;
 }
 
 static void write_tss(int num, UINT ss0, UINT esp0)
@@ -272,11 +274,9 @@ void isr_handler(registers regs)
 		isr_t handler=interrupt_handlers[int_no];
 		handler(&regs);
 	} else {
-		if (int_no<32) {
-			printf("%s Exception. System Halted!\n",exception_messages[int_no]);
-			cli();
-			hlt();
-		} else printf("unhandled interrupt: 0x%X\n",int_no);
+		if (int_no<32) printf("%s Exception",exception_messages[int_no]);
+			else printf("unhandled interrupt: 0x%X\n",int_no);
+		abort_current_process();
 	}
 }
 

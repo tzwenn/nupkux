@@ -103,7 +103,7 @@ struct _mountinfo {
 
 typedef struct file {
 	UINT fd;
-	USHORT mode;
+	USHORT flags;
 	fs_node *node;
 	off_t offset;
 } FILE;
