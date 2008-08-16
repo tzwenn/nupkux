@@ -20,10 +20,13 @@
 #ifndef _STRING_H
 #define _STRING_H
 
-extern int strcmp(char *s1, char *s2);
-extern int strlen(char *str);
-extern char *strchr(char *str, char chr);
-extern char *strcpy(char *dest, char *src);
-extern char *strncpy(char *dest, char *src, int num);
+#include <kernel.h>
+
+extern int strcmp(const char *s1, const char *s2);
+extern size_t strlen(const char *str);
+extern char *strchr(const char *str, char chr);
+extern char *strcpy(char *dest, const char *src);
+extern char *strncpy(char *dest, const char *src, size_t num);
+extern char *strtok(char *s, const char *delim);
 
 #endif

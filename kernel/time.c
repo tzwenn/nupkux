@@ -24,15 +24,12 @@
 
 #define tick_rate 50
 
-int _ktimezone = 1;
-int _kdaylight_saving_time = 1; //It's the 27th of July
-
-time_t time(time_t *__timer);
-int removetimezone(struct tm *timeptr);
+static int _ktimezone = 1;
+static int _kdaylight_saving_time = 1; //It's the 27th of July
 
 ULONG ticks = 0;
 
-void set_pic_timer(int freq)
+static void set_pic_timer(int freq)
 {
     int divisor = 1193180/freq;
     outportb(0x43,0x36);
@@ -52,7 +49,7 @@ void setup_timer()
 	register_interrupt_handler(IRQ0,&timer_handler);
 }
 
-UCHAR DateBCD(UCHAR value, int is_bcd)
+static UCHAR DateBCD(UCHAR value, int is_bcd)
 {
 	int tmp;
 

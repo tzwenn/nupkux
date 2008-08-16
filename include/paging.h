@@ -72,6 +72,6 @@ extern void free_directory(page_directory *dir);
 extern page *make_page(UINT address, UINT flags, page_directory *directory, int alloc);
 extern page *get_page(UINT address, int make, page_directory *directory);
 extern page *free_page(UINT address, page_directory *directory);
-extern void setup_paging();
+extern void setup_paging(void);
 
 #endif

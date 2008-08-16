@@ -65,7 +65,7 @@ struct FACP
 
 UINT *acpiCheckRSDPtr(UINT *ptr)
 {
-	char *sig = "RSD PTR ";
+	const char *sig = "RSD PTR ";
 	struct RSDPtr *rsdp = (struct RSDPtr *) ptr;
 	char *bptr;
 	char check=0;
@@ -81,7 +81,7 @@ UINT *acpiCheckRSDPtr(UINT *ptr)
 		else return 0;
 }
 
-UINT *acpiGetRSDPtr()
+UINT *acpiGetRSDPtr(void)
 {
 	UINT *addr;
 	UINT *rsdp;
@@ -99,7 +99,7 @@ UINT *acpiGetRSDPtr()
 	return 0;
 }
 
-int acpiCheckHeader(UINT *ptr, char *sig)
+int acpiCheckHeader(UINT *ptr, const char *sig)
 {
 	if (!memcmp(ptr,sig,4)) {
 		char *checkPtr=(char *)ptr;
@@ -114,7 +114,7 @@ int acpiCheckHeader(UINT *ptr, char *sig)
 	return -1;
 }
 
-int acpiEnable()
+int acpiEnable(void)
 {
 	if (inportw((UINT)PM1a_CNT)&SCI_EN) return 0;
 	if (!(SMI_CMD && ACPI_ENABLE)) return -1;
@@ -133,7 +133,7 @@ int acpiEnable()
 		else return -1;
 }
 
-int setup_ACPI()
+int setup_ACPI(void)
 {
 	UINT *ptr=acpiGetRSDPtr();
 	if (!ptr || acpiCheckHeader(ptr,"RSDT")) return -1;
@@ -176,7 +176,7 @@ int setup_ACPI()
 	return -1;
 }
 
-void acpiPowerOff()
+void acpiPowerOff(void)
 {
 	if (!SCI_EN) return;
 	acpiEnable();

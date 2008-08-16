@@ -19,29 +19,25 @@
 
 #include <lib/memory.h>
 
-void *memcpy(void *target, void *src, UINT count);
-void *memset(void *target, char value, UINT count);
-int memcmp(void *s1, void *s2, UINT n);
-
-void *memcpy(void *target, void *src, UINT count)
+void *memcpy(void *target, const void *src, size_t count)
 {	
-	char *tmp = (char *) target;
+	char *tmp = (char *) target, *source = (char *)src;
 	while (count--) {
-		*tmp=*((char *) src);
+		*tmp=*source;
 		tmp++;
-		src++;
+		source++;
 	}
 	return target;
 }
 
-void *memset(void *target, char value, UINT count)
+void *memset(void *target, int value, size_t count)
 {
 	char *tmp = (char *)target;
 	while (count--) *(tmp++)=value;
 	return target;
 }
 
-int memcmp(void *s1, void *s2, UINT n)
+int memcmp(const void *s1, const void *s2, size_t n)
 {
 	if (n) {
 		register const UCHAR *p1 = s1, *p2 = s2;

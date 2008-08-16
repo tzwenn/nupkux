@@ -17,15 +17,12 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//                       Based on code from Bran's and JamesM'S kernel development tutorials.
-
-
 #ifndef _DTS_H
 #define _DTS_H
 
 #include <kernel.h>
 
-void setup_dts();
+void setup_dts(void);
 
 typedef struct _gdt_entry gdt_entry;
 typedef struct _gdt_pointer gdt_pointer;

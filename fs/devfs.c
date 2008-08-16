@@ -37,7 +37,7 @@ static fs_node *devfs_get_node(devfs_discr *discr, UINT inode)
 	return &(node[inode]);
 }
 
-static void devfs_add_d_entry(fs_node *dir, char *name, UINT inode)
+static void devfs_add_d_entry(fs_node *dir, const char *name, UINT inode)
 {
 	UINT entr_num = (dir->size/sizeof(devfs_d_entry));
 	
@@ -122,7 +122,7 @@ static struct dirent *devfs_readdir(fs_node *node, UINT index)
 	return &dirent;
 }
 
-static fs_node *devfs_finddir(fs_node *node, char *name)
+static fs_node *devfs_finddir(fs_node *node, const char *name)
 {
 	if (node->flags!=FS_DIRECTORY) return 0;
 	devfs_discr *discr = (devfs_discr *)(node->mi->discr);
@@ -162,7 +162,7 @@ static fs_node *devfs_find_free_node(devfs_discr *discr)
 	return 0;
 }
 
-fs_node *devfs_register_device(fs_node *dir, char *name, UINT mode, UINT uid, UINT gid, UINT type, node_operations *f_op)
+fs_node *devfs_register_device(fs_node *dir, const char *name, UINT mode, UINT uid, UINT gid, UINT type, node_operations *f_op)
 {
 	if (!dir || dir->flags!=FS_DIRECTORY || dir->mi->fs_type!=FS_TYPE_DEVFS) return 0;
 	devfs_discr *discr = (devfs_discr *) dir->mi->discr;
@@ -219,7 +219,7 @@ fs_node *setup_devfs(fs_node *mountpoint)
 	strcpy(rootentr[1].filename,"..");
 	root->p_data=(void *)rootentr;
 	
-	root->mode=(FS_MODE_RWX << FS_MODE_USER) | (FS_MODE_RX << FS_MODE_GROUP) | (FS_MODE_RX << FS_MODE_OTHER);
+	root->mode=0755;
 	root->uid=FS_UID_ROOT;
 	root->gid=FS_GID_ROOT;
 	root->flags=FS_DIRECTORY;

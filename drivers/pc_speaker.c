@@ -20,12 +20,12 @@
 #include <kernel.h>
 #include <kernel/ktextio.h>
 
-void _init_pc_speaker()
+void _init_pc_speaker(void)
 {
 	outportb(0x61,inportb(0x61) | 0x03);
 }
 
-void _stop_pc_speaker()
+void _stop_pc_speaker(void)
 {
 	outportb(0x61,inportb(0x61) & 0xFC);
 }

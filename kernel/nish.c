@@ -72,7 +72,7 @@ int split_to_argv(char *str, char *argv[])
 	if (!*str) return 0;
 	char cmd[STRLEN],args[STRLEN];
 	UINT i=0;
-	strcpy(cmd,str);
+	strncpy(cmd,str,STRLEN);
 	do {
 		memset(args,0,STRLEN);
 		_nish_split_par(cmd,args);
@@ -112,7 +112,7 @@ static void format_mode(fs_node *node, char *output)
 	}
 }
 
-static int nish_help()
+static int nish_help(void)
 {
 	printf("List of built-in commands:\n");
 	printf("\ttest\t\tRun the current development function\n");
@@ -126,10 +126,11 @@ static int nish_help()
 	printf("\thalt\t\tHalt system\n");
 	printf("\treboot\t\tReboot system\n");
 	printf("\thelp\t\tWhat do you read right now?\n");
+	printf("  Any other command is tried to be executed from /bin.\n");
 	return 0;
 }
 
-static int nish_time()
+static int nish_time(void)
 {
 	struct tm now;
 	time_t timestamp;
@@ -142,7 +143,7 @@ static int nish_time()
 	return 1;
 }
 
-static int nish_lba28()
+static int nish_lba28(void)
 {
 	UCHAR idelist = 0,drv,tcalc;
 	USHORT tmpword = 0, contrl;
@@ -281,55 +282,53 @@ static int nish_cd(int argc, char *argv[])
 	return 1;
 }
 
-static int nish_test(int argc, char **argv)
+static int nish_run(const char *cmd, char **argv)
 {
-	printf("---usermode test---\n\n");
+	int ret;
+	pid_t pid;
 	
-	if (!sys_fork()) {
-		/*switch_to_user_mode();
-		asm volatile ("int $0x80"::"a"(SYS_EXECVE),"b"((int)"utest"),"c"(0),"d"(0));
-		asm volatile ("int $0x80"::"a"(SYS_EXIT),"b"(0));
-		for (;;) asm volatile ("int $0x80"::"a"(SYS_PUTCHAR),"b"('A'));*/
-		UINT *ptr = (UINT *)0xA000000;
-		printf("%d",*ptr);
-	} else {
-		//for (;;) _kputc('.');
-	}
-	return 1;
+	if (!(pid=sys_fork())) {
+		ret=sys_execve(cmd,argv,0);
+		if ((ret==-1) && (errno==-ENOENT)) {
+			printf("nish: %s: command not found\n",cmd);
+		}
+		sys_exit(ret);
+	} else sys_waitpid(pid,&ret,0);
+	return ret;
 }
 
-static int nish_run(char *cmd, char **argv)
+static int nish_test(int argc, char **argv)
 {
-	//TODO Fork it!
-	if ((sys_execve(cmd,argv,0)==-1) && (errno==-ENOENT))
-		printf("nish: %s: command not found\n",cmd);
+	printf("---open,read,write,close test---\n\n");
+	
+	int fd0=sys_open("/dev/stdin",2,0);
+	int fd1=sys_open("/dev/stdout",2,0);
+	nish_run("utest",argv);
+	sys_close(fd1);
+	sys_close(fd0);
 	return 1;
 }
 
 static int _nish_interpret(char *str)
 {
-	char **argv=calloc(MAX_ARGS,sizeof(char *)),*cmd;
+	if (*str<32) return 0;
+	char **argv=calloc(MAX_ARGS,sizeof(char *));
 	int i,ret=0,argc;
 	for (i=0;i<MAX_ARGS;i++) 
 		argv[i]=malloc(STRLEN);
 	argc=split_to_argv(str,argv);
-	cmd=argv[0];
-	if (!(*cmd)) {
-		printf("\n");
-		return 0;
-	}
-	if (!strcmp(cmd,"test")) ret=nish_test(argc,argv);
-		else if (!strcmp(cmd,"clear")) ret=_kclear();
-		else if (!strcmp(cmd,"lba28")) ret=nish_lba28();
-		else if (!strcmp(cmd,"ls")) ret=nish_ls(argc,argv);
-		else if (!strcmp(cmd,"cat")) ret=nish_cat(argc,argv);
-		else if (!strcmp(cmd,"cd")) ret=nish_cd(argc,argv);
-		else if (!strcmp(cmd,"time")) ret=nish_time();
-		else if (!strcmp(cmd,"exit")) ret=NISH_EXIT;
-		else if (!strcmp(cmd,"halt")) ret=NISH_HALT;
-		else if (!strcmp(cmd,"reboot")) ret=NISH_REBOOT;
-		else if (!strcmp(cmd,"help")) ret=nish_help();
-		else ret=nish_run(cmd,argv);
+	if (!strcmp(argv[0],"test")) ret=nish_test(argc,argv);
+		else if (!strcmp(argv[0],"clear")) ret=_kclear();
+		else if (!strcmp(argv[0],"lba28")) ret=nish_lba28();
+		else if (!strcmp(argv[0],"ls")) ret=nish_ls(argc,argv);
+		else if (!strcmp(argv[0],"cat")) ret=nish_cat(argc,argv);
+		else if (!strcmp(argv[0],"cd")) ret=nish_cd(argc,argv);
+		else if (!strcmp(argv[0],"time")) ret=nish_time();
+		else if (!strcmp(argv[0],"exit")) ret=NISH_EXIT;
+		else if (!strcmp(argv[0],"halt")) ret=NISH_HALT;
+		else if (!strcmp(argv[0],"reboot")) ret=NISH_REBOOT;
+		else if (!strcmp(argv[0],"help")) ret=nish_help();
+		else ret=nish_run(argv[0],argv);
 	for (i=0;i<MAX_ARGS;i++) {
 		free(argv[i]);
 	}

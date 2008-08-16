@@ -30,6 +30,8 @@
 #define TASK_ZOMBIE		3
 #define TASK_STOPPED		4
 
+#define ROOT_UID	0
+
 #define NR_TASKS	64
 #define NO_TASK		(-1)
 
@@ -37,26 +39,30 @@
 
 typedef struct _task task;
 
+#ifndef _PID_T
+#define _PID_T
+typedef int pid_t;
+#endif
+
 struct _task
 {
-	int pid,parent;
+	pid_t pid,parent;
+	long priority,state;
 	UINT esp,ebp;
 	UINT eip;
 	page_directory *directory;
 	UINT kernel_stack;
 	USHORT uid, gid;
-	long priority,state;
+	int exit_code;
 	FILE files[NR_OPEN];
-	fs_node *pwd;
+	fs_node *pwd,*root;
 };
 
 extern volatile task *current_task;
-extern void setup_tasking();
-extern void switch_task();
-extern int sys_fork();
+extern void setup_tasking(void);
+extern void switch_task(void);
 extern void move_stack(void *new_stack, UINT size);
-extern int sys_getpid();
-extern void switch_to_user_mode();
-extern void abort_current_process();
+extern void switch_to_user_mode(void);
+extern void abort_current_process(void);
 
 #endif

@@ -17,8 +17,6 @@
 ; *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
 ; */
 
-;                       Based on code from Bran's and JamesM'S kernel development tutorials.
-
 [GLOBAL gdt_flush]    ; Allows the C code to call gdt_flush().
 
 gdt_flush:

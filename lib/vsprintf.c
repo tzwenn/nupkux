@@ -7,8 +7,8 @@
  *  just in case ...
  */
 
-#include <stdarg.h>
-#include <string.h>
+#include <lib/stdarg.h>
+#include <lib/string.h>
 
 /* we use this so that we can do without the ctype library */
 #define is_digit(c)	((c) >= '0' && (c) <= '9')

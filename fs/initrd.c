@@ -71,7 +71,7 @@ static struct dirent *initrd_readdir(fs_node *node, UINT index)
 }
 
 
-static fs_node *initrd_finddir(fs_node *node, char *name)
+static fs_node *initrd_finddir(fs_node *node, const char *name)
 {	
 	if (node->flags!=FS_DIRECTORY) return 0;
 	initrd_discr *discr = (initrd_discr *)(node->mi->discr);

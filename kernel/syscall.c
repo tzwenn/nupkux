@@ -30,7 +30,7 @@ int sys_putchar(char chr)
 	return chr;
 }
 
-int sys_mknod(char *name, int mode, int addr)
+int sys_mknod(const char *name, int mode, int addr)
 {
 	return -ENOSYS;
 }
@@ -71,10 +71,16 @@ void setup_syscalls()
 	sys_call_table[SYS_PUTCHAR]=&sys_putchar;
 	sys_call_table[SYS_EXIT]=&sys_exit;
 	sys_call_table[SYS_FORK]=&sys_fork;
+	sys_call_table[SYS_READ]=&sys_read;
+	sys_call_table[SYS_WRITE]=&sys_write;
+	sys_call_table[SYS_OPEN]=&sys_open;
+	sys_call_table[SYS_CLOSE]=&sys_close;
+	sys_call_table[SYS_WAITPID]=&sys_waitpid;
 	sys_call_table[SYS_EXECVE]=&sys_execve;
 	sys_call_table[SYS_CHDIR]=&sys_chdir;
 	sys_call_table[SYS_MKNOD]=&sys_mknod;
 	sys_call_table[SYS_GETPID]=&sys_getpid;
+	sys_call_table[SYS_CHROOT]=&sys_chroot;
 	
 	register_interrupt_handler(0x80,&SysCallHandler);
 }

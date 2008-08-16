@@ -69,7 +69,7 @@ typedef struct DrvGeom {
 
 /* function prototypes */
 
-void ResetFloppy();
+void ResetFloppy(void);
 void reset(void);
 UINT diskchange(void);
 void motoron(void);

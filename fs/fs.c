@@ -53,7 +53,7 @@ struct dirent *readdir_fs(fs_node *node, UINT index)
 		else return 0;
 }
 
-fs_node *finddir_fs(fs_node *node, char *name)
+fs_node *finddir_fs(fs_node *node, const char *name)
 {
 	if ((node->flags&FS_DIRECTORY) && (node->f_op && node->f_op->finddir)) return node->f_op->finddir(node,name);
 		else return 0;
@@ -83,11 +83,6 @@ mountinfo *fs_add_mountpoint(UINT fs_type, void *discr, fs_node *mountpoint, fs_
 	mi->next=mountinfos;
 	mountinfos=mi;
 	if (mountpoint) {
-		/*FIXME I could mount another time on this node and make a lot of trouble
-		  UPDATE: namei() resolves the problem in a good way:
-			  B is mounted on A and C also (for the caller) on A, it will
-		          found itself on B (understood? sorry ...)
-		*/
 		if (mountpoint->flags!=FS_DIRECTORY) {
 			errno=-ENOTDIR;
 			return 0;
@@ -128,6 +123,7 @@ UINT close_vfs()
 fs_node *resolve_node(fs_node *node)
 {
 	if (!node) return 0;
+	
 	if (node->flags&FS_MOUNTPOINT || node->flags==FS_SYMLINK)
 		return resolve_node(node->ptr);
 	else return node;
@@ -135,29 +131,7 @@ fs_node *resolve_node(fs_node *node)
 
 fs_node *get_root_fs_node()
 {
-	return resolve_node(fs_root);
-}
-int sys_open(char *filename,int flag,int mode)
-{
-	//TODO Check access
-	int fd;
-	for (fd=0;fd<NR_OPEN;fd++)
-		if (current_task->files[fd].fd==NO_FILE) break;
-	if (fd==NR_OPEN) return -1;
-	current_task->files[fd].fd=fd;
-	current_task->files[fd].flags=flag;
-	
-	/////////////////////////////////////
-	// A lot more //like offset
-	/////////////////////////////////////
-	
-	return fd;
-}
-	
-int sys_close(int fd)
-{
-	if (fd<0 || fd>=NR_OPEN) return -1;
-	current_task->files[fd].fd=NO_FILE;
-	close_fs(current_task->files[fd].node);
-	return 0;
+	if ((!current_task) || (!current_task->root))
+		return resolve_node(fs_root);
+		else return resolve_node(current_task->root);
 }

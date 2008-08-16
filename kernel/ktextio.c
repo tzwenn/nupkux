@@ -24,11 +24,10 @@
 
 static int _ksetcursor(UCHAR x, UCHAR y);
 int _kin(char *instr, int maxlen);
-int _kclear();
 static UCHAR _kkeyboard_layout(UCHAR key, int layout);
 static UCHAR _kinterpret_key(UCHAR key, int layout);
 
-static int _kout(char *output);
+static int _kout(const char *output);
 
 static CURSOR_POS _cursor_pos;
 static UINT _line_buffer_pos = 0, _line_buffer_end = 0;
@@ -65,7 +64,7 @@ inline USHORT inportw(USHORT port)
 	return value;
 }
 
-static int _kline_buffer_up() 
+static int _kline_buffer_up(void) 
 {
 	if (((_line_buffer_end>=0) && (_line_buffer_pos==_line_buffer_end)) || 
 	   ((_line_buffer_end<0) && (_line_buffer_pos==-_line_buffer_end-1) )) return 0;
@@ -75,7 +74,7 @@ static int _kline_buffer_up()
 	return 1;
 }
 
-static int _kline_buffer_down() 
+static int _kline_buffer_down(void) 
 {
 	if (!_line_buffer_pos)	return 0;
 
@@ -85,7 +84,7 @@ static int _kline_buffer_down()
 }
 
 
-static int _kline_buffer_reset() 
+static int _kline_buffer_reset(void) 
 {
 	//while (_kline_buffer_down());
 	return 1;
@@ -135,7 +134,7 @@ static UCHAR _kkeyboard_layout(UCHAR key, int layout)
 	return 0;
 }
 
-extern void reboot();
+extern void reboot(void);
 
 static UCHAR _kinterpret_key(UCHAR key, int layout)
 {
@@ -298,7 +297,7 @@ void setup_input()
 		_key_states[i]=0;
 }
 
-int _kgetc()
+int _kgetc(void)
 {
 	//_print_pressed_key=0;
 	_key_recieved=0;
@@ -332,7 +331,7 @@ int _kgets(char *instr, int maxlen)
 	return 0;
 }
 
-static int _kout(char *output)
+static int _kout(const char *output)
 {
 	UCHAR x = _cursor_pos.x, y = _cursor_pos.y;
 	int i;

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007,2008 Sven Köhler
+ *  Copyright (C) 2008 Sven Köhler
  *
  *  This file is part of Nupkux.
  *
@@ -17,13 +17,31 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MEMORY_H
-#define _MEMORY_H
+#include <task.h>
+#include <fs/fs.h>
+#include <errno.h>
 
-#include <kernel.h>
-
-extern void *memcpy(void *target, const void *src, size_t count);
-extern void *memset(void *target, int value, size_t count);
-extern int memcmp(const void *s1, const void *s2, size_t n);
-
-#endif
+int sys_execve(const char *file,char **argv,char **envp)
+{
+	//TODO: permission check, PATH, only './' for programs in .
+	UCHAR *buf;
+	int ret,argc=0;
+	int (*main)(int,char **,char **);
+	fs_node *node=namei(file);
+	
+	if (!node)
+		node=finddir_fs(namei("/bin"),file);
+	if (!node) {
+		errno=-ENOENT;
+		return -1;	
+	}
+	open_fs(node,1,0);
+	buf=(UCHAR *)malloc(node->size);
+	read_fs(node,0,node->size,buf);
+	while (argv[argc]) argc++;
+	main=(int (*)(int,char **,char **))buf;
+	ret=main(argc,argv,envp);
+	free(buf);
+	close_fs(node);
+	return ret;
+}

@@ -30,13 +30,12 @@ volatile task tasks[NR_TASKS];
 
 //paging.c
 extern page_directory *kernel_directory;
-extern page_directory *current_directory;
 
 //mm.c
 extern UINT _kmalloc_a(UINT sz);
 
-extern volatile task* schedule();	//sched.c
-extern UINT read_eip();			//process.S
+extern volatile task* schedule(void);	//sched.c
+extern UINT read_eip(void);		//process.S
 extern UINT initial_esp;		//main.c
 
 void move_stack(void *new_stack, UINT size)
@@ -79,7 +78,8 @@ void setup_tasking()
 	current_task->directory=current_directory;
 	current_task->gid=FS_GID_ROOT; //root runs it
 	current_task->uid=FS_UID_ROOT;
-	current_task->pwd=0;//get_root_fs_node();
+	current_task->pwd=0;
+	current_task->root=0;//get_root_fs_node();
 	for (i=NR_OPEN;i--;)
 		current_task->files[i].fd=NO_FILE;
 	current_task->kernel_stack=_kmalloc_a(KERNEL_STACK_SIZE);
@@ -115,43 +115,6 @@ void switch_task()
 			"jmp *%%ecx\n\t"::"r"(eip),"r"(esp),"r"(ebp),"r"(current_directory->physPos));
 }
 
-int sys_fork()
-{
-	cli();
-	task *parent_task=(task *)current_task;
-	int i;
-	for (i=0;i<NR_TASKS;i++)
-		if (tasks[i].pid==NO_TASK) break;
-	if (i==NR_TASKS) return -1;
-	page_directory *directory=clone_directory(current_directory);
-	volatile task *newtask=(&(tasks[i]));
-	newtask->pid=i;
-	newtask->esp=0;
-	newtask->ebp=0;
-	newtask->eip=0;
-	newtask->parent=parent_task->pid;
-	newtask->gid=parent_task->gid;
-	newtask->uid=parent_task->uid;
-	newtask->directory=directory;
-	newtask->pwd=parent_task->pwd;
-	memcpy(&newtask->files,&parent_task->files,NR_OPEN*sizeof(FILE));
-	current_task->kernel_stack=_kmalloc_a(KERNEL_STACK_SIZE);
-	UINT eip=read_eip();
-	if (current_task==parent_task) {
-		UINT esp,ebp;
-		asm volatile("mov %%esp,%0":"=r"(esp));
-		asm volatile("mov %%ebp,%0":"=r"(ebp));
-		newtask->esp=esp;
-		newtask->ebp=ebp;
-		newtask->eip=eip;
-		sti();
-		return newtask->pid;
-	} else {
-		sti();
-		return 0;
-	}
-}
-
 void switch_to_user_mode()
 {
 	set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);
@@ -174,74 +137,51 @@ void switch_to_user_mode()
 			"1:");
 }
 
-int sys_getpid()
+pid_t sys_fork()
+{
+	cli();
+	task *parent_task=(task *)current_task;
+	pid_t i;
+	for (i=0;i<NR_TASKS;i++)
+		if (tasks[i].pid==NO_TASK) break;
+	if (i==NR_TASKS) return -1;
+	page_directory *directory=clone_directory(current_directory);
+	volatile task *newtask=(&(tasks[i]));
+	newtask->pid=i;
+	newtask->esp=0;
+	newtask->ebp=0;
+	newtask->eip=0;
+	newtask->exit_code=0;
+	newtask->parent=parent_task->pid;
+	newtask->gid=parent_task->gid;
+	newtask->uid=parent_task->uid;
+	newtask->directory=directory;
+	newtask->pwd=parent_task->pwd;
+	newtask->root=parent_task->root;
+	memcpy(&newtask->files,&parent_task->files,NR_OPEN*sizeof(FILE));
+	current_task->kernel_stack=_kmalloc_a(KERNEL_STACK_SIZE);
+	UINT eip=read_eip();
+	if (current_task==parent_task) {
+		UINT esp,ebp;
+		asm volatile("mov %%esp,%0":"=r"(esp));
+		asm volatile("mov %%ebp,%0":"=r"(ebp));
+		newtask->esp=esp;
+		newtask->ebp=ebp;
+		newtask->eip=eip;
+		sti();
+		return newtask->pid;
+	} else {
+		sti();
+		return 0;
+	}
+}
+
+pid_t sys_getpid()
 {
 	return current_task->pid;
-}
-
-int sys_chdir(char *name)
-{
-	if (!current_task) return -1;
-	fs_node *node;
-	
-	node=namei(name);
-	if (node) {
-		if ((node->flags&0x07)==FS_DIRECTORY) 
-			current_task->pwd=node;
-			else {
-				errno=-ENOTDIR;
-				return -1;
-			}
-	} else { 
-		errno=-ENOENT;
-		return -1;
-	}
-	return 0;
-}
-
-int sys_execve(char *file,char **argv,char **envp)
-{
-	//TODO: permission check, PATH, only './' for programs in .
-	UCHAR *buf;
-	int ret,argc=0;
-	int (*main)(int,char **,char **);
-	fs_node *node=namei(file);
-	
-	if (!node)
-		node=finddir_fs(namei("/bin"),file);
-	if (!node) {
-		errno=-ENOENT;
-		return -1;	
-	}
-	open_fs(node,1,0);
-	buf=(UCHAR *)malloc(node->size);
-	read_fs(node,0,node->size,buf);
-	while (argv[argc]) argc++;
-	main=(int (*)(int,char **,char **))buf;
-	ret=main(argc,argv,envp);
-	free(buf);
-	close_fs(node);
-	return ret;
 }
 
 void abort_current_process()
 {
 	sys_exit(0);
-}
-
-int sys_exit(int status)
-{
-	UINT i;
-	cli(); //switch_task does sti()
-	for (i=NR_OPEN;i--;)
-		if (current_task->files[i].fd!=NO_FILE)
-			sys_close(i);
-	if (!sys_getpid()) {
-		printf("Kernel Aborted. Halt System!\n");
-		hlt();
-	}
-	current_task->pid=NO_TASK;
-	free_directory(current_task->directory);
-	switch_task(); //Fare Well!
-	return status; //We will never reach this :-(
 }

@@ -24,10 +24,9 @@
 #include <task.h>
 
 page_directory *current_directory, *kernel_directory;
-page_table *table;
 
-UINT framecount = 0;
-UINT *framemap;
+static UINT framecount = 0;
+static UINT *framemap;
 
 extern UINT kmalloc_pos;
 extern UINT _kmalloc_pa(UINT sz, UINT *phys);
@@ -45,7 +44,7 @@ static void set_page_directory(page_directory *PAGE_DIR)
 			"sti"::"a"(PAGE_DIR->physPos));
 }
 
-static UINT first_frame()
+static UINT first_frame(void)
 {
 	UINT i,j;
 

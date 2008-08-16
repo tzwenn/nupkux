@@ -17,8 +17,6 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//                       Based on code from Bran's and JamesM's kernel development tutorials.
-
 #include <kernel/dts.h>
 #include <lib/memory.h>
 #include <kernel/ktextio.h>
@@ -27,67 +25,69 @@
 
 #define IDT_SET_GATE_ISR(nr)	idt_set_gate(nr,(UINT)isr##nr,0x08,0x8E);
 #define IDT_SET_GATE_IRQ(nr)	idt_set_gate(IRQ##nr,(UINT)irq##nr,0x08,0x8E);
+#define EXTERN_ISR(nr)		extern void isr##nr(void)
+#define EXTERN_IRQ(nr)		extern void irq##nr(void)
 
 extern void gdt_flush(UINT);
 extern void idt_flush(UINT);
-extern void tss_flush();
-static void init_gdt();
-static void init_idt();
+extern void tss_flush(void);
+static void init_gdt(void);
+static void init_idt(void);
 static void gdt_set_gate(int,UINT,UINT,UCHAR,UCHAR);
 static void idt_set_gate(UCHAR,UINT,USHORT,UCHAR);
 static void write_tss(int,UINT,UINT);
 
 tss_entry tss_ent;
 
-extern void isr0();
-extern void isr1();
-extern void isr2();
-extern void isr3();
-extern void isr4();
-extern void isr5();
-extern void isr6();
-extern void isr7();
-extern void isr8();
-extern void isr9();
-extern void isr10();
-extern void isr11();
-extern void isr12();
-extern void isr13();
-extern void isr14();
-extern void isr15();
-extern void isr16();
-extern void isr17();
-extern void isr18();
-extern void isr19();
-extern void isr20();
-extern void isr21();
-extern void isr22();
-extern void isr23();
-extern void isr24();
-extern void isr25();
-extern void isr26();
-extern void isr27();
-extern void isr28();
-extern void isr29();
-extern void isr30();
-extern void isr31();
-extern void irq0();
-extern void irq1();
-extern void irq2();
-extern void irq3();
-extern void irq4();
-extern void irq5();
-extern void irq6();
-extern void irq7();
-extern void irq8();
-extern void irq9();
-extern void irq10();
-extern void irq11();
-extern void irq12();
-extern void irq13();
-extern void irq14();
-extern void irq15();
-extern void isr128();
+EXTERN_ISR(0);
+EXTERN_ISR(1);
+EXTERN_ISR(2);
+EXTERN_ISR(3);
+EXTERN_ISR(4);
+EXTERN_ISR(5);
+EXTERN_ISR(6);
+EXTERN_ISR(7);
+EXTERN_ISR(8);
+EXTERN_ISR(9);
+EXTERN_ISR(10);
+EXTERN_ISR(11);
+EXTERN_ISR(12);
+EXTERN_ISR(13);
+EXTERN_ISR(14);
+EXTERN_ISR(15);
+EXTERN_ISR(16);
+EXTERN_ISR(17);
+EXTERN_ISR(18);
+EXTERN_ISR(19);
+EXTERN_ISR(20);
+EXTERN_ISR(21);
+EXTERN_ISR(22);
+EXTERN_ISR(23);
+EXTERN_ISR(24);
+EXTERN_ISR(25);
+EXTERN_ISR(26);
+EXTERN_ISR(27);
+EXTERN_ISR(28);
+EXTERN_ISR(29);
+EXTERN_ISR(30);
+EXTERN_ISR(31);
+EXTERN_IRQ(0);
+EXTERN_IRQ(1);
+EXTERN_IRQ(2);
+EXTERN_IRQ(3);
+EXTERN_IRQ(4);
+EXTERN_IRQ(5);
+EXTERN_IRQ(6);
+EXTERN_IRQ(7);
+EXTERN_IRQ(8);
+EXTERN_IRQ(9);
+EXTERN_IRQ(10);
+EXTERN_IRQ(11);
+EXTERN_IRQ(12);
+EXTERN_IRQ(13);
+EXTERN_IRQ(14);
+EXTERN_IRQ(15);
+EXTERN_ISR(128);
 
 gdt_entry gdt_entries[5];
 gdt_pointer gdt_ptr;
@@ -224,7 +224,7 @@ void set_kernel_stack(UINT stack)
 
 //Interrupt Service Routines and related stuff
 
-char *exception_messages[] = {
+const char *exception_messages[] = {
 	"Division By Zero",
 	"Debug",
 	"Non Maskable Interrupt",

@@ -30,8 +30,8 @@
 #define NISH_HALT	0xE1
 #define NISH_REBOOT	0xE2
 
-extern int nish();
+extern int nish(void);
 extern void _echo_pc_speaker(UINT freq);
-extern void _stop_pc_speaker();
+extern void _stop_pc_speaker(void);
 
 #endif

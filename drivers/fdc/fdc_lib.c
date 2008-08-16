@@ -26,15 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <lib/memory.h>
 #include <kernel/dts.h>
 
-void ResetFloppy();
-void reset(void);
-UINT diskchange(void);
-void motoron(void);
-void motoroff(void);
-void recalibrate(void);
-UINT flseek(int track);
-UINT log_disk(DrvGeom *g);
-UINT format_track(UCHAR track,DrvGeom *g);
 UINT fdc_read_block(int block,UCHAR *blockbuff, ULONG nosectors);
 
 /* globals */
@@ -52,11 +43,11 @@ static DrvGeom geometry = { DG144_HEADS,DG144_TRACKS,DG144_SPT };
 unsigned long tbaddr = 0x80000L;    /* physical address of track buffer located below 1M */
 
 /* prototypes */
-extern void floppy_ISR();
-extern void _int1c();
+extern void floppy_ISR(void);
+extern void _int1c(void);
 
 void sendbyte(int byte);
-int getbyte();
+int getbyte(void);
 UINT waitfdc(UINT sensei);
 UINT fdc_rw(int block,UCHAR *blockbuff,UINT read,ULONG nosectors);
 

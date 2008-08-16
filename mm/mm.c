@@ -309,8 +309,8 @@ static void *heap_realloc(void *ptr, UINT size, heap *aheap)
 	if (size==header->size-sizeof(mm_header)-sizeof(mm_footer)) return ptr;
 	else if (size<header->size-sizeof(mm_header)-sizeof(mm_footer)) {
 		if (header->size-size-2*(sizeof(mm_header)-sizeof(mm_footer))<0) return ptr;
-		tmpheader=(mm_header*) (ptr+size+sizeof(mm_footer));
-		tmpfooter=(mm_footer*) (ptr+size);
+		tmpheader=(mm_header*) ((UINT)ptr+size+sizeof(mm_footer));
+		tmpfooter=(mm_footer*) ((UINT)ptr+size);
 		footer->header=tmpheader;
 		tmpfooter->header=header;
 		tmpheader->magic=tmpfooter->magic=MM_MAGIC;

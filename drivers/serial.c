@@ -20,7 +20,7 @@
 #include <drivers/drivers.h>
 #include <kernel/ktextio.h>
 
-//A REALLY good source: http://www.sci.muni.cz/docs/pc/serport.txt
+//A REALLY good source: http://www.nondot.org/sabre/os/files/Communication/ser_port.txt
 
 #define COM1	0x3F8
 #define COM2	0x2F8

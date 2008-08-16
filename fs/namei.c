@@ -21,9 +21,9 @@
 #include <lib/string.h>
 #include <task.h>
 
-fs_node *namei(char *filename)
+fs_node *namei(const char *filename)
 {
-	char sname[NODE_NAME_LEN], *end=filename, tmp;
+	char sname[NODE_NAME_LEN], tmp, *end=sname;
 	fs_node *node;
 	
 	if (!filename) return 0;
@@ -43,6 +43,10 @@ fs_node *namei(char *filename)
 		} else strcpy(sname,filename);
 		filename=end+1;
 		if (!*sname) continue;		//Because "//" is also valid
+		if (!strcmp(sname,"..")) {
+			if (node==get_root_fs_node()) continue;
+			//TODO Come out of mountpoint, if we are in it
+		}
 		node=resolve_node(finddir_fs(node,sname));
 		if (!node) return 0;
 	}

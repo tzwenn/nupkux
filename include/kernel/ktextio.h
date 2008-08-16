@@ -79,12 +79,12 @@ extern inline UCHAR inportb(USHORT port);
 extern inline void outportw(USHORT port, USHORT value);
 extern inline USHORT inportw(USHORT port); 
 extern int _kgets(char *instr, int maxlen);
-extern int _kclear();
+extern int _kclear(void);
 extern int printf(const char *fmt, ...);
 extern int _kputc(const char chr);
 extern int str2d(char *str);
-extern void setup_input();
-extern void setup_ktexto();
+extern void setup_input(void);
+extern void setup_ktexto(void);
 
 #endif
 

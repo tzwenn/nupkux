@@ -1,5 +1,3 @@
-;Taken from James M's http://www.jamesmolloy.co.uk
-
 ;*
 ;*  This file is part of Nupkux.
 ;*

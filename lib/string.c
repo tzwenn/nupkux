@@ -19,7 +19,9 @@
 
 #include <lib/string.h>
 
-int strcmp(char *s1, char *s2)
+static char *strtok_save_ptr;
+
+int strcmp(const char *s1, const char *s2)
 {	
 	while ((*s1) && (*s2)) {
 		if (*s1<*s2) return -1;
@@ -32,22 +34,22 @@ int strcmp(char *s1, char *s2)
 	return 0;
 }
 
-int strlen(char *str)
+size_t strlen(const char *str)
 {
-	int res = 0;
+	size_t res = 0;
 	
 	while (*(str++)) res++;
 	return res;
 }
 
-char *strchr(char *str, char chr)
+char *strchr(const char *str, char chr)
 {
 	while ((*str) && (*str!=chr)) str++;
 	if (!(*str)) return 0;
-	return str;
+	return (char *)((UINT)str);
 }
 
-char *strcpy(char *dest, char *src)
+char *strcpy(char *dest, const char *src)
 {
 	char *tmp = dest;
 	while (*src) *(tmp++)=*(src++);
@@ -55,11 +57,20 @@ char *strcpy(char *dest, char *src)
 	return dest;
 }
 
-char *strncpy(char *dest, char *src, int num)
+char *strncpy(char *dest, const char *src, size_t num)
 {
 	char *tmp = dest;
 	while (*src && num--) *(tmp++)=*(src++);
 	while (num--) *(tmp++)=0;
 	
 	return dest;
+}
+
+char *strtok(char *s, const char *delim)
+{
+	char tmp;
+	while (*delim) {
+		strtok_save_ptr=strchr(s,tmp);
+	}
+	return s;
 }

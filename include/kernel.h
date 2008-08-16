@@ -25,13 +25,15 @@
 
 #define _kaborted	0xFF
 
-typedef unsigned char  byte;
 typedef unsigned char  UCHAR;
 typedef unsigned short USHORT;
 typedef unsigned int   UINT;
 typedef unsigned long  ULONG;
 
-typedef unsigned int size_t;
+#ifndef _SIZE_T
+#define _SIZE_T
+	typedef unsigned int size_t;
+#endif
 typedef unsigned int off_t;
 
 extern char _kabort_func;

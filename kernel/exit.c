@@ -18,17 +18,34 @@
  */
 
 #include <task.h>
+#include <kernel/syscall.h>
+#include <errno.h>
+#include <kernel/ktextio.h>
 
 extern volatile task tasks[NR_TASKS];
 
-volatile task* schedule(void)
+int sys_exit(int status)
 {
-	pid_t i;
-	volatile task *new_task;
-	
-	for (i=current_task->pid+1;i<NR_TASKS;i++)
-		if (tasks[i].pid!=NO_TASK) break;
-	if (i==NR_TASKS) new_task=tasks;
-	else new_task=&(tasks[i]);
-	return new_task;
+	UINT i;
+	cli(); //switch_task does sti()
+	for (i=NR_OPEN;i--;)
+		if (current_task->files[i].fd!=NO_FILE)
+			sys_close(i);
+	if (!current_task->pid) {
+		printf("Kernel Aborted. Halt System!\n");
+		hlt();
+	}
+	current_task->pid=NO_TASK;
+	current_task->exit_code=status;
+	free_directory(current_task->directory);
+	switch_task(); //Fare Well!
+	return status; //We will never reach this :-(
+}
+
+pid_t sys_waitpid(pid_t pid, int *statloc, int options)
+{
+	if (pid<=0) return -1;
+	while (tasks[pid].pid!=NO_TASK);
+	if (statloc) *statloc=tasks[pid].exit_code;
+	return pid;
 }

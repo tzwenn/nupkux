@@ -35,9 +35,8 @@ UINT initial_esp;
 ULONG memory_end = 0;
 UINT __working_memstart = 0;
 extern UINT kmalloc_pos;
-extern UINT initrd_location;
 
-void reboot()
+void reboot(void)
 {
 	volatile UCHAR in = 0x02;
 
@@ -47,10 +46,10 @@ void reboot()
 	outportb(0x64,0xFE);
 }
 
-extern int setup_ACPI();
-extern void acpiPowerOff();
+extern int setup_ACPI(void);
+extern void acpiPowerOff(void);
 
-static void halt()
+static void halt(void)
 {	
 	printf("Will now halt");
 	acpiPowerOff();

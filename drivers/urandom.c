@@ -44,7 +44,7 @@ long double sqrt(long double a) //Heron
 	return x;
 }
 
-int rand()
+int rand(void)
 {
 	if (!urandom_state) srand(time(0));
 	long double tmp=sqrt((long double)urandom_state);

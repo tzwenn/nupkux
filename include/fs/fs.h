@@ -36,13 +36,6 @@
 #define FS_TYPE_INITRD	0x1120
 #define FS_TYPE_DEVFS	0xDEF5
 
-#define FS_MODE_R	4
-#define FS_MODE_RX	5
-#define FS_MODE_RW	6
-#define FS_MODE_RWX	7
-#define FS_MODE_USER	6
-#define FS_MODE_GROUP	3
-#define FS_MODE_OTHER	0
 #define FS_UID_ROOT	0
 #define FS_GID_ROOT	0
 
@@ -57,7 +50,7 @@ typedef UINT (*read_proto)(fs_node*,off_t,size_t,UCHAR*);
 typedef UINT (*write_proto)(fs_node*,off_t,size_t,UCHAR*);
 typedef void (*close_proto)(fs_node*);
 typedef struct dirent *(*readdir_proto)(fs_node*,UINT);
-typedef fs_node *(*finddir_proto)(fs_node*,char *name);
+typedef fs_node *(*finddir_proto)(fs_node*,const char *name);
 
 struct dirent
 {
@@ -115,20 +108,20 @@ extern UINT read_fs(fs_node *node, off_t offset, size_t size, UCHAR *buffer);
 extern UINT write_fs(fs_node *node, off_t offset, size_t size, UCHAR *buffer);
 extern void close_fs(fs_node *node);
 extern struct dirent *readdir_fs(fs_node *node, UINT index);
-extern fs_node *finddir_fs(fs_node *node, char *name);
+extern fs_node *finddir_fs(fs_node *node, const char *name);
 
-extern fs_node *get_root_fs_node();
+extern fs_node *get_root_fs_node(void);
 
 //Managment of mountpoints
 
-extern UINT setup_vfs();
+extern UINT setup_vfs(void);
 extern mountinfo *fs_add_mountpoint(UINT fs_type, void *discr, fs_node *mountpoint, fs_node *device, fs_node *root);
 extern UINT fs_del_mountpoint(mountinfo *mi);
-extern UINT close_vfs();
+extern UINT close_vfs(void);
 extern fs_node *resolve_node(fs_node *node);
 
 //functions NOT in fs.c
 
-extern fs_node *namei(char *filename);
+extern fs_node *namei(const char *filename);
 
 #endif

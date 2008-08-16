@@ -44,7 +44,7 @@ extern fs_node *setup_devfs(fs_node *mountpoint);
 //TODO A seperated mount may be achieved
 extern UINT remove_devfs(fs_node *devfs);
 
-extern fs_node *devfs_register_device(fs_node *dir, char *name, UINT mode, UINT uid, UINT gid, UINT type, node_operations *f_op);
+extern fs_node *devfs_register_device(fs_node *dir, const char *name, UINT mode, UINT uid, UINT gid, UINT type, node_operations *f_op);
 extern void devfs_unregister_device(fs_node *device);
 
 #endif

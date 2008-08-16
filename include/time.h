@@ -44,9 +44,9 @@ extern ULONG ticks;
 extern time_t time(time_t *tp);	
 extern time_t mktime(struct tm *timeptr); 
 //Write a ctime, it will make things much easyer
-extern struct tm getrtctime();
+extern struct tm getrtctime(void);
 extern int removetimezone(struct tm *timeptr);
 extern void sleep(UINT msecs);
-extern void setup_timer();
+extern void setup_timer(void);
 
 #endif

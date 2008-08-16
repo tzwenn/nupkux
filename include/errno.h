@@ -20,7 +20,10 @@
 #ifndef _ERRNO_H
 #define _ERRNO_H
 
+#ifndef _ERRNO
+#define _ERRNO
 extern int errno;
+#endif
 
 #define EGENERIC	99
 #define EPERM		 1

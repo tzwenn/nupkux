@@ -18,17 +18,26 @@
  */
 
 #include <task.h>
+#include <fs/fs.h>
+#include <errno.h>
+#include <fcntl.h>
 
-extern volatile task tasks[NR_TASKS];
-
-volatile task* schedule(void)
+int sys_read(int fd, char *buffer, size_t size)
 {
-	pid_t i;
-	volatile task *new_task;
-	
-	for (i=current_task->pid+1;i<NR_TASKS;i++)
-		if (tasks[i].pid!=NO_TASK) break;
-	if (i==NR_TASKS) new_task=tasks;
-	else new_task=&(tasks[i]);
-	return new_task;
+	if (fd<0 || fd>=NR_OPEN) return -1;
+	volatile FILE *f = &(current_task->files[fd]);
+	//if (!(!f->flags&O_RDWR) || ((f->flags&O_RDWR)==O_RDWR)) return -1;
+	size=read_fs(f->node,f->offset,size,(UCHAR *)buffer);
+	if (f->node->flags!=FS_CHARDEVICE) f->offset+=size;
+	return size;
+}
+
+int sys_write(int fd, const char *buffer, size_t size)
+{
+	if (fd<0 || fd>=NR_OPEN) return -1;
+	volatile FILE *f = &(current_task->files[fd]);
+	//if (!(f->flags&O_RDWR) || ((f->flags&O_RDWR)==O_RDWR)) return -1;
+	size=write_fs(f->node,f->offset,size,(UCHAR *)buffer);
+	if (f->node->flags!=FS_CHARDEVICE) f->offset+=size;
+	return size;
 }
