@@ -23,9 +23,11 @@
 
 fs_node *namei(const char *filename)
 {
-	char sname[NODE_NAME_LEN], tmp, *end=sname;
+	//TODO: Permissioncheck
+	//Maybe a IS_DIR-Makro?
+	char sname[NODE_NAME_LEN],*token,*ptr;
 	fs_node *node;
-	
+
 	if (!filename) return 0;
 	if (!current_task || !(current_task->pwd)) node=get_root_fs_node();
 		else node=current_task->pwd;
@@ -34,21 +36,23 @@ fs_node *namei(const char *filename)
 		filename++;
 	}
 	if (!filename) return 0;
-	while (end) {
-		if ((end=strchr(filename,'/'))) {
-			tmp=*end;
-			*end=0;
-			strcpy(sname,filename);
-			*end=tmp;
-		} else strcpy(sname,filename);
-		filename=end+1;
-		if (!*sname) continue;		//Because "//" is also valid
-		if (!strcmp(sname,"..")) {
-			if (node==get_root_fs_node()) continue;
-			//TODO Come out of mountpoint, if we are in it
+	strcpy(sname,filename);
+	token=strtok_save(sname,"/",&ptr);
+	while (token) {
+		if (!strcmp(token,"..")) {
+			if (node==get_root_fs_node()) {
+				token=strtok_save(0,"/",&ptr);
+				continue;
+			}
+			if (node==node->mi->root && node->mi->parent_dir) {
+				node=node->mi->parent_dir;
+				token=strtok_save(0,"/",&ptr);
+				continue;
+			}
 		}
-		node=resolve_node(finddir_fs(node,sname));
+		node=resolve_node(finddir_fs(node,token));
 		if (!node) return 0;
+		token=strtok_save(0,"/",&ptr);
 	}
 	return node;
 }

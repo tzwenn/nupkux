@@ -24,7 +24,7 @@
 
 int sys_read(int fd, char *buffer, size_t size)
 {
-	if (fd<0 || fd>=NR_OPEN) return -1;
+	if (fd<0 || fd>=NR_OPEN) return -EBADF;
 	volatile FILE *f = &(current_task->files[fd]);
 	//if (!(!f->flags&O_RDWR) || ((f->flags&O_RDWR)==O_RDWR)) return -1;
 	size=read_fs(f->node,f->offset,size,(UCHAR *)buffer);
@@ -34,7 +34,7 @@ int sys_read(int fd, char *buffer, size_t size)
 
 int sys_write(int fd, const char *buffer, size_t size)
 {
-	if (fd<0 || fd>=NR_OPEN) return -1;
+	if (fd<0 || fd>=NR_OPEN) return -EBADF;
 	volatile FILE *f = &(current_task->files[fd]);
 	//if (!(f->flags&O_RDWR) || ((f->flags&O_RDWR)==O_RDWR)) return -1;
 	size=write_fs(f->node,f->offset,size,(UCHAR *)buffer);

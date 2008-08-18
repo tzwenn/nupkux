@@ -28,11 +28,8 @@
 volatile task *current_task = 0;
 volatile task tasks[NR_TASKS];
 
-//paging.c
-extern page_directory *kernel_directory;
-
-//mm.c
-extern UINT _kmalloc_a(UINT sz);
+extern page_directory *kernel_directory; //paging.c
+extern UINT _kmalloc_a(UINT sz); //mm.c
 
 extern volatile task* schedule(void);	//sched.c
 extern UINT read_eip(void);		//process.S
@@ -41,8 +38,8 @@ extern UINT initial_esp;		//main.c
 void move_stack(void *new_stack, UINT size)
 {
 	UINT i,pdirpos,old_esp,old_ebp,offset,new_esp,new_ebp,tmp;
-	
-	for (i=(UINT)new_stack;i>=((UINT)new_stack-size);i-=FRAME_SIZE) 
+
+	for (i=(UINT)new_stack;i>=((UINT)new_stack-size);i-=FRAME_SIZE)
 		make_page(i,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | PAGE_FLAG_USERMODE,current_directory,1);
 	asm volatile("mov %%cr3,%0":"=r"(pdirpos));
 	asm volatile("mov %0,%%cr3"::"r"(pdirpos));

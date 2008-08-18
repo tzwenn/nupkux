@@ -26,7 +26,7 @@ WFLAGS = -Wall -Werror -Wcast-align -Wwrite-strings -Wshadow -Winline -Wredundan
 AS	= as
 
 ASINT	= nasm
-ASINTFLAGS = -f aout
+ASINTFLAGS= -felf
 
 CC	= gcc
 CFLAGS	= -c $(WFLAGS) -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I$(INCLUDEDIR)
@@ -36,8 +36,8 @@ LDFLAGS	= -Tlink.ld
 
 DEPDIR		= .deps
 DEPFILE		= $(DEPDIR)/$*.d
-DEPFILES	= $(patsubst %.c,$(DEPDIR)/%.d,$(CFILES))
-MAKEDEPEND	= mkdir -p $(DEPDIR)/$(*D); rm -f $(DEPFILE); touch $(DEPFILE); makedepend -f $(DEPFILE) -- $(CFLAGS) -- $<
+DEPFILES	= $(patsubst %.c,$(DEPDIR)/%.d,$(CFILES))   
+MAKEDEPEND	= mkdir -p $(DEPDIR)/$(*D); touch $(DEPFILE); makedepend -f $(DEPFILE) -- $(CFLAGS) -- $<
 
 all:	$(OBJFILES) link
 

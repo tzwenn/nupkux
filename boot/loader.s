@@ -17,21 +17,21 @@
 #*  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
 #*
 
-.global _loader           #Entry
+.global _start           #Entry
 
-# multiboot header 
+# multiboot header
 .set ALIGN, 1<<0
 .set MEMINFO, 1<<1
-.set FLAGS_MBH, ALIGN | MEMINFO  
+.set FLAGS_MBH, ALIGN | MEMINFO
 .set MAGIC_MBH, 0x1BADB002
-.set CHECKSUM,-(MAGIC_MBH+FLAGS_MBH) 
+.set CHECKSUM,-(MAGIC_MBH+FLAGS_MBH)
 
 .align 4
 .long MAGIC_MBH
 .long FLAGS_MBH
 .long CHECKSUM
 
-_loader:
+_start:
 	push  %eax
 	push  %esp
 	push  %ebx

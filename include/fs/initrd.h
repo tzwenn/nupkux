@@ -24,9 +24,11 @@
 #include <fs/fs.h>
 
 #define INITRD_FILENAME_LEN	64
+#define INITRD_MAGIC		0x54494E49
 
 typedef struct _initrd_header
 {
+	UINT magic;
 	UINT inodecount;
 	UINT entries;
 } initrd_header;
@@ -47,7 +49,7 @@ typedef struct _initrd_d_entry
 {
 	UINT inode;
 	char filename[INITRD_FILENAME_LEN];
-	
+
 } initrd_d_entry;
 
 typedef struct _initrd_discr

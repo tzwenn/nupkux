@@ -24,40 +24,28 @@
 
 int sys_chdir(const char *name)
 {
-	if (!current_task) return -1;
+	if (!current_task) return -EGENERIC;
 	fs_node *node=namei(name);
 
 	if (node) {
-		if ((node->flags&0x07)==FS_DIRECTORY) 
+		if (IS_DIR(node))
 			current_task->pwd=node;
-		else {
-			errno=-ENOTDIR;
-			return -1;
-		}
-	} else {
-		errno=-ENOENT;
-		return -1;
-	}
+		else return -ENOTDIR;
+	} else return -ENOENT;
 	return 0;
 }
 
 int sys_chroot(const char *name)
 {
-	if (!current_task) return -1;
-	if (current_task->pid!=ROOT_UID) return -EPERM;
+	if (!current_task) return -EGENERIC;
+	if (!I_AM_ROOT()) return -EPERM;
 	fs_node *node=namei(name);
-	
+
 	if (node) {
-		if ((node->flags&0x07)==FS_DIRECTORY) 
+		if (IS_DIR(node))
 			current_task->root=node;
-		else {
-			errno=-ENOTDIR;
-			return -1;
-		}
-	} else {
-		errno=-ENOENT;
-		return -1;
-	}
+		else return -ENOTDIR;
+	} else return -ENOENT;
 	return 0;
 }
 
@@ -66,19 +54,16 @@ int sys_open(const char *filename,int flag,int mode)
 	//TODO Check access
 	int fd;
 	volatile FILE *f;
-	
+
 	for (fd=0;fd<NR_OPEN;fd++)
 		if (current_task->files[fd].fd==NO_FILE) break;
-	if (fd==NR_OPEN) return -1;
+	if (fd==NR_OPEN) return -EMFILE;
 	f=&(current_task->files[fd]);
 	f->flags=flag;
 	f->node=namei(filename);
-	if (!f->node) {
-		errno=-ENOENT;
-		return -1;
-	}
+	if (!f->node) return -ENOENT;
 	if (flag&O_APPEND) f->offset=f->node->size;
-	else f->offset=0;
+		else f->offset=0;
 	/////////////////////////////////////
 	// A lot more goes here and there an everywhere
 	/////////////////////////////////////
@@ -89,8 +74,8 @@ int sys_open(const char *filename,int flag,int mode)
 
 int sys_close(int fd)
 {
-	if (fd<0 || fd>=NR_OPEN) return -1;
-	if (current_task->files[fd].fd==NO_FILE) return -1;
+	if (fd<0 || fd>=NR_OPEN) return -EBADF;
+	if (current_task->files[fd].fd==NO_FILE) return -EBADF;
 	current_task->files[fd].fd=NO_FILE;
 	close_fs(current_task->files[fd].node);
 	return 0;

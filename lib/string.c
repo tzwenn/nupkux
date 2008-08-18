@@ -19,10 +19,10 @@
 
 #include <lib/string.h>
 
-static char *strtok_save_ptr;
+static char *strtok_save_ptr = 0;
 
 int strcmp(const char *s1, const char *s2)
-{	
+{
 	while ((*s1) && (*s2)) {
 		if (*s1<*s2) return -1;
 		if (*s1>*s2) return 1;
@@ -37,7 +37,7 @@ int strcmp(const char *s1, const char *s2)
 size_t strlen(const char *str)
 {
 	size_t res = 0;
-	
+
 	while (*(str++)) res++;
 	return res;
 }
@@ -62,15 +62,48 @@ char *strncpy(char *dest, const char *src, size_t num)
 	char *tmp = dest;
 	while (*src && num--) *(tmp++)=*(src++);
 	while (num--) *(tmp++)=0;
-	
+
 	return dest;
+}
+
+char *strtok_save(char *s, const char *delim, char **ptr)
+{
+	char *tmp,*occ;
+	const char *del;
+	int skip=0;
+
+	if (!delim || !*delim) return s;
+	if (!s) s=*ptr;
+	if (!s) return 0;
+	while (!skip) {
+		skip=1;
+		del=delim;
+		while (*del && *s) {
+			if (*s==*del) {
+				skip=0;
+				s++;
+			}
+			del++;
+		}
+	}
+	if (!*s) return 0;
+	tmp=s+strlen(s);
+	del=delim;
+	while (*del) {
+		occ=strchr(s,*del);
+		if (occ && occ<tmp) tmp=occ;
+		del++;
+	}
+	if (*tmp) {
+		*ptr=tmp+1;
+		*tmp=0;
+		return s;
+	}
+	*ptr=0;
+	return s;
 }
 
 char *strtok(char *s, const char *delim)
 {
-	char tmp;
-	while (*delim) {
-		strtok_save_ptr=strchr(s,tmp);
-	}
-	return s;
+	return strtok_save(s,delim,&strtok_save_ptr);
 }

@@ -24,15 +24,17 @@
 #include <paging.h>
 #include <lib/memory.h>
 
-//#define WORKING_MEMSTART ((UINT) &kernel_end)   /* By the way, this will be a minumum of required space, what a suprise ;-) */
 #define WORKING_MEMSTART 	(__working_memstart)
-#define WORKING_MEMEND 		(memory_end)	/* And this is accessable maximum of memory */
+#define WORKING_MEMEND 		(memory_end)	/* And this is accessible maximum of memory */
+#define ASSUMED_WORKING_MEMEND 0x1000000	//If reading multibootinfo failed
 
-#define MM_MAGIC	0x68747552
-#define MM_KHEAP_START	0x100000	//1MB after kmalloc_pos
+#define IPC_MEMSIZE		0x400000	//4MB for IPC
+
+#define MM_MAGIC		0x68747552
+#define MM_KHEAP_START	0x40000		//256KB after kmalloc_pos
 #define MM_KHEAP_SIZE	0x300000	//Add this to above and clear up the mess!
 #define MM_KHEAP_MIN	0x100000
-#define MM_INDEX_COUNT	0x400
+#define MM_INDEX_COUNT	0x800
 
 #define MM_FLAG_BLOCK	0
 #define MM_FLAG_HOLE	1
@@ -46,13 +48,13 @@ typedef struct _heap heap;
 struct _mm_header {
 	UINT magic;
 	UINT size: 31;
-	UCHAR flag: 1; 
-}; 
+	UCHAR flag: 1;
+};
 
 struct _mm_footer {
 	UINT magic;
 	mm_header *header;
-}; 
+};
 
 struct _heap {
 	mm_header **entries;

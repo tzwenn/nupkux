@@ -28,5 +28,6 @@ extern char *strchr(const char *str, char chr);
 extern char *strcpy(char *dest, const char *src);
 extern char *strncpy(char *dest, const char *src, size_t num);
 extern char *strtok(char *s, const char *delim);
+extern char *strtok_save(char *s, const char *delim, char **ptr);
 
 #endif

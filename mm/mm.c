@@ -29,7 +29,7 @@ extern page_directory *kernel_directory;
 static UINT _kmalloc_base(UINT sz, UINT *phys, UCHAR align)
 {
 	UINT res;
-	
+
 	if (kheap) {
 		res=(UINT)heap_malloc(sz,align,kheap);
 		if (phys) {
@@ -82,14 +82,14 @@ heap *create_heap(UINT start, UINT end, UINT memend, UINT pageflags)
 	initholestart->size=end-start;
 	initholestart->flag=MM_FLAG_HOLE;
 	newheap->entries[0]=initholestart;
-	
+
 	initholeend=(mm_footer *) (end-sizeof(mm_footer));
 	initholeend->magic=MM_MAGIC;
 	initholeend->header=newheap->entries[0];
-	
+
 	newheap->entrycount=1;
 	newheap->maxentries=MM_INDEX_COUNT;
-	
+
 	return newheap;
 }
 
@@ -100,7 +100,7 @@ static void expand_heap(UINT new_size, heap *aheap)
 	if (new_size<=aheap->end-aheap->start) return;
 	ASSERT_ALIGN(new_size);
 	if (aheap->start+new_size>aheap->memend) return;
-	for (i=aheap->end-aheap->start;i<new_size;i+=FRAME_SIZE) 
+	for (i=aheap->end-aheap->start;i<new_size;i+=FRAME_SIZE)
 		make_page(aheap->start+i,aheap->pageflags,kernel_directory,1);
 	aheap->end=aheap->start+new_size;
 }
@@ -135,7 +135,7 @@ static void heap_add_entry(mm_header *entry, heap *aheap)
 			tmp=tmp2;
 		}
 		aheap->entrycount++;
-	}	
+	}
 }
 
 static void heap_del_entry(UINT i, heap *aheap)
@@ -185,7 +185,7 @@ static void *heap_malloc(UINT size, UCHAR page_align, heap *aheap)
 		oldsize=aheap->end-aheap->start;
 		oldend=aheap->end;
 		expand_heap(oldsize+newsize,aheap);
-		newsize=aheap->end-aheap->start; 
+		newsize=aheap->end-aheap->start;
 		UINT idx=MM_NO_HOLE; UINT value=0;
 		for (hole_pos=0;hole_pos<aheap->entrycount;hole_pos++) {
 			UINT tmp = (UINT) aheap->entries[hole_pos];
@@ -203,7 +203,7 @@ static void *heap_malloc(UINT size, UCHAR page_align, heap *aheap)
 			newfooter->header=header;
 			heap_add_entry(header,aheap);
 		} else  {
-           		header=aheap->entries[idx];
+			header=aheap->entries[idx];
 			header->size+=newsize-oldsize;
 			newfooter=(mm_footer *) ((UINT)header+header->size-sizeof(mm_footer));
 			newfooter->header=header;
@@ -236,7 +236,7 @@ static void *heap_malloc(UINT size, UCHAR page_align, heap *aheap)
 	header->flag=MM_FLAG_BLOCK;
 	header->size=newsize;
 	header->magic=newfooter->magic=MM_MAGIC;
-	newfooter->header=header; 
+	newfooter->header=header;
 	if (oldsize-newsize>0) {
 		newheader=(mm_header *) (oldpos+newsize);
 		newheader->magic=MM_MAGIC;
@@ -268,14 +268,13 @@ static void heap_free(void *ptr, heap *aheap)
 	tmpfooter=(mm_footer*) ((UINT)header-sizeof(mm_footer));
 	if ((tmpfooter->magic==MM_MAGIC) && (tmpfooter->header->magic==MM_MAGIC) && (tmpfooter->header->flag==MM_FLAG_HOLE)) {
 		opt=0;
-		header=tmpfooter->header;   
-		footer->header=header;        
-		header->size+=oldsize;     
+		header=tmpfooter->header;
+		footer->header=header;
+		header->size+=oldsize;
 	}
 
 	tmpheader=(mm_header*) ((UINT)footer+sizeof(mm_footer));
-	if ((tmpheader->magic==MM_MAGIC) && (tmpheader->flag==MM_FLAG_HOLE)) {//&&
-//		 (((mm_footer*) ((UINT)tmpheader+tmpheader->size-sizeof(mm_footer)))->magic=MM_MAGIC)) {
+	if ((tmpheader->magic==MM_MAGIC) && (tmpheader->flag==MM_FLAG_HOLE)) {
 		header->size+=tmpheader->size;
 		footer=(mm_footer*) ((UINT)tmpheader+tmpheader->size-sizeof(mm_footer));
 		heap_del_entry(heap_find_entry(tmpheader,aheap),aheap);
@@ -290,14 +289,14 @@ static void heap_free(void *ptr, heap *aheap)
 			footer->header=header;
 		} else heap_del_entry(heap_find_entry(header,aheap),aheap);
 	}
-	if (opt) heap_add_entry(header,aheap); 
+	if (opt) heap_add_entry(header,aheap);
 }
 
 static void *heap_realloc(void *ptr, UINT size, heap *aheap)
 {
 	mm_header *header, *tmpheader;
 	mm_footer *footer, *tmpfooter;
-	
+
 	if ((!ptr) || (!aheap)) return 0;
 	if (!size) {
 		heap_free(ptr,aheap);
@@ -321,7 +320,7 @@ static void *heap_realloc(void *ptr, UINT size, heap *aheap)
 		return ptr;
 	} else {
 		void *res = heap_malloc(size,0,aheap);
-	
+
 		if (!res) return 0;
 		memcpy(res,ptr,size);
 		heap_free(ptr,aheap);

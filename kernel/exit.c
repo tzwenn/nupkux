@@ -44,7 +44,7 @@ int sys_exit(int status)
 
 pid_t sys_waitpid(pid_t pid, int *statloc, int options)
 {
-	if (pid<=0) return -1;
+	if (pid<=0) return -ECHILD;
 	while (tasks[pid].pid!=NO_TASK);
 	if (statloc) *statloc=tasks[pid].exit_code;
 	return pid;

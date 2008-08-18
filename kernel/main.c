@@ -22,6 +22,7 @@
 #include <kernel/ktextio.h>
 #include <kernel/nish.h>
 #include <kernel/syscall.h>
+#include <lib/string.h>
 #include <time.h>
 #include <task.h>
 #include <mm.h>
@@ -30,10 +31,13 @@
 
 char _kabort_func = 0;
 int errno;
-UINT initrd_location = 0;
-UINT initial_esp;
+UINT initial_esp = 0;
+char kernel_cmdline[256] = {0,};
+boot_module boot_modules[NR_BOOT_MODULES];
+UINT		boot_modules_count = 0;
 ULONG memory_end = 0;
 UINT __working_memstart = 0;
+UINT initrd_location = 0;
 extern UINT kmalloc_pos;
 
 void reboot(void)
@@ -50,7 +54,7 @@ extern int setup_ACPI(void);
 extern void acpiPowerOff(void);
 
 static void halt(void)
-{	
+{
 	printf("Will now halt");
 	acpiPowerOff();
 	printf("\nACPI Power off failed!\nTurn off the computer manually!");  //Just in case
@@ -58,21 +62,52 @@ static void halt(void)
 	hlt();
 }
 
+static void read_multiboot_info(multiboot_info_t* mbd)
+{
+	int i;
+	multiboot_module_info_t *mod_infos;
+
+	/* According to http://www.gnu.org/software/grub/manual/multiboot/multiboot.html
+	   GRUB can store it values anywhere
+	   I've discovered there are all in the first 640K, but I don't want to risk anything */
+	if (mbd->flags&0x01) memory_end=mbd->mem_upper*1024; //TODO: A map would be nicer
+			else memory_end=ASSUMED_WORKING_MEMEND;
+	if (mbd->flags&0x04) {
+		strncpy(kernel_cmdline,(char *)mbd->cmdline,256);
+		kernel_cmdline[255]=0;
+	}
+	if (mbd->flags&0x08) {
+		memset(boot_modules,0,NR_BOOT_MODULES*sizeof(boot_module));
+		boot_modules_count=mbd->mods_count;
+		if (boot_modules_count>NR_BOOT_MODULES)
+			boot_modules_count=NR_BOOT_MODULES;
+		mod_infos=(multiboot_module_info_t *)mbd->mods_addr;
+		for (i=0;i<boot_modules_count;i++) {
+			boot_modules[i].addr=mod_infos[i].mod_start;
+			boot_modules[i].size=mod_infos[i].mod_end-mod_infos[i].mod_start;
+			memset(boot_modules[i].string,0,BOOT_MODULE_STRLEN);
+			strncpy(boot_modules[i].string,(char*)mod_infos[i].string,BOOT_MODULE_STRLEN);
+			boot_modules[i].string[BOOT_MODULE_STRLEN-1]=0;
+			if (*((UINT*)boot_modules[i].addr)==INITRD_MAGIC)
+				initrd_location=boot_modules[i].addr;
+		}
+	}
+	if (boot_modules_count)
+		__working_memstart=boot_modules[boot_modules_count-1].addr+boot_modules[boot_modules_count-1].size;
+		else __working_memstart=(UINT) &kernel_end;
+	ASSERT_ALIGN(__working_memstart);
+	kmalloc_pos=WORKING_MEMSTART+IPC_MEMSIZE;
+}
+
 int _kmain(multiboot_info_t* mbd, UINT initial_stack, UINT magic)
 {
 	int ret;
 	fs_node *root, *devfs;
-	
-	_kclear();
-	if (mbd->flags&0x01) memory_end=mbd->mem_upper*1024;
-		else memory_end=0x400000;
+
+	read_multiboot_info(mbd);
 	initial_esp=initial_stack;
+	_kclear();
 	printf("Nupkux loaded ... Stack at 0x%X\nAmount of RAM: %d Bytes.\nSet up Descriptors ... ",initial_esp,memory_end);
-	if (mbd->mods_count>0) {
-		initrd_location = *((UINT*)mbd->mods_addr);
-		__working_memstart=*(UINT*)(mbd->mods_addr+4);
-	} else __working_memstart=(UINT) &kernel_end;
-	kmalloc_pos=__working_memstart;
 	setup_dts();
 	setup_input();
 	printf("Finished.\nEnable Interrupts and PIC ... ");
@@ -90,19 +125,19 @@ int _kmain(multiboot_info_t* mbd, UINT initial_stack, UINT magic)
 	root=setup_initrd(initrd_location,get_root_fs_node());
 	current_task->pwd=root;
 	if (root) printf("Finished.\n");
-		else printf("FAILED.\n");	
+		else printf("FAILED.\n");
 	if ((devfs=namei("/dev"))) {
 		printf("Populating Devfs ... ");
 		devfs=setup_devfs(devfs);
 		setup_drivers(devfs);
 		if (devfs) printf("Finished.\n");
-			else printf("FAILED.\n");	
+			else printf("FAILED.\n");
 	}
 	setup_syscalls();
 	printf("Booted up!\n");
-	
+
 	printf("nish returned with 0x%X.\n\n",ret=nish());
-	
+
 	printf("Unmount devfs (/dev) ... \n");
 	remove_devfs(devfs);
 	printf("Unmount initrd (/) ... \n");
@@ -112,7 +147,7 @@ int _kmain(multiboot_info_t* mbd, UINT initial_stack, UINT magic)
 	printf("OK\n");
 	switch (ret) {
 	  case NISH_REBOOT: reboot();
-			    return 0;	
+			    return 0;
 			    break;
 	  case NISH_HALT:   halt();
 			    return 0;

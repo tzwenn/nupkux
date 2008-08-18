@@ -28,13 +28,11 @@ int sys_execve(const char *file,char **argv,char **envp)
 	int ret,argc=0;
 	int (*main)(int,char **,char **);
 	fs_node *node=namei(file);
-	
+
 	if (!node)
 		node=finddir_fs(namei("/bin"),file);
-	if (!node) {
-		errno=-ENOENT;
-		return -1;	
-	}
+	if (!node)
+		return -ENOENT;
 	open_fs(node,1,0);
 	buf=(UCHAR *)malloc(node->size);
 	read_fs(node,0,node->size,buf);

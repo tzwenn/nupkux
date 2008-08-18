@@ -18,7 +18,7 @@
  */
 
 #include <paging.h>
-#include <memory.h>
+#include <lib/memory.h>
 #include <kernel/ktextio.h>
 #include <kernel/dts.h>
 #include <task.h>
@@ -33,7 +33,10 @@ extern UINT _kmalloc_pa(UINT sz, UINT *phys);
 extern heap *kheap;
 extern void clone_page(UINT src, UINT dest);
 
-static void set_page_directory(page_directory *PAGE_DIR) 
+#define MAP_MEMORY(start,end,flags) for (i=start;i<=end;i+=FRAME_SIZE) \
+		make_page(i,flags,kernel_directory,1)
+
+static void set_page_directory(page_directory *PAGE_DIR)
 {
 	current_directory=PAGE_DIR;
 	asm volatile (	"cli\n\t"
@@ -48,9 +51,9 @@ static UINT first_frame(void)
 {
 	UINT i,j;
 
-	for (i=0;i<framecount/32;i++) 
+	for (i=0;i<framecount/32;i++)
 		if (framemap[i]!=0xFFFFFFFF)
-			for (j=0;j<32;j++) 
+			for (j=0;j<32;j++)
 				if (!(framemap[i]&(1<<j)))
 					return i*32+j;
 	return 0xFFFFFFFF;
@@ -60,7 +63,7 @@ static void alloc_frame(page *apage, UINT flags)
 {
 	UINT number = first_frame();
 
-	if (apage->frame) return;	
+	if (apage->frame) return;
 	apage->frame=number;
 	apage->flags=flags;
 	framemap[number/32]|=(1<<(number%32));
@@ -69,7 +72,7 @@ static void alloc_frame(page *apage, UINT flags)
 static void free_frame(page *apage)
 {
 	UINT number=apage->frame;
-	
+
 	apage->frame=0;
 	if (number) framemap[number/32]&=~(1<<(number%32));
 }
@@ -108,7 +111,7 @@ static page_table* clone_table(page_table* src, UINT* physAddr)
 {
 	UINT i = 1024;
 	page_table *table = (page_table*)_kmalloc_pa(sizeof(page_table),physAddr);
-	
+
 	memset(table,0,sizeof(page_table));
 	while (i--) {
 		if (!src->entries[i].frame) continue;
@@ -122,7 +125,7 @@ page_directory* clone_directory(page_directory* src)
 {
 	UINT phys,i = 1024;
 	page_directory *dir = (page_directory *)_kmalloc_pa(sizeof(page_directory),&phys);
-	
+
 	memset(dir,0,sizeof(page_directory));
 	dir->physPos=phys;//+(UINT)dir->physTabs-(UINT)dir;
 	while (i--) {
@@ -155,7 +158,7 @@ void free_directory(page_directory *dir)
 	UINT i=1024;
 	while (i--) {
 		if (!dir->tables[i]) continue;
-		if (kernel_directory->tables[i]!=dir->tables[i]) 
+		if (kernel_directory->tables[i]!=dir->tables[i])
 			free_table(dir->tables[i]);
 	}
 	free(dir);
@@ -165,8 +168,8 @@ page *get_page(UINT address, int make, page_directory *directory)
 {
 	UINT index = address/FRAME_SIZE;
 	UINT tab = index/1024;
-	   
-	if (directory->physTabs[tab]) 
+
+	if (directory->physTabs[tab])
 		return &(directory->tables[tab]->entries[index%1024]);
 	else if (make)
 		return make_page(address,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | PAGE_FLAG_USERMODE,directory,0);
@@ -186,27 +189,22 @@ void page_fault_handler(registers *regs)
 void setup_paging()
 {
 	UINT i = 0;
-	
+
 	framecount=WORKING_MEMEND/FRAME_SIZE;
 	framemap=(UINT *)_kmalloc(framecount/8);  // sizeof(UINT)*fc/32
 	memset(framemap,0,framecount/8);
 	kernel_directory=(page_directory *)_kmalloc_pa(sizeof(page_directory),&i);
 	memset(kernel_directory,0,sizeof(page_directory));
 	kernel_directory->physPos=(UINT)kernel_directory->physTabs;
-	/*i=MM_KHEAP_START+kmalloc_pos;
-	ASSERT_ALIGN(i);
-	for (;i<MM_KHEAP_START+MM_KHEAP_SIZE+(kmalloc_pos&0xFFFFF000)+FRAME_SIZE;i+=FRAME_SIZE)*/
-	for (i=0;i<MM_KHEAP_START+MM_KHEAP_SIZE+(kmalloc_pos&0xFFFFF000)+FRAME_SIZE;i+=FRAME_SIZE)
-		get_page(i,1,kernel_directory);
-	for (i=0;i<=kmalloc_pos+FRAME_SIZE;i+=FRAME_SIZE)
-		make_page(i,PAGE_FLAG_READONLY | PAGE_FLAG_USERMODE | PAGE_FLAG_PRESENT,kernel_directory,1);
+	MAP_MEMORY(0,WORKING_MEMSTART,PAGE_FLAG_READONLY | PAGE_FLAG_USERMODE | PAGE_FLAG_PRESENT); //Kernel & initrd
+	MAP_MEMORY(WORKING_MEMSTART,WORKING_MEMSTART+IPC_MEMSIZE,PAGE_FLAG_WRITE | PAGE_FLAG_USERMODE | PAGE_FLAG_PRESENT); //IPC
+	MAP_MEMORY(WORKING_MEMSTART+IPC_MEMSIZE,kmalloc_pos+FRAME_SIZE,PAGE_FLAG_READONLY | PAGE_FLAG_USERMODE | PAGE_FLAG_PRESENT); //Pre-Heap
 	i=MM_KHEAP_START+kmalloc_pos;
 	ASSERT_ALIGN(i);
-	for (;i<MM_KHEAP_START+MM_KHEAP_SIZE+(kmalloc_pos&0xFFFFF000)+FRAME_SIZE;i+=FRAME_SIZE)
-	       alloc_frame(get_page(i,1,kernel_directory),PAGE_FLAG_USERMODE | PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT);
+	MAP_MEMORY(i,ALIGN_UP(kmalloc_pos)+MM_KHEAP_START+MM_KHEAP_SIZE,PAGE_FLAG_USERMODE | PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT); //Heap
 	register_interrupt_handler(14,page_fault_handler);
 	set_page_directory(kernel_directory);
-	kheap=create_heap(MM_KHEAP_START+kmalloc_pos,MM_KHEAP_START+MM_KHEAP_SIZE+kmalloc_pos,WORKING_MEMEND,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE);
+	kheap=create_heap(MM_KHEAP_START+kmalloc_pos,MM_KHEAP_START+MM_KHEAP_SIZE+kmalloc_pos,WORKING_MEMEND,PAGE_FLAG_USERMODE | PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT);
 	current_directory=clone_directory(kernel_directory);
 	set_page_directory(current_directory);
 }

@@ -67,7 +67,7 @@ static int _nish_split_par(char *cmd, char *args)
 }
 
 int split_to_argv(char *str, char *argv[])
-{
+{ //I've done something with strtok() but it didn't work
 	if (!str) return -1;
 	if (!*str) return 0;
 	char cmd[STRLEN],args[STRLEN];
@@ -87,7 +87,7 @@ int split_to_argv(char *str, char *argv[])
 static void format_mode(fs_node *node, char *output)
 {
 	strcpy(output,"??????????");
-	
+
 	if (!node) return;
 	UINT mode = node->mode, i=3;
 	switch (node->flags&0x7) {
@@ -122,7 +122,7 @@ static int nish_help(void)
 	printf("\tcat\t\tShow file content on stdout\n");
 	printf("\tcd\t\tChange working directory\n");
 	printf("\ttime\t\tGive information about time and date\n");
-	printf("\texit\t\tQuit nish\n"); 
+	printf("\texit\t\tQuit nish\n");
 	printf("\thalt\t\tHalt system\n");
 	printf("\treboot\t\tReboot system\n");
 	printf("\thelp\t\tWhat do you read right now?\n");
@@ -134,12 +134,12 @@ static int nish_time(void)
 {
 	struct tm now;
 	time_t timestamp;
-	
+
 	now=getrtctime();
 	printf("Time:\t\t%.2d:%.2d:%.2d\n",now.tm_hour,now.tm_min,now.tm_sec);
 	printf("Date:\t\t%.2d-%.2d-%.2d\n",now.tm_year,now.tm_mon,now.tm_mday);
 	removetimezone(&now);
-	timestamp=mktime(&now);	
+	timestamp=mktime(&now);
 	return 1;
 }
 
@@ -224,7 +224,7 @@ static int nish_cat(int argc, char *argv[])
 	fs_node *node;
 	UCHAR *buf;
 	UINT i;
-	
+
 	if (argc==1) return 1;
 	node=namei(argv[1]);
 	if (node) {
@@ -245,7 +245,7 @@ static int nish_ls(int argc, char *argv[])
 	UINT i;
 	char the_mode[11];
 	struct dirent *pDirEnt;
-	
+
 	if (argc==1) node=current_task->pwd;
 		else node=namei(argv[1]);
 	if (node) {
@@ -262,23 +262,23 @@ static int nish_ls(int argc, char *argv[])
 			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,pDirEnt->d_name);
 		}
 	} else printf("Error: Could not find file %s.\n",argv[1]);
-	
+
 	return 1;
 }
 
 static int nish_cd(int argc, char *argv[])
 {
-	if (argc==1);
-	int ret = sys_chdir(argv[1]);
-	if (ret==-1) {
-		switch (errno) {
-			case -ENOENT: 	printf("cd: %s: No such file or directory\n");
-					break;
-			case -ENOTDIR: 	printf("cd: %s: Is no directory\n");
-					break;
-		}
+	if (argc==1) {
+		sys_chdir("/");
+		return 1;
 	}
-
+	int ret = sys_chdir(argv[1]);
+	switch (ret) {
+		case -ENOENT: 	printf("cd: %s: No such file or directory\n",argv[1]);
+				break;
+		case -ENOTDIR: 	printf("cd: %s: Is no directory\n",argv[1]);
+				break;
+	}
 	return 1;
 }
 
@@ -286,10 +286,10 @@ static int nish_run(const char *cmd, char **argv)
 {
 	int ret;
 	pid_t pid;
-	
+
 	if (!(pid=sys_fork())) {
 		ret=sys_execve(cmd,argv,0);
-		if ((ret==-1) && (errno==-ENOENT)) {
+		if (ret==-ENOENT) {
 			printf("nish: %s: command not found\n",cmd);
 		}
 		sys_exit(ret);
@@ -300,7 +300,7 @@ static int nish_run(const char *cmd, char **argv)
 static int nish_test(int argc, char **argv)
 {
 	printf("---open,read,write,close test---\n\n");
-	
+
 	int fd0=sys_open("/dev/stdin",2,0);
 	int fd1=sys_open("/dev/stdout",2,0);
 	nish_run("utest",argv);
@@ -314,8 +314,8 @@ static int _nish_interpret(char *str)
 	if (*str<32) return 0;
 	char **argv=calloc(MAX_ARGS,sizeof(char *));
 	int i,ret=0,argc;
-	for (i=0;i<MAX_ARGS;i++) 
-		argv[i]=malloc(STRLEN);
+	for (i=0;i<MAX_ARGS;i++)
+		argv[i]=calloc(STRLEN,sizeof(char));
 	argc=split_to_argv(str,argv);
 	if (!strcmp(argv[0],"test")) ret=nish_test(argc,argv);
 		else if (!strcmp(argv[0],"clear")) ret=_kclear();

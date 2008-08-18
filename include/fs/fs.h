@@ -39,6 +39,10 @@
 #define FS_UID_ROOT	0
 #define FS_GID_ROOT	0
 
+#define IS_DIR(NODE)	((NODE->flags&0x7)==FS_DIRECTORY)
+#define IS_LNK(NODE)	((NODE->flags&0x7)==FS_SYMLINK)
+#define IS_MNT(NODE)	(NODE->flags&FS_MOUNTPOINT)
+
 #define NR_OPEN		32
 #define NO_FILE		NR_OPEN+1
 
@@ -90,6 +94,7 @@ struct _mountinfo {
 	void *discr;
 	fs_node *device;
 	fs_node *mountpoint;
+	fs_node *parent_dir;
 	fs_node *root;
 	mountinfo *next;
 };

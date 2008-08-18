@@ -1,5 +1,6 @@
 /* multiboot.h - the header for Multiboot */
 /* Copyright (C) 1999, 2001  Free Software Foundation, Inc.
+ * Copyright (C) 2008	Sven Köhler
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,6 +18,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. */
 
 #ifndef MULTIBOOT_H
 #define MULTIBOOT_H
+
+#include <kernel.h>
 
 /* Macros. */
 
@@ -99,13 +102,22 @@ typedef struct multiboot_info
 } multiboot_info_t;
 
 /* The module structure. */
-typedef struct module
+typedef struct multiboot_module_info
 {
 	unsigned long mod_start;
 	unsigned long mod_end;
 	unsigned long string;
 	unsigned long reserved;
-} module_t;
+} multiboot_module_info_t;
+
+/* Made by Sven Köhler */
+#define BOOT_MODULE_STRLEN	256
+#define NR_BOOT_MODULES		4
+typedef struct _boot_module
+{
+	UINT addr,size; //start,size of module
+	char string[255];
+} boot_module;
 
 /* The memory map. Be careful that the offset 0 is base_addr_low
 but no size. */

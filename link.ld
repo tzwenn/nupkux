@@ -1,4 +1,4 @@
-ENTRY (_loader)
+ENTRY (_start)
 
 SECTIONS{
     . = 0x00100000;

@@ -32,7 +32,7 @@
 #define PAGE_FLAG_DIRTY		0x40
 //dummies
 #define PAGE_FLAG_NOTPRESENT	0x00
-#define PAGE_FLAG_READONLY	0x00
+#define PAGE_FLAG_READONLY		0x00
 #define PAGE_FLAG_KERNELMODE	0x00
 
 #define KERNEL_PAGE_BUFFER	0x32000
@@ -42,12 +42,13 @@
 					VALUE&=0xFFFFF000;	\
 					VALUE+=FRAME_SIZE;	\
 				}
+#define ALIGN_UP(VALUE)		(((VALUE)&0xFFFFF000)+FRAME_SIZE)
 
 typedef struct _page_directory page_directory;
 typedef struct _page_table page_table;
 typedef struct _page page;
 
-struct _page { 
+struct _page {
    UINT flags: 12;
    UINT frame: 20;
 };

@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #ifndef _TASK_H
 #define _TASK_H
 
@@ -31,6 +31,7 @@
 #define TASK_STOPPED		4
 
 #define ROOT_UID	0
+#define I_AM_ROOT()	(current_task->uid==ROOT_UID)
 
 #define NR_TASKS	64
 #define NO_TASK		(-1)
