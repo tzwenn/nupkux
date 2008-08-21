@@ -18,11 +18,16 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
-#ifndef FDC_H
-#define FDC_H
+#ifndef _FDC_H
+#define _FDC_H
 
-#include <kernel.h>
-#include <fs/devfs.h>
+#include <drivers/drivers.h>
+
+typedef struct DrvGeom {
+	UCHAR heads;
+	UCHAR tracks;
+	UCHAR spt;     /* sectors per track */
+} DrvGeom;
 
 /* drive geometries */
 #define DG144_HEADS       2     /* heads per drive (1.44M) */
@@ -55,17 +60,28 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define CMD_SEEK    (0x0f)  /* seek track */
 #define CMD_VERSION (0x10)  /* FDC version */
 
+#define FLOPPY_SECTOR_SIZE	512
+#define FLOPPY_144IN_SIZE	1474560
 
 /* function prototypes */
 
-extern int fdc_read_block(int block,UCHAR *blockbuff,ULONG nosectors);
-extern int fdc_write_block(int block,UCHAR *blockbuff,ULONG nosectors);
+void ResetFloppy(void);
+void reset(void);
+UINT diskchange(void);
+void motoron(void);
+void motoroff(void);
+void recalibrate(void);
+UINT flseek(int track);
+UINT log_disk(DrvGeom *g);
+UINT format_track(UCHAR track,DrvGeom *g);
+
+extern UINT fdc_read_block(int block,UCHAR *blockbuff,ULONG nosectors);
+extern UINT fdc_write_block(int block,UCHAR *blockbuff,ULONG nosectors);
 extern void setup_floppy(fs_node *devfs);
 
 
-extern unsigned int motor;
+extern UINT motor;
 extern int mtick;
 extern int tmout;
-extern UCHAR floppy_drives;
 
-#endif /* FDC_H */
+#endif

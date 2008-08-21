@@ -29,7 +29,8 @@ ASINT	= nasm
 ASINTFLAGS= -felf
 
 CC	= gcc
-CFLAGS	= -c $(WFLAGS) -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I$(INCLUDEDIR)
+CFLAGS	= -c $(WFLAGS) -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -fstrength-reduce \
+	  -fomit-frame-pointer -finline-functions -I$(INCLUDEDIR)
 
 LD	= ld
 LDFLAGS	= -Tlink.ld

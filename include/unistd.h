@@ -46,7 +46,7 @@ typedef int ssize_t;
 #define NULL    ((void *)0)
 #endif
 
-//file access 
+//file access
 #define F_OK	0
 #define X_OK	1
 #define W_OK	2
@@ -84,6 +84,8 @@ typedef int ssize_t;
 #define __NR_kill	37
 #define __NR_times	43
 #define __NR_brk	45
+#define __NR_ioctl	54
+#define __NR_fcntl	55
 #define __NR_chroot	61
 
 #define _syscall0(type,name) \

@@ -57,6 +57,8 @@
 #define SYS_KILL	__NR_kill
 #define SYS_TIMES	__NR_times
 #define SYS_BRK		__NR_brk
+#define SYS_IOCTL	__NR_ioctl
+#define SYS_FCNTL	__NR_fcntl
 #define SYS_CHROOT	__NR_chroot
 
 #define NR_SYSCALLS	64
@@ -75,6 +77,7 @@ extern int sys_execve(const char *file,char **argv,char **envp);
 extern int sys_chdir(const char *name);
 extern int sys_mknod(const char *name, int mode, int addr);
 extern pid_t sys_getpid(void);
+extern int sys_ioctl(int fd, UINT cmd, ULONG arg);
 extern int sys_chroot(const char *name);
 
 #endif

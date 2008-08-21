@@ -26,7 +26,7 @@ struct dirent dirent;
 static fs_node *devfs_get_node(devfs_discr *discr, UINT inode)
 {
 	fs_node *node = discr->nodes;
-	
+
 	while (inode>=DEVFS_INODES_PER_BLOCK) {
 		node=&(node[DEVFS_INODES_PER_BLOCK]);  //We've to alloc just one more ...
 		if (node->inode!=DEVFS_INODE_LINK) return 0; //It's a kind of stupid
@@ -40,7 +40,7 @@ static fs_node *devfs_get_node(devfs_discr *discr, UINT inode)
 static void devfs_add_d_entry(fs_node *dir, const char *name, UINT inode)
 {
 	UINT entr_num = (dir->size/sizeof(devfs_d_entry));
-	
+
 	dir->size=(entr_num+1)*sizeof(devfs_d_entry);
 	dir->p_data=realloc(dir->p_data,dir->size);
 	((devfs_d_entry*)dir->p_data)[entr_num].inode=inode;
@@ -52,7 +52,7 @@ static void del_add_d_entry(fs_node *dir, UINT index)
 {
 	devfs_d_entry *entries = (devfs_d_entry *) dir->p_data;
 	UINT count=dir->size/sizeof(devfs_d_entry);
-	
+
 	if (index>count) return;
 	while (index<count-1) {
 		entries[index]=entries[index+1];
@@ -68,7 +68,7 @@ static void devfs_dirck(fs_node *dir)
 	devfs_discr *discr = (devfs_discr *)(dir->mi->discr);
 	UINT i=0;
 	fs_node *node;
-	
+
 	while (i<dir->size/sizeof(devfs_d_entry)) {
 		node=devfs_get_node(discr,entries[i].inode);
 		if (!node || node->inode==DEVFS_INODE_FREE)
@@ -79,10 +79,10 @@ static void devfs_dirck(fs_node *dir)
 
 static void devfs_fsck(fs_node *nodes)
 {
-	
+
 	UINT i, val_nodes;
 	fs_node *pre=0;
-	
+
 	while (1) {
 		val_nodes=0;
 		for (i=0;i<DEVFS_INODES_PER_BLOCK;i++) {
@@ -102,7 +102,7 @@ static void devfs_fsck(fs_node *nodes)
 		pre=nodes;
 		nodes=nodes[DEVFS_INODES_PER_BLOCK].ptr;
 	}
-	
+
 }
 
 static struct dirent *devfs_readdir(fs_node *node, UINT index)
@@ -111,7 +111,7 @@ static struct dirent *devfs_readdir(fs_node *node, UINT index)
 	devfs_discr *discr = (devfs_discr *)(node->mi->discr);
 	devfs_d_entry *entries = (devfs_d_entry *) (node->p_data);
 	fs_node *file_node;
-	
+
 	if (index>=node->size/sizeof(devfs_d_entry)) return 0;
 	file_node=devfs_get_node(discr,entries[index].inode);
 	strncpy(dirent.d_name,entries[index].filename,DEVFS_FILENAME_LEN);
@@ -128,19 +128,24 @@ static fs_node *devfs_finddir(fs_node *node, const char *name)
 	devfs_discr *discr = (devfs_discr *)(node->mi->discr);
 	devfs_d_entry *entries = (devfs_d_entry *) (node->p_data);
 	UINT i = node->size/sizeof(devfs_d_entry);
-	
-	while (i--) 
-		if (!strcmp(name,entries[i].filename)) 
+
+	while (i--)
+		if (!strcmp(name,entries[i].filename))
 			return devfs_get_node(discr,entries[i].inode);
-	
+
 	return 0;
+}
+
+static void devfs_free_p_data(fs_node *node)
+{
+	if (IS_DIR(node)) free(node->p_data);
 }
 
 static fs_node *devfs_find_free_node(devfs_discr *discr)
 {
 	fs_node *nodes = discr->nodes;
 	UINT i,block;
-	
+
 	for (block=0;;block++) {
 		for (i=0;i<DEVFS_INODES_PER_BLOCK;i++)
 			if (nodes[i].inode==DEVFS_INODE_FREE) {
@@ -167,7 +172,7 @@ fs_node *devfs_register_device(fs_node *dir, const char *name, UINT mode, UINT u
 	if (!dir || dir->flags!=FS_DIRECTORY || dir->mi->fs_type!=FS_TYPE_DEVFS) return 0;
 	devfs_discr *discr = (devfs_discr *) dir->mi->discr;
 	fs_node *node = devfs_find_free_node(discr);
-	
+
 	node->mode=mode;
 	node->uid=uid;
 	node->gid=gid;
@@ -177,23 +182,25 @@ fs_node *devfs_register_device(fs_node *dir, const char *name, UINT mode, UINT u
 	node->ptr=0;
 	node->nlinks=1;
 	node->mi=dir->mi;
-	node->p_data=(void *)1; //lock it!
 	devfs_add_d_entry(dir,name,node->inode);
-	node->p_data=(void *)0; //unlock
-	
+
 	return node;
 }
 
 void devfs_unregister_device(fs_node *device)
 {
-	if (!device || (device->flags&0x07)==FS_DIRECTORY || device->mi->fs_type!=FS_TYPE_DEVFS) return;
+	if (!device || IS_DIR(device) || device->mi->fs_type!=FS_TYPE_DEVFS) return;
 	devfs_discr *discr = (devfs_discr *) device->mi->discr;
-	
+
 	device->inode=DEVFS_INODE_FREE;
 	devfs_fsck(discr->nodes);
 }
 
-node_operations devfs_dir_operations = {0,0,0,0,&devfs_readdir,&devfs_finddir};
+node_operations devfs_dir_operations = {
+		readdir: &devfs_readdir,
+		finddir: &devfs_finddir,
+		free_p_data: &devfs_free_p_data,
+};
 
 fs_node *setup_devfs(fs_node *mountpoint)
 {
@@ -202,7 +209,7 @@ fs_node *setup_devfs(fs_node *mountpoint)
 	fs_node *root, *nodes;
 	mountinfo *mi;
 	UINT i = DEVFS_INODES_PER_BLOCK;
-	
+
 	root=nodes=calloc(DEVFS_INODES_PER_BLOCK+1,sizeof(fs_node));
 	discr->nodes=nodes;
 	discr->root=root;
@@ -211,14 +218,14 @@ fs_node *setup_devfs(fs_node *mountpoint)
 	nodes[DEVFS_INODES_PER_BLOCK].inode=DEVFS_INODE_LINK;
 	nodes[DEVFS_INODES_PER_BLOCK].ptr=0;
 	mi=fs_add_mountpoint(FS_TYPE_DEVFS,(void *)discr,mountpoint,0,root);
-	
+
 	root->size=2*sizeof(devfs_d_entry);
 	rootentr=calloc(2,sizeof(devfs_d_entry));
 	rootentr[0].inode=rootentr[1].inode=0;
 	strcpy(rootentr[0].filename,".");
 	strcpy(rootentr[1].filename,"..");
 	root->p_data=(void *)rootentr;
-	
+
 	root->mode=0755;
 	root->uid=FS_UID_ROOT;
 	root->gid=FS_GID_ROOT;
@@ -234,7 +241,7 @@ fs_node *setup_devfs(fs_node *mountpoint)
 UINT remove_devfs(fs_node *devfs)
 {
 	if (!devfs) return 2;
-	
+
 	devfs_discr *discr = (devfs_discr *)(devfs->mi->discr);
 	if (devfs!=discr->root) return 1;
 	mountinfo *mi = devfs->mi;
@@ -243,7 +250,7 @@ UINT remove_devfs(fs_node *devfs)
 	fs_node *block = discr->nodes,*tmp;
 	while (block) {
 		for (i=0;i<DEVFS_INODES_PER_BLOCK;i++) {
-			if (block[i].flags==FS_DIRECTORY) free(block[i].p_data);
+			free_p_data_fs(&(block[i]));
 		}
 		tmp=block[DEVFS_INODES_PER_BLOCK].ptr;
 		free(block);

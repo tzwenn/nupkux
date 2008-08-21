@@ -18,7 +18,7 @@
  */
 
 #include <kernel.h>
-#include <kernel/ktextio.h>
+#include <drivers/drivers.h>
 #include <time.h>
 #include <lib/memory.h>
 

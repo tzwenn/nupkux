@@ -25,4 +25,9 @@
 
 extern UINT setup_drivers(fs_node *devfs);
 
+extern inline void outportb(USHORT port, UCHAR value);
+extern inline UCHAR inportb(USHORT port);
+extern inline void outportw(USHORT port, USHORT value);
+extern inline USHORT inportw(USHORT port);
+
 #endif

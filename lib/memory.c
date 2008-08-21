@@ -20,7 +20,7 @@
 #include <lib/memory.h>
 
 void *memcpy(void *target, const void *src, size_t count)
-{	
+{
 	char *tmp = (char *) target, *source = (char *)src;
 	while (count--) {
 		*tmp=*source;
@@ -34,6 +34,13 @@ void *memset(void *target, int value, size_t count)
 {
 	char *tmp = (char *)target;
 	while (count--) *(tmp++)=value;
+	return target;
+}
+
+USHORT *memsetw(USHORT *target, int value, size_t count)
+{
+	USHORT *tmp=target;
+	while (count --) *(tmp++)=value;
 	return target;
 }
 

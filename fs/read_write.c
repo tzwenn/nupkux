@@ -20,15 +20,23 @@
 #include <task.h>
 #include <fs/fs.h>
 #include <errno.h>
-#include <fcntl.h>
+
+int sys_ioctl(int fd, UINT cmd, ULONG arg)
+{
+	if (fd<0 || fd>=NR_OPEN) return -EBADF;
+	volatile FILE *f = &(current_task->files[fd]);
+	if (f->fd==NO_FILE) return -EBADF;
+	return ioctl_fs(f->node,cmd,arg);
+}
 
 int sys_read(int fd, char *buffer, size_t size)
 {
 	if (fd<0 || fd>=NR_OPEN) return -EBADF;
 	volatile FILE *f = &(current_task->files[fd]);
-	//if (!(!f->flags&O_RDWR) || ((f->flags&O_RDWR)==O_RDWR)) return -1;
-	size=read_fs(f->node,f->offset,size,(UCHAR *)buffer);
-	if (f->node->flags!=FS_CHARDEVICE) f->offset+=size;
+	if (f->fd==NO_FILE) return -EBADF;
+	if (!f->flags&FMODE_READ) return -EBADF;
+	size=read_fs(f->node,f->offset,size,buffer);
+	if (!IS_CHR(f->node)) f->offset+=size;
 	return size;
 }
 
@@ -36,8 +44,9 @@ int sys_write(int fd, const char *buffer, size_t size)
 {
 	if (fd<0 || fd>=NR_OPEN) return -EBADF;
 	volatile FILE *f = &(current_task->files[fd]);
-	//if (!(f->flags&O_RDWR) || ((f->flags&O_RDWR)==O_RDWR)) return -1;
-	size=write_fs(f->node,f->offset,size,(UCHAR *)buffer);
-	if (f->node->flags!=FS_CHARDEVICE) f->offset+=size;
+	if (f->fd==NO_FILE) return -EBADF;
+	if (!f->flags&FMODE_WRITE) return -EBADF;
+	size=write_fs(f->node,f->offset,size,buffer);
+	if (!IS_CHR(f->node)) f->offset+=size;
 	return size;
 }

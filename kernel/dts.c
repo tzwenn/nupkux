@@ -19,6 +19,7 @@
 
 #include <kernel/dts.h>
 #include <lib/memory.h>
+#include <drivers/drivers.h>
 #include <kernel/ktextio.h>
 #include <kernel/syscall.h>
 #include <task.h>

@@ -42,7 +42,7 @@ void SysCallHandler(registers *regs)
 		return;
 	}
 	void *sys_call=sys_call_table[regs->eax];
-	
+
 	if (!sys_call) {
 		regs->eax=-ENOSYS;
 		return;
@@ -67,7 +67,7 @@ void SysCallHandler(registers *regs)
 void setup_syscalls()
 {
 	memset(sys_call_table,0,NR_SYSCALLS*sizeof(void *));
-	
+
 	sys_call_table[SYS_PUTCHAR]=&sys_putchar;
 	sys_call_table[SYS_EXIT]=&sys_exit;
 	sys_call_table[SYS_FORK]=&sys_fork;
@@ -80,7 +80,8 @@ void setup_syscalls()
 	sys_call_table[SYS_CHDIR]=&sys_chdir;
 	sys_call_table[SYS_MKNOD]=&sys_mknod;
 	sys_call_table[SYS_GETPID]=&sys_getpid;
+	sys_call_table[SYS_IOCTL]=&sys_ioctl;
 	sys_call_table[SYS_CHROOT]=&sys_chroot;
-	
+
 	register_interrupt_handler(0x80,&SysCallHandler);
 }

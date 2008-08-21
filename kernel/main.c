@@ -30,7 +30,7 @@
 #include <drivers/drivers.h>
 
 char _kabort_func = 0;
-int errno;
+int errno = 0;
 UINT initial_esp = 0;
 char kernel_cmdline[256] = {0,};
 boot_module boot_modules[NR_BOOT_MODULES];

@@ -21,13 +21,16 @@
 #include <lib/stdarg.h>
 #include <mm.h>
 #include <kernel/dts.h>
+#include <drivers/drivers.h>
+#include <lib/string.h>
+
+extern fs_node *current_tty;
 
 static int _ksetcursor(UCHAR x, UCHAR y);
-int _kin(char *instr, int maxlen);
+static int _kout(fs_node *node, off_t offset, size_t size, const char *output);
+int (*ktexto)(fs_node *,off_t,size_t,const char*) = _kout;
 static UCHAR _kkeyboard_layout(UCHAR key, int layout);
 static UCHAR _kinterpret_key(UCHAR key, int layout);
-
-static int _kout(const char *output);
 
 static CURSOR_POS _cursor_pos;
 static UINT _line_buffer_pos = 0, _line_buffer_end = 0;
@@ -38,43 +41,17 @@ static char _key_recieved = 0;
 
 char *mem = (char *) VIDEO_MEM_ENTRY;
 
-inline void outportb(USHORT port, UCHAR value) 
+static int _kline_buffer_up(void)
 {
-    asm volatile ("outb %%al,%%dx"::"d" (port), "a" (value));
-}
-
-inline UCHAR inportb(USHORT port)  
-{
- 	UCHAR value;
-
-	asm volatile ("inb %%dx,%%al":"=a" (value):"d"(port));
-	return value;
-}
-
-inline void outportw(USHORT port, USHORT value) 
-{
-    asm volatile ("outw %%ax,%%dx"::"d"(port), "a"(value));
-}
-
-inline USHORT inportw(USHORT port)  
-{
- 	USHORT value;
-
-	asm volatile ("inw %%dx,%%ax":"=a"(value):"d"(port));
-	return value;
-}
-
-static int _kline_buffer_up(void) 
-{
-	if (((_line_buffer_end>=0) && (_line_buffer_pos==_line_buffer_end)) || 
+	if (((_line_buffer_end>=0) && (_line_buffer_pos==_line_buffer_end)) ||
 	   ((_line_buffer_end<0) && (_line_buffer_pos==-_line_buffer_end-1) )) return 0;
-	
+
 	_line_buffer_pos++;
-	printf("+(%d)",_line_buffer_pos);	
+	printf("+(%d)",_line_buffer_pos);
 	return 1;
 }
 
-static int _kline_buffer_down(void) 
+static int _kline_buffer_down(void)
 {
 	if (!_line_buffer_pos)	return 0;
 
@@ -84,7 +61,7 @@ static int _kline_buffer_down(void)
 }
 
 
-static int _kline_buffer_reset(void) 
+static int _kline_buffer_reset(void)
 {
 	//while (_kline_buffer_down());
 	return 1;
@@ -100,7 +77,7 @@ int printf(const char *fmt, ...)
 
 	va_start(ap,fmt);
 	res=vsprintf(str,fmt,ap);
-	_kout(str);
+	ktexto(current_tty,0,strlen(str),str);
 	va_end(ap);
 	return res;
 }
@@ -123,9 +100,9 @@ int str2d(char *str)
 
 static UCHAR _kkeyboard_layout(UCHAR key, int layout)
 {
-	UCHAR german_keymap[90] = 	{0,1,'1','2','3','4','5','6','7','8','9','0',223/*ß*/,0/*´*/,'\b',
-					'\t','q','w','e','r','t','z','u','i','o','p',0/*ü*/,'+','\n',
-					0,'a','s','d','f','g','h','j','k','l',0/*ö*/,0/*ä*/,'^',0,'#',
+	UCHAR german_keymap[90] = 	{0,1,'1','2','3','4','5','6','7','8','9','0',0xE1/*ß*/,0/*´*/,'\b',
+					'\t','q','w','e','r','t','z','u','i','o','p',0x81/*ü*/,'+','\n',
+					0,'a','s','d','f','g','h','j','k','l',0x94/*ö*/,0x84/*ä*/,0x5E,0,'#',
 					'y','x','c','v','b','n','m',',','.','-',
 					0,0,0,' ',0,0,0,0,0,0,0,0,0,0,0,0,0,
 					0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'<',0,0,0};
@@ -164,7 +141,7 @@ static UCHAR _kinterpret_key(UCHAR key, int layout)
 					     }
 					     if ((_cursor_pos.x!=TXT_WIDTH-1) && (_cursor_pos.y!=TXT_HEIGHT-1)) {
 						_ksetcursor(_cursor_pos.x+1,_cursor_pos.y);
-						_kout("\b");
+						_kputc('\b');
 					     }
 					     break;
 			case 46: 	     if (_key_states[SPEC_KEY_CTRLL]) {
@@ -176,11 +153,11 @@ static UCHAR _kinterpret_key(UCHAR key, int layout)
 	key=_kkeyboard_layout(key,layout);
 	if (!key) return 0;
 	if (_key_states[SPEC_KEY_SHIFTL] || _key_states[SPEC_KEY_SHIFTR]) {
-        	if ((key>=97) && (key<=123)) return key & 0xDF;
+		if ((key>=97) && (key<=123)) return key & 0xDF;
 		switch (key) {
 			case '1': return '!';
 			case '2': return '"';
-			//case '3': return 167;//'§';
+			case '3': return 0x15; //'§';
 			case '4': return '$';
 			case '5': return '%';
 			case '6': return '&';
@@ -188,13 +165,16 @@ static UCHAR _kinterpret_key(UCHAR key, int layout)
 			case '8': return '(';
 			case '9': return ')';
 			case '0': return '=';
-			case 223: return '?'; //(223=ß)
+			case 0x84: return 0x8E; //ä
+			case 0x81: return 0x9A; //ö
+			case 0x94: return 0x99; //ü
+			case 0xE1: return '?'; //(223=ß)
 			case '+': return '*';
 			case '#': return '\'';
 			case ',': return ';';
 			case '.': return ':';
 			case '-': return '_';
-			//case '^': return 176;//'°';
+			case '^': return 0xF8;//'°';
 			case '<': return '>';
 		}
 	}
@@ -205,13 +185,13 @@ static UCHAR _kinterpret_key(UCHAR key, int layout)
 			case '8': return '[';
 			case '9': return ']';
 			case '0': return '}';
-			case 223: return '\\';
-			case '+': return '~';
+			case 0xE1: return '\\';
+			case '+': return 0xE7;
 			case '<': return '|';
 
 		}
 	}
-	if (key>127) return 0;
+	//if (key>127) return 0;
 	return key;
 }
 
@@ -244,15 +224,13 @@ static int _ksetcursor(UCHAR x, UCHAR y)
 
 int _kclear()
 {
-        int i=0;
+	int i=0;
 
 	_kline_buffer_reset();
-        while (i<(TXT_WIDTH*TXT_HEIGHT*2)) {
-        	mem[i]=' ';
-                i++;
-                mem[i]=TXT_COL_WHITE;
-                i++;
-        }
+	while (i<(TXT_WIDTH*TXT_HEIGHT*2)) {
+		mem[i++]=' ';
+		mem[i++]=TXT_COL_WHITE;
+	}
 	_ksetcursor(0,0);
 	return 0;
 }
@@ -279,8 +257,7 @@ void irq_keyboard(registers *regs)
 		if (!_key_states[input]) {
 			_key_states[input]=1;
 			keyprint=_kinterpret_key(input,KEYBOARD_LAY_DE);
-			if ((_print_pressed_keys) && (keyprint!='\n')) _kputc(keyprint);
-			//_key_recieved=input;//keyprint[0];
+			if ((_print_pressed_keys) && keyprint && (keyprint!='\n')) _kputc(keyprint);
 		}
 	} else if (_key_states[input-128]) {
 		_key_states[input-128]=0;
@@ -326,25 +303,25 @@ int _kgets(char *instr, int maxlen)
 		instr[++i]=0;
 	}
 	#ifdef NEWLINE_KIN
-	_kout("\n");
+	_kputc('\n');
 	#endif
 	return 0;
 }
 
-static int _kout(const char *output)
+static int _kout(fs_node *node, off_t offset, size_t size, const char *output)
 {
 	UCHAR x = _cursor_pos.x, y = _cursor_pos.y;
 	int i;
 
 	_kline_buffer_reset();
-	while (*output) {
+	while (size--) {
 		switch (*output) {
 		  case '\n':	_kiomove(x,y,TXT_WIDTH);
 				#ifdef NEWLINE_RETURN
 				for (i=2*((y+1)*TXT_WIDTH);i<2*TXT_HEIGHT*TXT_WIDTH;i++)
 					mem[i]=mem[i+2*x];
 				x=0;
-				#endif	
+				#endif
 				y++;
 				break;
 		  case '\r':	x=0;
@@ -368,20 +345,18 @@ static int _kout(const char *output)
 		  case '\f':	_kiomove(x,y,TXT_WIDTH);
 				y++;
 				break;
-		  default:	if (*output>=32) {
-					_kiomove(x,y,1);
+		  default: 	_kiomove(x,y,1);
 					mem[2*(y*TXT_WIDTH+x)]=*output;
 					mem[2*(y*TXT_WIDTH+x)+1]=TXT_COL_WHITE;
 					x++;
-				}
-				break;
-		} 
+					break;
+		}
 		if (x>=TXT_WIDTH) {
 			x-=TXT_WIDTH;
 			y++;
 		}
 		if (y>=TXT_HEIGHT) {
-			/*ToDo: line_buffer*/
+			/*TODO: line_buffer*/
 			y=0;
 			while (y<TXT_HEIGHT-1) {
 				memcpy(mem+2*(y*TXT_WIDTH),mem+2*((y+1)*TXT_WIDTH),(UINT) 2*TXT_WIDTH);
@@ -401,6 +376,5 @@ static int _kout(const char *output)
 
 int _kputc(const char chr)
 {
-	char buf[2] = {chr,0};
-	return _kout(buf);
+	return ktexto(current_tty,0,1,(char *)&chr);
 }

@@ -20,6 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef INCLUDE_DMA
 #define INCLUDE_DMA
 
+#include <drivers/drivers.h>
+
 void dma_xfer(unsigned char channel, unsigned long address, unsigned int length, unsigned char read);
 
 #endif

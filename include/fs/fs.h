@@ -39,22 +39,31 @@
 #define FS_UID_ROOT	0
 #define FS_GID_ROOT	0
 
+#define IS_REG(NODE)	((NODE->flags&0x7)==FS_FILE)
 #define IS_DIR(NODE)	((NODE->flags&0x7)==FS_DIRECTORY)
+#define IS_CHR(NODE)	((NODE->flags&0x7)==FS_CHARDEVICE)
+#define IS_BLK(NODE)	((NODE->flags&0x7)==FS_BLOCKDEVICE)
+#define IS_PIP(NODE)	((NODE->flags&0x7)==FS_PIPE)
 #define IS_LNK(NODE)	((NODE->flags&0x7)==FS_SYMLINK)
 #define IS_MNT(NODE)	(NODE->flags&FS_MOUNTPOINT)
 
 #define NR_OPEN		32
 #define NO_FILE		NR_OPEN+1
 
+#define FMODE_READ	1
+#define FMODE_WRITE	2
+
 typedef struct _fs_node fs_node;
 typedef struct _mountinfo mountinfo;
 
 typedef void (*open_proto)(fs_node*);
-typedef UINT (*read_proto)(fs_node*,off_t,size_t,UCHAR*);
-typedef UINT (*write_proto)(fs_node*,off_t,size_t,UCHAR*);
+typedef int (*read_proto)(fs_node*,off_t,size_t,char*);
+typedef int (*write_proto)(fs_node*,off_t,size_t,const char*);
 typedef void (*close_proto)(fs_node*);
 typedef struct dirent *(*readdir_proto)(fs_node*,UINT);
-typedef fs_node *(*finddir_proto)(fs_node*,const char *name);
+typedef fs_node *(*finddir_proto)(fs_node*,const char *);
+typedef void (*free_p_data_proto)(fs_node*);
+typedef int (*ioctl_proto)(fs_node*,UINT,ULONG);
 
 struct dirent
 {
@@ -71,6 +80,8 @@ typedef struct _node_operations {
 	close_proto close;
 	readdir_proto readdir;
 	finddir_proto finddir;
+	free_p_data_proto free_p_data;
+	ioctl_proto ioctl;
 } node_operations;
 
 struct _fs_node {
@@ -109,11 +120,13 @@ typedef struct file {
 //VFS functions
 
 extern void open_fs(fs_node *node, UCHAR read, UCHAR write);
-extern UINT read_fs(fs_node *node, off_t offset, size_t size, UCHAR *buffer);
-extern UINT write_fs(fs_node *node, off_t offset, size_t size, UCHAR *buffer);
+extern int read_fs(fs_node *node, off_t offset, size_t size, char *buffer);
+extern int write_fs(fs_node *node, off_t offset, size_t size, const char *buffer);
 extern void close_fs(fs_node *node);
 extern struct dirent *readdir_fs(fs_node *node, UINT index);
 extern fs_node *finddir_fs(fs_node *node, const char *name);
+extern void free_p_data_fs(fs_node *node);
+extern int ioctl_fs(fs_node *node, UINT cmd, ULONG arg);
 
 extern fs_node *get_root_fs_node(void);
 

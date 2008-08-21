@@ -59,7 +59,7 @@ int sys_open(const char *filename,int flag,int mode)
 		if (current_task->files[fd].fd==NO_FILE) break;
 	if (fd==NR_OPEN) return -EMFILE;
 	f=&(current_task->files[fd]);
-	f->flags=flag;
+	f->flags=0;
 	f->node=namei(filename);
 	if (!f->node) return -ENOENT;
 	if (flag&O_APPEND) f->offset=f->node->size;
@@ -67,7 +67,9 @@ int sys_open(const char *filename,int flag,int mode)
 	/////////////////////////////////////
 	// A lot more goes here and there an everywhere
 	/////////////////////////////////////
-	open_fs(f->node,(!flag&O_RDWR) || ((flag&O_RDWR)==O_RDWR),(flag&O_RDWR) || ((flag&O_RDWR)==O_RDWR));
+	f->flags|=((!flag&O_RDWR) || ((flag&O_RDWR)==O_RDWR)&0xFF)&FMODE_READ;
+	f->flags|=((flag&O_RDWR) || ((flag&O_RDWR)==O_RDWR)&0xFF)&FMODE_WRITE;
+	open_fs(f->node,f->flags&FMODE_READ,f->flags&FMODE_WRITE);
 	f->fd=fd;
 	return fd;
 }

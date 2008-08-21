@@ -25,46 +25,80 @@ extern void setup_floppy(fs_node *);
 extern void setup_urandom_file(fs_node *);
 extern void setup_serial(fs_node *);
 
-static UINT drv_stdin_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+inline void outportb(USHORT port, UCHAR value)
+{
+    asm volatile ("outb %%al,%%dx"::"d" (port), "a" (value));
+}
+
+inline UCHAR inportb(USHORT port)
+{
+ 	UCHAR value;
+
+	asm volatile ("inb %%dx,%%al":"=a" (value):"d"(port));
+	return value;
+}
+
+inline void outportw(USHORT port, USHORT value)
+{
+    asm volatile ("outw %%ax,%%dx"::"d"(port), "a"(value));
+}
+
+inline USHORT inportw(USHORT port)
+{
+ 	USHORT value;
+
+	asm volatile ("inw %%dx,%%ax":"=a"(value):"d"(port));
+	return value;
+}
+
+static int drv_stdin_read(fs_node *node, off_t offset, size_t size, char *buffer)
 {
 	return 0;
 }
 
-static UINT drv_stdout_write(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+static int drv_stdout_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
 	size_t i=size;
-	
-	while (i--) 
+
+	while (i--)
 		_kputc(*(buffer++));
-	
+
 	return size;
 }
 
-static UINT drv_null_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+static int drv_null_read(fs_node *node, off_t offset, size_t size, char *buffer)
 {
 	return 0;
 }
 
-UINT drv_null_write(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+int drv_null_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
 	return size;
 }
 
-static UINT drv_zero_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+static int drv_zero_read(fs_node *node, off_t offset, size_t size, char *buffer)
 {
 	memset(buffer,0,size);
 	return size;
 }
 
-static node_operations stdin_ops  = {0,&drv_stdin_read,&drv_null_write,0,0,0};
-static node_operations stdout_ops = {0,&drv_null_read,&drv_stdout_write,0,0,0};
-static node_operations null_ops   = {0,&drv_null_read,&drv_null_write,0,0,0};
-static node_operations zero_ops   = {0,&drv_zero_read,&drv_null_write,0,0,0};
+static node_operations stdin_ops  = {
+		read: &drv_stdin_read,
+		write: &drv_null_write,};
+static node_operations stdout_ops = {
+		read: &drv_null_read,
+		write: &drv_stdout_write,};
+static node_operations null_ops = {
+		read: &drv_null_read,
+		write: &drv_null_write,};
+static node_operations zero_ops = {
+		read: &drv_zero_read,
+		write: &drv_null_write,};
 
 UINT setup_drivers(fs_node *devfs)
 {
 	if (!devfs) return 2;
-	
+
 	devfs_register_device(devfs,"stdin",0444,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&stdin_ops);
 	devfs_register_device(devfs,"stdout",0222,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&stdout_ops);
 	devfs_register_device(devfs,"stderr",0222,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&stdout_ops);

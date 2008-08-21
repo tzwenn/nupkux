@@ -24,7 +24,7 @@
 int sys_execve(const char *file,char **argv,char **envp)
 {
 	//TODO: permission check, PATH, only './' for programs in .
-	UCHAR *buf;
+	char *buf;
 	int ret,argc=0;
 	int (*main)(int,char **,char **);
 	fs_node *node=namei(file);
@@ -34,7 +34,7 @@ int sys_execve(const char *file,char **argv,char **envp)
 	if (!node)
 		return -ENOENT;
 	open_fs(node,1,0);
-	buf=(UCHAR *)malloc(node->size);
+	buf=malloc(node->size);
 	read_fs(node,0,node->size,buf);
 	while (argv[argc]) argc++;
 	main=(int (*)(int,char **,char **))buf;

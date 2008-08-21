@@ -18,7 +18,7 @@
  */
 
 #include <time.h>
-#include <kernel/ktextio.h>
+#include <drivers/drivers.h>
 #include <kernel/dts.h>
 #include <task.h>
 
@@ -87,7 +87,7 @@ struct tm getrtctime()
 	now.tm_wday+=2;
 	if (now.tm_wday>6) now.tm_wday-=7;*/
 	now.tm_wday=-1;
-	
+
 	now.tm_yday=(now.tm_mon-1)*30;
 	if (now.tm_mon>2) now.tm_yday-=2;
 	if (now.tm_mon<7) now.tm_yday+=(now.tm_mon)/2;
@@ -108,8 +108,8 @@ time_t mktime(struct tm *timeptr)
 	//Zeit seit 01.01.1970 berechnen
 	time_t result = 0;
 	int i;
-	
-	//Es wären die Tage zu bestimmen 
+
+	//Es wären die Tage zu bestimmen
 	if (timeptr->tm_year>=70) result=(timeptr->tm_year-70)*365;
 		else result=(timeptr->tm_year+30)*365;
 	//Schalttage => VERBESSERN
@@ -133,7 +133,7 @@ time_t time(time_t *tp)
 {
 	struct tm now = getrtctime();
 	time_t result;
-	
+
 	removetimezone(&now);
 	result = mktime(&now);
 	if (tp) *tp=result;

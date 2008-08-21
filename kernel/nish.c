@@ -222,14 +222,14 @@ static int nish_lba28(void)
 static int nish_cat(int argc, char *argv[])
 {
 	fs_node *node;
-	UCHAR *buf;
+	char *buf;
 	UINT i;
 
 	if (argc==1) return 1;
 	node=namei(argv[1]);
 	if (node) {
 		open_fs(node,1,0);
-		buf=(UCHAR *)malloc(node->size);
+		buf=(char *)malloc(node->size);
 		read_fs(node,0,node->size,buf);
 		for (i=0;i<node->size;i++)
 			_kputc(buf[i]);
@@ -297,15 +297,12 @@ static int nish_run(const char *cmd, char **argv)
 	return ret;
 }
 
+extern void run_test(void);
+
 static int nish_test(int argc, char **argv)
 {
-	printf("---open,read,write,close test---\n\n");
-
-	int fd0=sys_open("/dev/stdin",2,0);
-	int fd1=sys_open("/dev/stdout",2,0);
-	nish_run("utest",argv);
-	sys_close(fd1);
-	sys_close(fd0);
+	printf("---tty test---\n\n");
+	run_test();
 	return 1;
 }
 

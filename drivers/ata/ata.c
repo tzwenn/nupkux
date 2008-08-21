@@ -18,14 +18,13 @@
  */
 
 #include <time.h>
-#include <kernel/ktextio.h>
 #include <drivers/ata.h>
 
-int lba28_init(USHORT controller, UCHAR drive, UINT addr, UCHAR sectorcount) 
+int lba28_init(USHORT controller, UCHAR drive, UINT addr, UCHAR sectorcount)
 {
 	while ((inportb(controller + ATA_CHK2) & 0x80)) {_kabort_func_return(0)};
 	outportb(controller | ATA_FEAT,0x00);
-	outportb(controller | ATA_SECS,sectorcount); 
+	outportb(controller | ATA_SECS,sectorcount);
 	outportb(controller | ATA_SNUM,(UCHAR) addr);
 	outportb(controller | ATA_CLOW,(UCHAR) (addr>>8));
 	outportb(controller | ATA_CHIH,(UCHAR) (addr>>16));
@@ -33,12 +32,12 @@ int lba28_init(USHORT controller, UCHAR drive, UINT addr, UCHAR sectorcount)
 	return 1;
 }
 
-/*void lba48_init(USHORT controller, UCHAR drive, ULONG addr, USHORT sectorcount) 
+/*void lba48_init(USHORT controller, UCHAR drive, ULONG addr, USHORT sectorcount)
 {
 	outportb(controller | 0x01,0x00);
 	outportb(controller | 0x01,0x00);
-	outportb(controller | 0x02,(UCHAR) ((sectorcount>>8) & 0xFF)); 
-	outportb(controller | 0x02,(UCHAR) (sectorcount & 0xFF)); 
+	outportb(controller | 0x02,(UCHAR) ((sectorcount>>8) & 0xFF));
+	outportb(controller | 0x02,(UCHAR) (sectorcount & 0xFF));
 	outportb(controller | 0x03,(UCHAR) ((addr>>24) & 0xFF));
 	outportb(controller | 0x03,(UCHAR) (addr & 0xFF));
 	outportb(controller | 0x04,(UCHAR) ((addr>>32) & 0xFF));

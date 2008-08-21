@@ -54,20 +54,28 @@ int rand(void)
 	return urandom_state;
 }
 
-static UINT drv_urandom_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+static void drv_urandom_open(fs_node *node)
+{
+	srand(time(0));
+}
+
+static int drv_urandom_read(fs_node *node, off_t offset, size_t size, char *buffer)
 {
 	size_t i;
 	i=size;
 	while (i--)
-		buffer[i]=(UCHAR)(rand()%0x100);
+		buffer[i]=(char)(rand()%0x100);
 	return size;
 }
 
-extern UINT drv_null_write(fs_node *node, off_t offset, size_t size, UCHAR *buffer);
-static node_operations urandom_ops = {0,&drv_urandom_read,&drv_null_write,0,0,0};
+extern int drv_null_write(fs_node *node, off_t offset, size_t size, const char *buffer);
+static node_operations urandom_ops = {
+		open: &drv_urandom_open,
+		read: &drv_urandom_read,
+		write: &drv_null_write,
+};
 
 void setup_urandom_file(fs_node *devfs)
 {
-	srand(time(0));
 	devfs_register_device(devfs,"urandom",0666,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&urandom_ops);
 }

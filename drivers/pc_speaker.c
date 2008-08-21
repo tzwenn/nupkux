@@ -17,8 +17,7 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel.h>
-#include <kernel/ktextio.h>
+#include <drivers/drivers.h>
 
 void _init_pc_speaker(void)
 {

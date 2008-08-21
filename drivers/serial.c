@@ -78,17 +78,17 @@ static void serial_open(fs_node *node)
 	outportb(port+MCR,LOOP_CLEAR);
 	outportb(port+FCR,RX_TRIGGER | RFres | XFres | FCR_enable);
 	outportb(port+MCR,OUT2 | RTS | DTR);
-	//By know this is my first "real hardware" driver, nupkux is without "real" scheduling
-	//For this reason this is non-interrupt-driven and therefore ugly
-	//outportb(port+IER,ERBFI);	
+	//By now this is my first "real hardware" driver, nupkux is without "real" scheduling
+	//For this reason this is non-interrupt-driven and therefore ugly one
+	//outportb(port+IER,ERBFI);
 	node->nlinks++;
 }
 
-static UINT serial_write(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+static int serial_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
 	size_t i=size;
 	USHORT port=(USHORT) ((UINT) node->p_data);
-	
+
 	while (i--)  {
 		while (!(inportb(port+LSR)&THRE));
 		outportb(port+THR,*(buffer++));
@@ -96,11 +96,11 @@ static UINT serial_write(fs_node *node, off_t offset, size_t size, UCHAR *buffer
 	return size;
 }
 
-static UINT serial_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+static int serial_read(fs_node *node, off_t offset, size_t size, char *buffer)
 {
 	size_t i=size;
 	USHORT port=(USHORT) ((UINT) node->p_data);
-	
+
 	while (i--) {
 		while (!inportb(port+LSR)&RBF);
 		*(buffer++)=inportb(port+RBR);
@@ -111,13 +111,18 @@ static UINT serial_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 static void serial_close(fs_node *node)
 {
 	USHORT port=(USHORT) ((UINT) node->p_data);
-	
+
 	outportb(port+IER,NO_INTERRUPTS);
 	outportb(port+MCR,0x00);
-	node->nlinks++;
+	node->nlinks--;
 }
 
-static node_operations serial_ops = {&serial_open,&serial_read,&serial_write,&serial_close,0,0};
+static node_operations serial_ops = {
+		open: &serial_open,
+		read: &serial_read,
+		write: &serial_write,
+		close: &serial_close,
+};
 
 void setup_serial(fs_node *devfs)
 {

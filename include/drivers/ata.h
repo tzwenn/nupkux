@@ -20,6 +20,8 @@
 #ifndef _ATA_H
 #define _ATA_H
 
+#include <drivers/drivers.h>
+
 #define ATA_IDE_1	0x1F0
 #define ATA_IDE_2	0x170
 
@@ -38,8 +40,6 @@
 
 #define ATA_READ_CMD	0x20
 #define ATA_WRITE_CMD	0x30
-
-#include <kernel.h>
 
 extern int lba28_read(UCHAR* buf, USHORT controller, UCHAR drive, UINT addr, UCHAR sectorcount);
 extern int lba28_write(UCHAR* buf, USHORT controller, UCHAR drive, UINT addr, UCHAR sectorcount);

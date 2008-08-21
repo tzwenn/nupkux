@@ -30,13 +30,13 @@ void open_fs(fs_node *node, UCHAR read, UCHAR write)
 	if (node->f_op && node->f_op->open) return node->f_op->open(node);
 }
 
-UINT read_fs(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+int read_fs(fs_node *node, off_t offset, size_t size, char *buffer)
 {
 	if (node->f_op && node->f_op->read) return node->f_op->read(node,offset,size,buffer);
 		else return 0;
 }
 
-UINT write_fs(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+int write_fs(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
 	if (node->f_op && node->f_op->write) return node->f_op->write(node,offset,size,buffer);
 		else return 0;
@@ -57,6 +57,17 @@ fs_node *finddir_fs(fs_node *node, const char *name)
 {
 	if (IS_DIR(node) && (node->f_op && node->f_op->finddir)) return node->f_op->finddir(node,name);
 		else return 0;
+}
+
+void free_p_data_fs(fs_node *node)
+{
+	if (node->f_op && node->f_op->free_p_data) return node->f_op->free_p_data(node);
+}
+
+int ioctl_fs(fs_node *node, UINT cmd, ULONG arg)
+{
+	if (node->f_op && node->f_op->ioctl) return node->f_op->ioctl(node,cmd,arg);
+		else return -ENOTTY;
 }
 
 UINT setup_vfs()
@@ -128,7 +139,7 @@ fs_node *resolve_node(fs_node *node)
 
 	if (IS_MNT(node) || IS_LNK(node))
 		return resolve_node(node->ptr);
-	else return node;
+		else return node;
 }
 
 fs_node *get_root_fs_node()

@@ -31,7 +31,7 @@ static void initrd_open(fs_node *node)
 	node->nlinks++;
 }
 
-static UINT initrd_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+static int initrd_read(fs_node *node, off_t offset, size_t size, char *buffer)
 {
 	initrd_discr *discr = (initrd_discr *)(node->mi->discr);
 	initrd_inode inode = discr->initrd_inodes[node->inode];
@@ -43,7 +43,7 @@ static UINT initrd_read(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
 	return size;
 }
 
-static UINT initrd_write(fs_node *node, off_t offset, size_t size, UCHAR *buffer)
+static int initrd_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
 	return 0;
 }
@@ -59,7 +59,7 @@ static struct dirent *initrd_readdir(fs_node *node, UINT index)
 	initrd_discr *discr = (initrd_discr *)(node->mi->discr);
 	initrd_inode inode = discr->initrd_inodes[node->inode], file_inode;
 	initrd_d_entry *entries = (initrd_d_entry *) (inode.offset+discr->location);
-	
+
 	if (index>=inode.size/sizeof(initrd_d_entry)) return 0;
 	file_inode=discr->initrd_inodes[entries[index].inode];
 	strncpy(dirent.d_name,entries[index].filename,INITRD_FILENAME_LEN);
@@ -72,25 +72,32 @@ static struct dirent *initrd_readdir(fs_node *node, UINT index)
 
 
 static fs_node *initrd_finddir(fs_node *node, const char *name)
-{	
+{
 	if (node->flags!=FS_DIRECTORY) return 0;
 	initrd_discr *discr = (initrd_discr *)(node->mi->discr);
 	initrd_inode inode = discr->initrd_inodes[node->inode];
 	initrd_d_entry *entries = (initrd_d_entry *) (inode.offset+discr->location);
 	UINT i = inode.size/sizeof(initrd_d_entry);
-	
-	while (i--) 
-		if (!strcmp(name,entries[i].filename)) 
+
+	while (i--)
+		if (!strcmp(name,entries[i].filename))
 			return &(discr->nodes[entries[i].inode]);
 	return 0;
 }
 
-node_operations initrd_operations = {&initrd_open,&initrd_read,&initrd_write,&initrd_close,&initrd_readdir,&initrd_finddir};
+node_operations initrd_operations = {
+		open: &initrd_open,
+		read: &initrd_read,
+		write: &initrd_write,
+		close: &initrd_close,
+		readdir: &initrd_readdir,
+		finddir: &initrd_finddir,
+};
 
 static fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr *discr, mountinfo *mi)
 {
 	initrd_inode d_inode = discr->initrd_inodes[inode];
-	
+
 	node->mode=d_inode.mode;
 	node->gid=d_inode.gid;
 	node->uid=d_inode.uid;
@@ -102,41 +109,41 @@ static fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr 
 	node->ptr=0;
 	node->mi=mi;
 	node->f_op=&initrd_operations;
-	
+
 	return node;
 }
 
 fs_node *setup_initrd(UINT location, fs_node *mountpoint)
 {
 	if (!location) return 0;
-	
+
 	initrd_discr *discr = malloc(sizeof(initrd_discr));
 	fs_node *root, *nodes;
 	mountinfo *mi;
 	UINT i;
-	
+
 	discr->location=location;
 	discr->initrdheader=(initrd_header *)location;
 	discr->initrd_inodes=(initrd_inode *)(location+sizeof(initrd_header));
-	
+
 	root=nodes=(fs_node *)calloc(discr->initrdheader->inodecount,sizeof(fs_node));
 	discr->nodes=nodes;
 	discr->root=root;
 	initrd_inode_to_fs_node(0,root,discr,0);
 	mi=fs_add_mountpoint(FS_TYPE_INITRD,(void *)discr,mountpoint,0,root);
 	root->mi=mi;
-	
+
 	i=discr->initrdheader->inodecount;
 	while (--i)
 		initrd_inode_to_fs_node(i,&(nodes[i]),discr,mi);
-	
+
 	return root;
 }
 
 UINT remove_initrd(fs_node *node)
-{	
+{
 	if (!node) return 2;
-	
+
 	initrd_discr *discr = (initrd_discr *)(node->mi->discr);
 	if (node!=discr->root) return 1;
 	fs_del_mountpoint(node->mi);

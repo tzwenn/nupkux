@@ -24,6 +24,7 @@
 
 extern void *memcpy(void *target, const void *src, size_t count);
 extern void *memset(void *target, int value, size_t count);
+extern USHORT *memsetw(USHORT *target, int value, size_t count);
 extern int memcmp(const void *s1, const void *s2, size_t n);
 
 #endif
