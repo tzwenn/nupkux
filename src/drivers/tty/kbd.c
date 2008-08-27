@@ -45,8 +45,12 @@ static void create_key_state(void)
 	if (ctrl)	key_state=5;
 }
 
+extern int tty_write(fs_node *node, off_t offset, size_t size, const char *buffer);
+
 static void handle_key(UCHAR *scan_code, USHORT *key, int up)
 {
+	//tty *atty=(tty *)current_tty->p_data;
+	*key=(*keymap)[(*scan_code&0x7F)*KEYMAP_STATES+key_state];
 	if (escape) {
 		if (*key==ALT) altgr=!up;
 		*scan_code|=KEYUP;
@@ -99,11 +103,11 @@ static void handle_key(UCHAR *scan_code, USHORT *key, int up)
 void irq_tty_keyboard(registers *regs)
 {
 	UCHAR scan_code = inportb(KEYBD_PORT);
-	USHORT input=(*keymap)[(scan_code&0x7F)*KEYMAP_STATES+key_state];
+	USHORT input;
+	tty *atty=(tty *)current_tty->p_data;
 	handle_key(&scan_code,&input,scan_code&KEYUP);
 	if (escape) return;
 	if (!(scan_code&KEYUP)) {
-		tty *atty=(tty *)current_tty->p_data;
 		atty->input_buffer[atty->in_e++]=input;
 		if (atty->in_e==TTY_INBUF_LEN) atty->in_e=0;
 		if (atty->in_e==atty->in_s)  //Buffer overflow

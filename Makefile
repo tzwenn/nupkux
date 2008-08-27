@@ -1,76 +1,128 @@
 #
-# Makefile for the Nupkux kernel
-# Copyright (C) 2007, 2008 Sven Köhler
+# Makefile for Nupkux Distribution
+# Copyright (C) 2008 Sven Köhler 
 # Use on your own risk.
 #
 
-PROJDIRS   = boot drivers fs include kernel lib mm
-INCLUDEDIR = include 
+KERNELSOURCE	= src
+USERSOURCE	= usr
+TOOLSOURCE	= tools
 
-SFILES   = $(shell find $(PROJDIRS) -name "*.S")
-CFILES   = $(shell find $(PROJDIRS) -name "*.c")
-SRCFILES = $(SFILES) $(CFILES)
+MOUNTPOINT	= bootdisk
+INITRDDIR	= initrd
 
-OSFILES  = $(patsubst %.S,%.o,$(SFILES))
-OCFILES	 = $(patsubst %.c,%.o,$(CFILES))
-OBJFILES = $(OSFILES) $(OCFILES)
+FLOPPYIMAGE	= bootdisk.img
+FSTYPE		= ext2
+KERNELIMAGE	= nupkux
+MAKEINITRD	= $(TOOLSOURCE)/mkinitrd/mkinitrd
 
-AUXFILES = COPYING Makefile link.ld
+AUXFILES	= Makefile
+PRJFILES	= $(TOOLSOURCE) $(AUXFILES)
 
-WFLAGS = -Wall -Werror -Wcast-align -Wwrite-strings -Wshadow -Winline -Wredundant-decls \
-	 -Wstrict-prototypes -Wpointer-arith -Wnested-externs -Wno-long-long \
-	 -Wunsafe-loop-optimizations
+MAKE		= make
+CPFLAGS		= -Rax
+DISTTMP		= .dist_tmp
+TARFLAGS	= -z
+DISTNAME	= nupkux-dist.tar.gz
 
-AS	= gcc
-ASFLAGS	= -c
+REALINST	= NO
 
-CC	= gcc
-CFLAGS	= -c $(WFLAGS) -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -fstrength-reduce \
-	  -fomit-frame-pointer -finline-functions -I$(INCLUDEDIR)
+.PHONY: install tools help
 
-LD	= ld
-LDFLAGS	= -Tlink.ld
+all: kernel userspace tools
 
-DEPDIR		= .deps
-DEPFILE		= $(DEPDIR)/$*.d
-DEPFILES	= $(patsubst %.c,$(DEPDIR)/%.d,$(CFILES))   
-MAKEDEPEND	= mkdir -p $(DEPDIR)/$(*D); touch $(DEPFILE); makedepend -f $(DEPFILE) -- $(CFLAGS) -- $<
+install: do_mount do_initrd do_install do_umount
 
-all:	$(OBJFILES) link
-
-.S.o:
-	@echo "  AS	  $@"
-	@$(AS) $(ASFLAGS) -o $@ $<
-
-.c.o:	
-	@echo "  CC	  $@"
-	@$(MAKEDEPEND)
-	@$(CC) $(CFLAGS) -o $@ $<
-
--include $(DEPFILES)
-
-link:	
-	@echo "  LD	  nupkux"
-	@$(LD) $(LDFLAGS) -o nupkux $(OBJFILES)
-
-clean: 
-	@echo "  CLEAN	  src"
-	@rm -f $(shell find $(PROJDIRS) -name "*.o")
-	-@if [ -f nupkux ]; then rm -f nupkux; fi
-
-distclean: 	clean
-		@rm -f $(shell find . -name "*~")
-		@rm -rf $(DEPDIR)
+help:
+	@echo "Makefile for Nupkux Distribution"
+	@echo ""
+	@echo "TARGETS:"
+	@echo "   kernel	Kernel Image"
+	@echo "   userspace	Userspace Applications"
+	@echo "   tools	Auxillary Programms on building system"
+	@echo "   all		Kernel, Userspace and Tools"
+	@echo "   install	Install Nupkux on virtual floppy drive"
+	@echo "   clean	Remove compiled binaries and objects"
+	@echo "   distclean	Remove as \"clean\" and backup files too"
+	@echo "   dist		Create a tarball containing all sources"
+	@echo "   run_qemu	Run bootdisk-Image in QEMU"
+	@echo "   help		Show this message"
+	@echo ""
+	@echo "NOTES:"
+	@echo "  1. To install Nupkux on your real drive too, run make with \"REALINST=YES\""
+	@echo "  2. If any error happens during install, the virtual drive won't be unmounted."
+	@echo "     In this case run: make do_umount"
+	@echo "  3. Any install operation needs superuser rights."
+	@echo "  4. The bootdisk-Image is NOT in the standard distribution."
 		
-dist: 
-	-@if [ ! -z $(DISTTMP) ]; then \
-		for dir in $(PROJDIRS); do cp -axR $$dir $(DISTTMP)/$$dir; done; \
-		for file in $(AUXFILES); do cp -axR $$file $(DISTTMP)/$$file; done; \
-	fi
 
-todolist:
-	-@for file in $(SRCFILES); do grep -H TODO $$file; done; true
+kernel:
+	@echo "==========Build Kernel==========="
+	@$(MAKE) -sC $(KERNELSOURCE)
 
-fixmelist:
-	-@for file in $(SRCFILES); do grep -H FIXME $$file; done; true
+userspace:
+	@echo "====Build Userspace programms===="
+	@$(MAKE) -sC $(USERSOURCE)
 
+tools:
+	@echo "===========Build Tools==========="
+	@$(MAKE) -sC $(TOOLSOURCE)
+
+do_mount:
+	@echo "===Mount virtual floppy drive===="
+	@mkdir -p $(MOUNTPOINT)
+	@mount -t $(FSTYPE) $(FLOPPYIMAGE) $(MOUNTPOINT) -o loop
+
+do_initrd:
+	@echo "======Build initial ramdisk======"
+	@mkdir -p $(INITRDDIR)/dev
+	@$(MAKE) -sC $(USERSOURCE) install
+	-@$(MAKEINITRD) $(INITRDDIR) > $(MOUNTPOINT)/initrd 2> /dev/null	
+
+do_install:
+	@echo "=Install Nupkux on virtual drive="
+	@cp $(KERNELSOURCE)/$(KERNELIMAGE) $(MOUNTPOINT)/nupkux
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+#                                                #
+# The following two statements install nupkux on #
+# your real drive. If you like trouble, run:     #
+#                                                #
+# # make "REALINST=YES" install                  #
+#                                                #
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+	@if [ $(REALINST) = YES ]; then \
+		cp $(MOUNTPOINT)/nupkux /boot/nupkux; \
+		cp $(MOUNTPOINT)/initrd /boot/nupkux-initrd; \
+	fi	
+
+do_umount:
+	@umount $(MOUNTPOINT)
+	@echo "============Finished============="
+
+run_qemu:
+	@qemu -fda $(FLOPPYIMAGE) -boot a
+
+clean:
+	@$(MAKE) -sC $(KERNELSOURCE) clean
+	@$(MAKE) -sC $(USERSOURCE) clean
+	@$(MAKE) -sC $(TOOLSOURCE) clean
+
+distclean:
+	@$(MAKE) -sC $(KERNELSOURCE) distclean
+	@$(MAKE) -sC $(USERSOURCE) distclean
+	@$(MAKE) -sC $(TOOLSOURCE) distclean
+
+dist:	distclean
+	@mkdir -p $(DISTTMP)/$(KERNELSOURCE)
+	@mkdir -p $(DISTTMP)/$(USERSOURCE)
+	@echo "===========Copy files============"
+	@echo "  CP	  $(KERNELSOURCE)"
+	@$(MAKE) -sC $(KERNELSOURCE) "DISTTMP=../$(DISTTMP)/$(KERNELSOURCE)" dist
+	@echo "  CP	  $(USERSOURCE)"
+	@$(MAKE) -sC $(USERSOURCE) "DISTTMP=../$(DISTTMP)/$(USERSOURCE)" dist
+	@for file in $(PRJFILES); do echo "  CP	  $$file"; cp $(CPFLAGS) $$file $(DISTTMP)/; done; true
+	@echo "==========Make archive==========="
+	@echo "  AR	  $(DISTNAME)"
+	@cd $(DISTTMP); tar $(TARFLAGS) -cf ../$(DISTNAME) *
+	@rm -rf $(DISTTMP)
+	@echo "============Finished============="

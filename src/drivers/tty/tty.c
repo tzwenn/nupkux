@@ -218,7 +218,7 @@ static void tty_interpret_escape(tty *atty) //According to http://en.wikipedia.o
 	}
 }
 
-static int tty_write(fs_node *node, off_t offset, size_t size, const char *buffer)
+int tty_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
 	size_t i=size;
 	tty *atty=(tty *)node->p_data;
