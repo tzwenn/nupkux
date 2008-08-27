@@ -35,17 +35,25 @@ int sys_exit(int status)
 		printf("Kernel Aborted. Halt System!\n");
 		hlt();
 	}
-	current_task->pid=NO_TASK;
+	current_task->state=TASK_ZOMBIE;
 	current_task->exit_code=status;
 	free_directory(current_task->directory);
-	switch_task(); //Fare Well!
-	return status; //We will never reach this :-(
+	free((void *)current_task->kernel_stack);
+	switch_task();
+	return status;
 }
 
 pid_t sys_waitpid(pid_t pid, int *statloc, int options)
 {
-	if (pid<=0) return -ECHILD;
-	while (tasks[pid].pid!=NO_TASK);
-	if (statloc) *statloc=tasks[pid].exit_code;
+	if (pid<=0 || pid>=NR_TASKS) return -ECHILD;
+	while (tasks[pid].state!=TASK_ZOMBIE);
+	if (statloc) {
+		if (!access_ok(VERIFY_WRITE,statloc,sizeof(int))) {
+			tasks[pid].pid=NO_TASK;
+			return -EFAULT;
+		}
+		*statloc=tasks[pid].exit_code;
+	}
+	tasks[pid].pid=NO_TASK;
 	return pid;
 }

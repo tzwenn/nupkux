@@ -17,4 +17,27 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <drivers/drivers.h>
+.global _start           #Entry
+
+# multiboot header
+.set ALIGN, 1<<0
+.set MEMINFO, 1<<1
+.set FLAGS_MBH, ALIGN | MEMINFO
+.set MAGIC_MBH, 0x1BADB002
+.set CHECKSUM,-(MAGIC_MBH+FLAGS_MBH)
+
+.align 4
+.long MAGIC_MBH
+.long FLAGS_MBH
+.long CHECKSUM
+
+_start:
+	push	%esp
+	push	%eax
+	push	%ebx
+	cli
+
+#Start Kernel's main-function
+	call	_kmain
+	cli
+	hlt

@@ -18,12 +18,11 @@
  */
 
 #include <drivers/drivers.h>
-#include <kernel/ktextio.h>
-#include <lib/memory.h>
+#include <drivers/fdc.h>
+#include <drivers/tty.h>
 
-extern void setup_floppy(fs_node *);
-extern void setup_urandom_file(fs_node *);
-extern void setup_serial(fs_node *);
+extern void setup_pseudo_devices(fs_node *devfs); //pseudo.c
+extern void setup_serial(fs_node *); //serial.c
 
 inline void outportb(USHORT port, UCHAR value)
 {
@@ -51,60 +50,12 @@ inline USHORT inportw(USHORT port)
 	return value;
 }
 
-static int drv_stdin_read(fs_node *node, off_t offset, size_t size, char *buffer)
-{
-	return 0;
-}
-
-static int drv_stdout_write(fs_node *node, off_t offset, size_t size, const char *buffer)
-{
-	size_t i=size;
-
-	while (i--)
-		_kputc(*(buffer++));
-
-	return size;
-}
-
-static int drv_null_read(fs_node *node, off_t offset, size_t size, char *buffer)
-{
-	return 0;
-}
-
-int drv_null_write(fs_node *node, off_t offset, size_t size, const char *buffer)
-{
-	return size;
-}
-
-static int drv_zero_read(fs_node *node, off_t offset, size_t size, char *buffer)
-{
-	memset(buffer,0,size);
-	return size;
-}
-
-static node_operations stdin_ops  = {
-		read: &drv_stdin_read,
-		write: &drv_null_write,};
-static node_operations stdout_ops = {
-		read: &drv_null_read,
-		write: &drv_stdout_write,};
-static node_operations null_ops = {
-		read: &drv_null_read,
-		write: &drv_null_write,};
-static node_operations zero_ops = {
-		read: &drv_zero_read,
-		write: &drv_null_write,};
-
 UINT setup_drivers(fs_node *devfs)
 {
 	if (!devfs) return 2;
 
-	devfs_register_device(devfs,"stdin",0444,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&stdin_ops);
-	devfs_register_device(devfs,"stdout",0222,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&stdout_ops);
-	devfs_register_device(devfs,"stderr",0222,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&stdout_ops);
-	devfs_register_device(devfs,"null",0666,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&null_ops);
-	devfs_register_device(devfs,"zero",0666,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&zero_ops);
-	setup_urandom_file(devfs);
+	setup_pseudo_devices(devfs);
+	setup_tty(devfs);
 	setup_serial(devfs);
 	setup_floppy(devfs);
 	return 0;

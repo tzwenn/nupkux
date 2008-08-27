@@ -1,4 +1,4 @@
-/*  vsprintf.c -- Lars Wirzenius, Linus Torvalds & Sven Köhler
+/*  vsprintf.c -- Lars Wirzenius, Linus Torvalds
  *
  *  Wirzenius wrote this portably, Torvalds fucked it up :-)
  *  Postscriptum: Köhler taked this stuff and put it into his obsolete system
@@ -54,7 +54,7 @@ static char * number(char * str, int num, int base, int size, int precision
 		sign=(type&PLUS) ? '+' : ((type&SPACE) ? ' ' : 0);
 	if (sign) size--;
 	if (type&SPECIAL) {
-		if (base==16) size -= 2; 
+		if (base==16) size -= 2;
 		else if (base==8) size--;
 	}
 	i=0;
@@ -109,7 +109,7 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 			*str++ = *fmt;
 			continue;
 		}
-			
+
 		/* process flags */
 		flags = 0;
 		repeat:
@@ -121,7 +121,7 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 				case '#': flags |= SPECIAL; goto repeat;
 				case '0': flags |= ZEROPAD; goto repeat;
 				}
-		
+
 		/* get field width */
 		field_width = -1;
 		if (is_digit(*fmt))
@@ -138,7 +138,7 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 		/* get the precision */
 		precision = -1;
 		if (*fmt == '.') {
-			++fmt;	
+			++fmt;
 			if (is_digit(*fmt))
 				precision = skip_atoi(&fmt);
 			else if (*fmt == '*') {

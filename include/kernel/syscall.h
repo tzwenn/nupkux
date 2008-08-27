@@ -60,8 +60,9 @@
 #define SYS_IOCTL	__NR_ioctl
 #define SYS_FCNTL	__NR_fcntl
 #define SYS_CHROOT	__NR_chroot
+#define SYS_REBOOT	__NR_reboot
 
-#define NR_SYSCALLS	64
+#define NR_SYSCALLS	128
 
 extern void setup_syscalls(void);
 
@@ -73,11 +74,12 @@ extern int sys_write(int fd, const char *buffer, size_t size);
 extern int sys_open(const char *filename,int flag,int mode);
 extern int sys_close(int fd);
 extern pid_t sys_waitpid(pid_t pid, int *statloc, int options);
-extern int sys_execve(const char *file,char **argv,char **envp);
+extern int sys_execve(const char *file,const char **argv,const char **envp);
 extern int sys_chdir(const char *name);
 extern int sys_mknod(const char *name, int mode, int addr);
 extern pid_t sys_getpid(void);
 extern int sys_ioctl(int fd, UINT cmd, ULONG arg);
 extern int sys_chroot(const char *name);
+extern int sys_reboot(int howto);
 
 #endif

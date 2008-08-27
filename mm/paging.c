@@ -36,15 +36,17 @@ extern void clone_page(UINT src, UINT dest);
 #define MAP_MEMORY(start,end,flags) for (i=start;i<=end;i+=FRAME_SIZE) \
 		make_page(i,flags,kernel_directory,1)
 
-static void set_page_directory(page_directory *PAGE_DIR)
+#define KERNEL_FLAGS	(PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT)
+
+static void set_page_directory(page_directory *dir)
 {
-	current_directory=PAGE_DIR;
+	current_directory=dir;
 	asm volatile (	"cli\n\t"
 			"movl %%eax,%%cr3\n\t"
 			"movl %%cr0,%%eax\n\t"
 			"orl  $0x80000000,%%eax\n\t"
 			"movl %%eax,%%cr0\n\t"
-			"sti"::"a"(PAGE_DIR->physPos));
+			"sti"::"a"(dir->physPos));
 }
 
 static UINT first_frame(void)
@@ -186,6 +188,11 @@ void page_fault_handler(registers *regs)
 	abort_current_process();
 }
 
+int access_ok(int type, const void* addr, UINT size)
+{ //TODO: Fill it!
+	return 1;
+}
+
 void setup_paging()
 {
 	UINT i = 0;
@@ -196,15 +203,15 @@ void setup_paging()
 	kernel_directory=(page_directory *)_kmalloc_pa(sizeof(page_directory),&i);
 	memset(kernel_directory,0,sizeof(page_directory));
 	kernel_directory->physPos=(UINT)kernel_directory->physTabs;
-	MAP_MEMORY(0,WORKING_MEMSTART,PAGE_FLAG_READONLY | PAGE_FLAG_USERMODE | PAGE_FLAG_PRESENT); //Kernel & initrd
+	MAP_MEMORY(0,WORKING_MEMSTART,KERNEL_FLAGS); //Kernel & initrd
 	MAP_MEMORY(WORKING_MEMSTART,WORKING_MEMSTART+IPC_MEMSIZE,PAGE_FLAG_WRITE | PAGE_FLAG_USERMODE | PAGE_FLAG_PRESENT); //IPC
-	MAP_MEMORY(WORKING_MEMSTART+IPC_MEMSIZE,kmalloc_pos+FRAME_SIZE,PAGE_FLAG_READONLY | PAGE_FLAG_USERMODE | PAGE_FLAG_PRESENT); //Pre-Heap
+	MAP_MEMORY(WORKING_MEMSTART+IPC_MEMSIZE,kmalloc_pos+FRAME_SIZE,KERNEL_FLAGS); //Pre-Heap
 	i=MM_KHEAP_START+kmalloc_pos;
 	ASSERT_ALIGN(i);
-	MAP_MEMORY(i,ALIGN_UP(kmalloc_pos)+MM_KHEAP_START+MM_KHEAP_SIZE,PAGE_FLAG_USERMODE | PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT); //Heap
+	MAP_MEMORY(i,ALIGN_UP(kmalloc_pos)+MM_KHEAP_START+MM_KHEAP_SIZE,KERNEL_FLAGS); //Heap
 	register_interrupt_handler(14,page_fault_handler);
 	set_page_directory(kernel_directory);
-	kheap=create_heap(MM_KHEAP_START+kmalloc_pos,MM_KHEAP_START+MM_KHEAP_SIZE+kmalloc_pos,WORKING_MEMEND,PAGE_FLAG_USERMODE | PAGE_FLAG_READONLY | PAGE_FLAG_PRESENT);
+	kheap=create_heap(MM_KHEAP_START+kmalloc_pos,MM_KHEAP_START+MM_KHEAP_SIZE+kmalloc_pos,WORKING_MEMEND,KERNEL_FLAGS);
 	current_directory=clone_directory(kernel_directory);
 	set_page_directory(current_directory);
 }

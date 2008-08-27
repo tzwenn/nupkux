@@ -87,6 +87,7 @@ typedef int ssize_t;
 #define __NR_ioctl	54
 #define __NR_fcntl	55
 #define __NR_chroot	61
+#define __NR_reboot	88
 
 #define _syscall0(type,name) \
 type name(void) \
@@ -94,7 +95,7 @@ type name(void) \
 type __res; \
 __asm__ volatile ("int $0x80" \
 	: "=a" (__res) \
-	: "0" (__NR_##name)); \
+	: "a" (__NR_##name)); \
 if (__res >= 0) \
 	return __res; \
 errno = -__res; \
@@ -107,7 +108,7 @@ type name(atype a) \
 type __res; \
 __asm__ volatile ("int $0x80" \
 	: "=a" (__res) \
-	: "0" (__NR_##name),"b" (a)); \
+	: "a" (__NR_##name),"b" (a)); \
 if (__res >= 0) \
 	return __res; \
 errno = -__res; \
@@ -120,7 +121,7 @@ type name(atype a,btype b) \
 type __res; \
 __asm__ volatile ("int $0x80" \
 	: "=a" (__res) \
-	: "0" (__NR_##name),"b" (a),"c" (b)); \
+	: "a" (__NR_##name),"b" (a),"c" (b); \
 if (__res >= 0) \
 	return __res; \
 errno = -__res; \
@@ -133,10 +134,11 @@ type name(atype a,btype b,ctype c) \
 type __res; \
 __asm__ volatile ("int $0x80" \
 	: "=a" (__res) \
-	: "0" (__NR_##name),"b" (a),"c" (b),"d" (c)); \
-if (__res<0) \
-	errno=-__res , __res = -1; \
-return __res;\
+	: "a" (__NR_##name),"b" (a),"c" (b), "d" (c)); \
+if (__res >= 0) \
+	return __res; \
+errno = -__res; \
+return -1; \
 }
 
 #define _decl_syscall0(type,name) \
@@ -159,15 +161,17 @@ extern int errno;
 _decl_syscall1(int,putchar,char,chr);
 _decl_syscall1(int,exit,int,status);
 _decl_syscall0(pid_t,fork);
-_decl_syscall3(int,read,int,fd,char,*buffer,size_t,size);
-_decl_syscall3(int,write,int,fd,const char,*buffer,size_t,size);
-_decl_syscall3(int,open,const char,*filename,int,flag,int,mode);
+_decl_syscall3(int,read,int,fd,char *,buffer,size_t,size);
+_decl_syscall3(int,write,int,fd,const char *,buffer,size_t,size);
+_decl_syscall3(int,open,const char *,filename,int,flag,int,mode);
 _decl_syscall1(int,close,int,fd);
-_decl_syscall3(pid_t,waitpid,pid_t,pid,int,*status,int,options);
-_decl_syscall3(int,execve,const char,*file,char,**argv,char,**envp);
-_decl_syscall1(int,chdir,const char,*name);
-_decl_syscall3(int,mknod,const char,*name,int,mode,int,addr);
+_decl_syscall3(pid_t,waitpid,pid_t,pid,int *,status,int,options);
+_decl_syscall3(int,execve,const char *,file,const char **,argv,const char **,envp);
+_decl_syscall1(int,chdir,const char *,name);
+_decl_syscall3(int,mknod,const char *,name,int,mode,int,addr);
 _decl_syscall0(pid_t,getpid);
-_decl_syscall1(int,chroot,const char,*name);
+_decl_syscall3(int,ioctl,int,fd,unsigned int,cmd,unsigned long,arg);
+_decl_syscall1(int,chroot,const char *,name);
+_decl_syscall1(int,reboot,int,howto);
 
 #endif

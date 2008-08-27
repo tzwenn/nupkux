@@ -37,12 +37,21 @@
 
 #define KERNEL_PAGE_BUFFER	0x32000
 
+#define VERIFY_READ		0x01
+#define VERIFY_WRITE	0x03
+#define VERIFY_STRLEN	1
+
 #define CHECK_ALIGN(VALUE)	((VALUE) & 0x00000FFF)
 #define ASSERT_ALIGN(VALUE)	if (CHECK_ALIGN(VALUE)) {	\
 					VALUE&=0xFFFFF000;	\
 					VALUE+=FRAME_SIZE;	\
 				}
-#define ALIGN_UP(VALUE)		(((VALUE)&0xFFFFF000)+FRAME_SIZE)
+
+#define ALIGN_DOWN(VALUE)	((VALUE)&0xFFFFF000)
+#define ALIGN_UP(VALUE)		(ALIGN_DOWN(VALUE)+FRAME_SIZE)
+
+#define flush_tlb() asm volatile("movl %cr3,%eax\n\t" \
+				"movl %eax,%cr3\n\t");
 
 typedef struct _page_directory page_directory;
 typedef struct _page_table page_table;
@@ -73,6 +82,7 @@ extern void free_directory(page_directory *dir);
 extern page *make_page(UINT address, UINT flags, page_directory *directory, int alloc);
 extern page *get_page(UINT address, int make, page_directory *directory);
 extern page *free_page(UINT address, page_directory *directory);
+extern int access_ok(int type, const void* addr, UINT size);
 extern void setup_paging(void);
 
 #endif

@@ -24,11 +24,14 @@ extern volatile task tasks[NR_TASKS];
 volatile task* schedule(void)
 {
 	pid_t i;
-	volatile task *new_task;
-	
-	for (i=current_task->pid+1;i<NR_TASKS;i++)
-		if (tasks[i].pid!=NO_TASK) break;
-	if (i==NR_TASKS) new_task=tasks;
-	else new_task=&(tasks[i]);
+	volatile task *new_task=current_task;
+
+repeat:
+	for (i=new_task->pid+1;i<NR_TASKS;i++)
+		if (tasks[i].pid!=NO_TASK && tasks[i].state==TASK_WAITING) break;
+	if (i==NR_TASKS) {
+		new_task=tasks; //FIXME: This risks a total system freeze
+		if (new_task->state!=TASK_WAITING) goto repeat;
+	} else new_task=&(tasks[i]);
 	return new_task;
 }

@@ -17,28 +17,38 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * I don't provide a real tty here, its just a crappy console called "tty"
+ * I have to work on an terminos struct
+ */
+
 #include <drivers/tty.h>
+#include <kernel/dts.h>
 #include <mm.h>
 #include <errno.h>
 
-#define TTY_POS(TTY,X,Y) ((TTY)->width*((TTY)->scrln+(Y)-(((TTY)->scrln+(Y)>=(TTY)->memlines)?(TTY)->memlines:0))+(X))
-#define is_digit(C)			((C)>='0' && (C)<='9') //TODO: see atoi
+#define TTY_POS(TTY,X,Y)	((TTY)->width*((TTY)->scrln+(Y)-(((TTY)->scrln+(Y)>=(TTY)->memlines)?(TTY)->memlines:0))+(X))
+#define is_digit(C)		((UINT) ((C)-'0')<10u)
 #define TTY_ESCAPE_END(C)	((C)>0x40 && (C)<0x7E)
 #define TTY_ESCAPE_CHR(C)	(TTY_ESCAPE_END(C) || (C)==';' || (C)=='?' || is_digit(C))
 
-UCHAR tty_col_map[8] = {TTY_COL_BLACK,TTY_COL_RED,TTY_COL_GREEN,TTY_COL_BROWN,TTY_COL_BLUE,TTY_COL_MAGENTA,TTY_COL_CYAN,TTY_COL_GRAY};
+static UCHAR ansi_col_map[8] = {TTY_COL_BLACK,TTY_COL_RED,TTY_COL_GREEN,TTY_COL_BROWN,TTY_COL_BLUE,TTY_COL_MAGENTA,TTY_COL_CYAN,TTY_COL_GRAY};
 fs_node *current_tty = 0;
 extern int (*ktexto)(fs_node *,off_t,size_t,const char*);
+extern tty_cursor _cursor_pos;
+extern void irq_tty_keyboard(registers *regs);
 
-extern int printf(const char *fmt, ...);
+tty *ttys[NR_TTYS] = {0,};
 
-static int atoi(const char *str) //TODO: One lib with such things inside the kernel (and tidy up ktextio)
+extern int sprintf(char *str, const char *fmt, ...);
+
+static int atoi(const char *str)
 {
 	int res = 0;
 
 	while (*str) {
 		if is_digit(*str)
-			res=10*(res)+(*str-48);
+			res=10*(res)+(*str-'0');
 		str++;
 	}
 	return res;
@@ -74,19 +84,19 @@ static void tty_select_graphic_rendition(tty *atty, int n)
 		fg=TTY_COL_FG_DEF;
 		bg=TTY_COL_BG_DEF;
 	} else if (n>=30 && n<=37) {
-		fg=tty_col_map[n-30];
+		fg=ansi_col_map[n-30];
 	} else if (n==39) {
 		fg=TTY_COL_FG_DEF;
 	} else if (n>=40 && n<=47) {
-		bg=tty_col_map[n-40];
+		bg=ansi_col_map[n-40];
 	} else if (n==49) {
 		bg=TTY_COL_BG_DEF;
 	} else if (n>=90 && n<=97) {
-		fg=tty_col_map[n-90] | TTY_COL_BRIGHT;
+		fg=ansi_col_map[n-90] | TTY_COL_BRIGHT;
 	} else if (n==99) {
 		fg=TTY_COL_FG_DEF | TTY_COL_BRIGHT;
 	} else if (n>=100 && n<=107) {
-		bg=tty_col_map[n-100] | TTY_COL_BRIGHT;
+		bg=ansi_col_map[n-100] | TTY_COL_BRIGHT;
 	} else if (n==109) {
 		bg=TTY_COL_BG_DEF  | TTY_COL_BRIGHT;
 	}
@@ -202,12 +212,10 @@ static void tty_interpret_escape(tty *atty) //According to http://en.wikipedia.o
 		case 'h':
 			if (!strcmp(params,"?25")) atty->show_cursor=1;
 			break;
+		case 'e': //This is not ANSI but I'm missing good ioctrl with tcgetattr
+			atty->echo=(n)?1:0;
+			break;
 	}
-}
-
-static int tty_read(fs_node *node, off_t offset, size_t size, char *buffer)
-{
-	return 0;
 }
 
 static int tty_write(fs_node *node, off_t offset, size_t size, const char *buffer)
@@ -235,9 +243,10 @@ static int tty_write(fs_node *node, off_t offset, size_t size, const char *buffe
 			case '\0': break;
 			case '\b':
 				if (atty->cursor.x) atty->cursor.x--;
+				atty->mem[TTY_POS(atty,atty->cursor.x,atty->cursor.y)]=atty->attr | 0x20;
 				break;
 			case '\t':
-				atty->cursor.x=(atty->cursor.x+8)&~0xF8;
+				atty->cursor.x=(atty->cursor.x+8)&0xF8;
 				if (atty->cursor.x>=atty->width) atty->cursor.x=atty->width-1;
 				break;
 			case '\n':
@@ -278,6 +287,23 @@ static int tty_write(fs_node *node, off_t offset, size_t size, const char *buffe
 	return size;
 }
 
+static int tty_read(fs_node *node, off_t offset, size_t size, char *buffer)
+{
+	size_t i=size;
+	tty *atty=(tty *)node->p_data;
+	while (i) {
+		sti(); //FIXME: Just delete it
+		if (atty->in_e!=atty->in_s) {
+			*buffer=(char)atty->input_buffer[atty->in_s++];
+			if (atty->echo) tty_write(node,0,1,buffer);
+			if (atty->in_s==TTY_INBUF_LEN) atty->in_s=0;
+			i--;
+			buffer++;
+		}
+	}
+	return size;
+}
+
 static void tty_free_p_data(fs_node *node)
 {
 	free(((tty *)(node->p_data))->mem);
@@ -304,6 +330,9 @@ static tty *create_tty(int nr)
 	res->is_esc=0;
 	res->show_cursor=0;
 	res->mem=calloc(res->width*res->memlines,sizeof(USHORT));
+	res->in_e=res->in_s=0;
+	res->echo=1;
+	res->node=0;
 	return res;
 }
 
@@ -314,21 +343,33 @@ static node_operations tty_ops = {
 		ioctl: &tty_ioctl,
 };
 
-int setup_tty(fs_node *devfs) // Also replaces ktextio stuff with tty0
+fs_node *set_current_tty(int nr)
 {
-	tty *tty0=create_tty(0);
-	current_tty=devfs_register_device(devfs,"tty0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&tty_ops);
-	current_tty->p_data=tty0;
-	memcpy(tty0->mem,(char *)(VIDEO_MEM+tty0->width*sizeof(USHORT)),tty0->width*(tty0->height-1)*sizeof(USHORT));
-	tty0->cursor.x=0;
-	tty0->cursor.y=tty0->height-1;
-	ktexto=tty_write;
-	return 0;
+	if (nr<0 || nr>=NR_TTYS || !ttys[nr]) return 0;
+	current_tty=ttys[nr]->node;
+	print_tty();
+	return current_tty;
 }
 
-void run_test(void)
+int setup_tty(fs_node *devfs) // Also replaces ktextio stuff with tty0
 {
-	setup_tty(namei("/dev"));
-	printf("Nupkux tty0\n\n");
-	for (;;);
+	int i;
+	char name[6];
+	fs_node *node;
+
+	ttys[0]=create_tty(0);
+	current_tty=devfs_register_device(devfs,"tty0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&tty_ops);
+	current_tty->p_data=ttys[0];
+	ttys[0]->node=current_tty;
+	for (i=1;i<NR_TTYS;i++) {
+		sprintf(name,"tty%d",i);
+		node=devfs_register_device(devfs,name,0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&tty_ops);
+		node->p_data=ttys[i]=create_tty(i);
+		ttys[i]->node=node;
+	}
+	memcpy(ttys[0]->mem,(char *)VIDEO_MEM,ttys[0]->width*ttys[0]->height*sizeof(USHORT));
+	ttys[0]->cursor=_cursor_pos;
+	ktexto=tty_write;
+	register_interrupt_handler(IRQ1,&irq_tty_keyboard);
+	return 0;
 }

@@ -28,6 +28,7 @@
 #define TTY_HEIGHT	25
 #define TTY_LINES	75	//25 visible lines + 50 linebuffer
 #define TTY_ESCAPE_LEN	128
+#define TTY_INBUF_LEN	16
 
 #define TTY_COL_BLACK	0
 #define TTY_COL_BLUE	1
@@ -42,18 +43,27 @@
 #define TTY_COL_FG_DEF	7
 #define TTY_COL_BG_DEF	0
 
+#define NR_TTYS		4
+
 typedef struct {
   char x;
   char y;
 } tty_cursor;
 
 typedef struct _tty {
-	UCHAR is_esc,show_cursor;
+	UCHAR is_esc:1;
+	UCHAR show_cursor:1;
+	UCHAR echo: 1;
+	UCHAR nr: 5;
 	USHORT width,height,memlines,viewln,scrln,esc_ind,attr;
-	int nr;
-	USHORT *mem;
+	USHORT *mem,in_s,in_e;
+	fs_node *node;
 	tty_cursor cursor,_cursor;
+	USHORT input_buffer[TTY_INBUF_LEN];
 	char escape_seq[TTY_ESCAPE_LEN];
 } tty;
+
+extern int setup_tty(fs_node *devfs);
+extern fs_node *set_current_tty(int nr);
 
 #endif

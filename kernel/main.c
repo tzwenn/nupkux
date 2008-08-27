@@ -18,7 +18,6 @@
  */
 
 #include <multiboot.h>
-#include <kernel.h>
 #include <kernel/ktextio.h>
 #include <kernel/nish.h>
 #include <kernel/syscall.h>
@@ -39,28 +38,9 @@ ULONG memory_end = 0;
 UINT __working_memstart = 0;
 UINT initrd_location = 0;
 extern UINT kmalloc_pos;
-
-void reboot(void)
-{
-	volatile UCHAR in = 0x02;
-
-	printf("Will now reboot");
-	while (in & 0x02)
-		in=inportb(0x64);
-	outportb(0x64,0xFE);
-}
+fs_node *root = 0, *devfs = 0;
 
 extern int setup_ACPI(void);
-extern void acpiPowerOff(void);
-
-static void halt(void)
-{
-	printf("Will now halt");
-	acpiPowerOff();
-	printf("\nACPI Power off failed!\nTurn off the computer manually!");  //Just in case
-	cli();
-	hlt();
-}
 
 static void read_multiboot_info(multiboot_info_t* mbd)
 {
@@ -68,7 +48,7 @@ static void read_multiboot_info(multiboot_info_t* mbd)
 	multiboot_module_info_t *mod_infos;
 
 	/* According to http://www.gnu.org/software/grub/manual/multiboot/multiboot.html
-	   GRUB can store it values anywhere
+	   GRUB can store its values anywhere
 	   I've discovered there are all in the first 640K, but I don't want to risk anything */
 	if (mbd->flags&0x01) memory_end=mbd->mem_upper*1024; //TODO: A map would be nicer
 			else memory_end=ASSUMED_WORKING_MEMEND;
@@ -99,24 +79,32 @@ static void read_multiboot_info(multiboot_info_t* mbd)
 	kmalloc_pos=WORKING_MEMSTART+IPC_MEMSIZE;
 }
 
-int _kmain(multiboot_info_t* mbd, UINT initial_stack, UINT magic)
+int init(void)
 {
 	int ret;
-	fs_node *root, *devfs;
+	pid_t pid;
+	if (!(pid=sys_fork())) {
+		set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);
+		asm volatile ("int $0x80":"=a"(ret):"a"(SYS_EXECVE),"b"("/bin/init"),"c"(0),"d"(0));
+		asm volatile ("int $0x80"::"a"(SYS_EXIT),"b"(ret));
+		for (;;);
+	} else sys_waitpid(pid,&ret,0); //TODO: Exception handling
+	return ret;
+}
 
+int _kmain(multiboot_info_t* mbd, UINT magic, UINT initial_stack)
+{
 	read_multiboot_info(mbd);
 	initial_esp=initial_stack;
 	_kclear();
 	printf("Nupkux loaded ... Stack at 0x%X\nAmount of RAM: %d Bytes.\nSet up Descriptors ... ",initial_esp,memory_end);
 	setup_dts();
-	setup_input();
 	printf("Finished.\nEnable Interrupts and PIC ... ");
 	sti();
 	setup_timer();
 	setup_ACPI();
 	printf("Finished.\nEnable Paging and Memory Manager ... ");
 	setup_paging();
-	setup_ktexto();
 	printf("Finished.\nSetup Tasking ... ");
 	setup_tasking();
 	printf("Finished.\nSetup VFS ... ");
@@ -134,29 +122,9 @@ int _kmain(multiboot_info_t* mbd, UINT initial_stack, UINT magic)
 			else printf("FAILED.\n");
 	}
 	setup_syscalls();
-	printf("Booted up!\n");
-
-	printf("nish returned with 0x%X.\n\n",ret=nish());
-
-	printf("Unmount devfs (/dev) ... \n");
-	remove_devfs(devfs);
-	printf("Unmount initrd (/) ... \n");
-	remove_initrd(root);
-	printf("Close VFS ... \n");
-	close_vfs();
-	printf("OK\n");
-	switch (ret) {
-	  case NISH_REBOOT: reboot();
-			    return 0;
-			    break;
-	  case NISH_HALT:   halt();
-			    return 0;
-			    break;
-	  default: 	    printf("Stop system");
-			    return 0;
-			    break;
-	}
-	while (1);
+	nish();
+	init();
+	for (;;);
 	return 0;
 }
 

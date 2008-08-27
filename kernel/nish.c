@@ -22,12 +22,14 @@
 #include <kernel/ktextio.h>
 #include <time.h>
 #include <lib/string.h>
-#include <drivers/ata.h>
 #include <task.h>
 #include <mm.h>
 #include <kernel/syscall.h>
+#include <drivers/drivers.h>
 
 #define MAX_ARGS	16
+
+extern int init(void);
 
 static int ltrim(char *cmd)
 {
@@ -116,17 +118,13 @@ static int nish_help(void)
 {
 	printf("List of built-in commands:\n");
 	printf("\ttest\t\tRun the current development function\n");
-	printf("\tclear\t\tClean up the mess on the screen\n");
-	printf("\tlba28\t\tAccess IDE-ATA drives\n");
 	printf("\tls\t\tList directory contents\n");
 	printf("\tcat\t\tShow file content on stdout\n");
 	printf("\tcd\t\tChange working directory\n");
 	printf("\ttime\t\tGive information about time and date\n");
-	printf("\texit\t\tQuit nish\n");
 	printf("\thalt\t\tHalt system\n");
 	printf("\treboot\t\tReboot system\n");
 	printf("\thelp\t\tWhat do you read right now?\n");
-	printf("  Any other command is tried to be executed from /bin.\n");
 	return 0;
 }
 
@@ -140,82 +138,6 @@ static int nish_time(void)
 	printf("Date:\t\t%.2d-%.2d-%.2d\n",now.tm_year,now.tm_mon,now.tm_mday);
 	removetimezone(&now);
 	timestamp=mktime(&now);
-	return 1;
-}
-
-static int nish_lba28(void)
-{
-	UCHAR idelist = 0,drv,tcalc;
-	USHORT tmpword = 0, contrl;
-	UINT addr;
-	UCHAR buffer[512];
-	char input[STRLEN];
-
-	printf("Detect Devices ...\n");
-	outportb(0x1F6,0xA0);
-	sleep(10);
-	tmpword=inportb(0x1F7);
-	if (tmpword & 0x40) {
-		idelist=0x01;
-		printf("Primary master exists.\n");
-	}
-	outportb(0x1F6,0xB0);
-	sleep(10);
-	tmpword=inportb(0x1F7);
-	if (tmpword & 0x40) {
-		idelist|=0x02;
-		printf("Primary slave exists.\n");
-	}
-	outportb(0x176,0xA0);
-	sleep(10);
-	tmpword=inportb(0x177);
-	if (tmpword & 0x40) {
-		idelist|=0x10;
-		printf("Secondary master exists.\n");
-	}
-	outportb(0x176,0xB0);
-	sleep(10);
-	tmpword=inportb(0x177);
-	if (tmpword & 0x40) {
-		idelist|=0x20;
-		printf("Secondary Slave exists.\n");
-	}
-	printf("Finished. Start loop, [^C] stops.\n");
-	while (1) {
-		printf("Controller (1/2): ");
-		if (_kgets(input,STRLEN)==_kaborted) break;
-		if (!strcmp(input,"1")) contrl=0x1F0;
-			else if (!strcmp(input,"2")) contrl=0x170;
-			else {
-				printf("Unknown controller.\n");
-				continue;
-			     }
-		printf("Drive (A/B): ");
-		if (_kgets(input,STRLEN)==_kaborted) break;
-		if (!strcmp(input,"A")) drv=0x00;
-			else if (!strcmp(input,"B")) drv=0x01;
-			else {
-				printf("Unknown drive.\n");
-				continue;
-			     }
-		tcalc=drv+1;
-		if (contrl==0x170) tcalc<<=4;
-		if (!(idelist & tcalc)) {
-			printf("No device attached.\n");
-			continue;
-		}
-		printf("Enter address: ");
-		if (_kgets(input,STRLEN)==_kaborted) break;
-		addr=str2d(input);
-		if (!lba28_read(buffer,contrl,drv,addr,0)) {
-			printf("Read-Error\n");
-			continue;
-		} else printf("Reading finished.\n");
-		for (addr=0;addr<512;addr++)
-			printf("%.2X",buffer[addr]);
-		printf("\n");
-	}
-	printf("\n");
 	return 1;
 }
 
@@ -235,7 +157,7 @@ static int nish_cat(int argc, char *argv[])
 			_kputc(buf[i]);
 		free(buf);
 		close_fs(node);
-	} else printf("Error: Cannot find file.\n");
+	} else printf("Error: Cannot find file %s.\n",argv[1]);
 	return 1;
 }
 
@@ -282,27 +204,9 @@ static int nish_cd(int argc, char *argv[])
 	return 1;
 }
 
-static int nish_run(const char *cmd, char **argv)
-{
-	int ret;
-	pid_t pid;
-
-	if (!(pid=sys_fork())) {
-		ret=sys_execve(cmd,argv,0);
-		if (ret==-ENOENT) {
-			printf("nish: %s: command not found\n",cmd);
-		}
-		sys_exit(ret);
-	} else sys_waitpid(pid,&ret,0);
-	return ret;
-}
-
-extern void run_test(void);
-
 static int nish_test(int argc, char **argv)
 {
-	printf("---tty test---\n\n");
-	run_test();
+	printf("Nothing tested!\n");
 	return 1;
 }
 
@@ -315,17 +219,15 @@ static int _nish_interpret(char *str)
 		argv[i]=calloc(STRLEN,sizeof(char));
 	argc=split_to_argv(str,argv);
 	if (!strcmp(argv[0],"test")) ret=nish_test(argc,argv);
-		else if (!strcmp(argv[0],"clear")) ret=_kclear();
-		else if (!strcmp(argv[0],"lba28")) ret=nish_lba28();
+		else if (!strcmp(argv[0],"clear")) ret=printf("\e[2J\e[H");
 		else if (!strcmp(argv[0],"ls")) ret=nish_ls(argc,argv);
 		else if (!strcmp(argv[0],"cat")) ret=nish_cat(argc,argv);
 		else if (!strcmp(argv[0],"cd")) ret=nish_cd(argc,argv);
 		else if (!strcmp(argv[0],"time")) ret=nish_time();
-		else if (!strcmp(argv[0],"exit")) ret=NISH_EXIT;
-		else if (!strcmp(argv[0],"halt")) ret=NISH_HALT;
-		else if (!strcmp(argv[0],"reboot")) ret=NISH_REBOOT;
+		else if (!strcmp(argv[0],"halt")) ret=sys_reboot(0x04);
+		else if (!strcmp(argv[0],"reboot")) ret=sys_reboot(0x02);
 		else if (!strcmp(argv[0],"help")) ret=nish_help();
-		else ret=nish_run(argv[0],argv);
+		else printf("nish: %s: command not found.\n",argv[0]);
 	for (i=0;i<MAX_ARGS;i++) {
 		free(argv[i]);
 	}
@@ -333,9 +235,35 @@ static int _nish_interpret(char *str)
 	return ret;
 }
 
+static char nish_buf[STRLEN] = {0,};
+static int buf_pos=0;
+
+static int nish_write(fs_node *node, off_t offset, size_t size, const char *buffer)
+{
+	if (buf_pos+size+1>STRLEN) size=STRLEN-1-buf_pos;
+	size_t i=size;
+	while (i--) {
+		nish_buf[buf_pos++]=*buffer;
+		if (!*buffer) {
+			_nish_interpret(nish_buf);
+			buf_pos=0;
+			memset(nish_buf,0,STRLEN);
+		}
+		buffer++;
+	}
+
+	return size;
+}
+
+static node_operations nish_ops = {
+		write: &nish_write,
+};
+
 int nish()
 {
-	char input[STRLEN];
+	devfs_register_device(namei("/dev"),"nish",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&nish_ops);
+	return 0;
+	/*char input[STRLEN];
 	int ret;
 
 	printf("\nNupkux intern shell (nish) started.\nType \"help\" for a list of built-in commands.\n\n");
@@ -346,5 +274,5 @@ int nish()
 		ret=_nish_interpret(input);
 		if ((ret & 0xF0)==0xE0) break;
 	}
-	return ret;
+	return ret;*/
 }

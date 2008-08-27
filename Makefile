@@ -7,15 +7,13 @@
 PROJDIRS   = boot drivers fs include kernel lib mm
 INCLUDEDIR = include 
 
-AFILES   = $(shell find $(PROJDIRS) -name "*.s")
 SFILES   = $(shell find $(PROJDIRS) -name "*.S")
 CFILES   = $(shell find $(PROJDIRS) -name "*.c")
-SRCFILES = $(AFILES) $(SFILES) $(CFILES)
+SRCFILES = $(SFILES) $(CFILES)
 
-OAFILES  = $(patsubst %.s,%.o,$(AFILES))
 OSFILES  = $(patsubst %.S,%.o,$(SFILES))
 OCFILES	 = $(patsubst %.c,%.o,$(CFILES))
-OBJFILES = $(OAFILES) $(OSFILES) $(OCFILES)
+OBJFILES = $(OSFILES) $(OCFILES)
 
 AUXFILES = COPYING Makefile link.ld
 
@@ -23,10 +21,8 @@ WFLAGS = -Wall -Werror -Wcast-align -Wwrite-strings -Wshadow -Winline -Wredundan
 	 -Wstrict-prototypes -Wpointer-arith -Wnested-externs -Wno-long-long \
 	 -Wunsafe-loop-optimizations
 
-AS	= as
-
-ASINT	= nasm
-ASINTFLAGS= -felf
+AS	= gcc
+ASFLAGS	= -c
 
 CC	= gcc
 CFLAGS	= -c $(WFLAGS) -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -fstrength-reduce \
@@ -42,13 +38,9 @@ MAKEDEPEND	= mkdir -p $(DEPDIR)/$(*D); touch $(DEPFILE); makedepend -f $(DEPFILE
 
 all:	$(OBJFILES) link
 
-.s.o:
-	@echo "  AS	  $@"
-	@$(AS) -o $@ $<
-
 .S.o:
 	@echo "  AS	  $@"
-	@$(ASINT) $(ASINTFLAGS) -o $@ $<
+	@$(AS) $(ASFLAGS) -o $@ $<
 
 .c.o:	
 	@echo "  CC	  $@"
@@ -66,8 +58,8 @@ clean:
 	@rm -f $(shell find $(PROJDIRS) -name "*.o")
 	-@if [ -f nupkux ]; then rm -f nupkux; fi
 
-distclean: clean
-		@rm -f $(shell find $(PROJDIRS) -name "*~")
+distclean: 	clean
+		@rm -f $(shell find . -name "*~")
 		@rm -rf $(DEPDIR)
 		
 dist: 
@@ -78,4 +70,7 @@ dist:
 
 todolist:
 	-@for file in $(SRCFILES); do grep -H TODO $$file; done; true
+
+fixmelist:
+	-@for file in $(SRCFILES); do grep -H FIXME $$file; done; true
 

@@ -25,6 +25,7 @@
 int sys_chdir(const char *name)
 {
 	if (!current_task) return -EGENERIC;
+	if (!access_ok(VERIFY_READ,name,VERIFY_STRLEN)) return -EFAULT;
 	fs_node *node=namei(name);
 
 	if (node) {
@@ -38,6 +39,7 @@ int sys_chdir(const char *name)
 int sys_chroot(const char *name)
 {
 	if (!current_task) return -EGENERIC;
+	if (!access_ok(VERIFY_READ,name,VERIFY_STRLEN)) return -EFAULT;
 	if (!I_AM_ROOT()) return -EPERM;
 	fs_node *node=namei(name);
 
@@ -55,6 +57,7 @@ int sys_open(const char *filename,int flag,int mode)
 	int fd;
 	volatile FILE *f;
 
+	if (!access_ok(VERIFY_READ,filename,VERIFY_STRLEN)) return -EFAULT;
 	for (fd=0;fd<NR_OPEN;fd++)
 		if (current_task->files[fd].fd==NO_FILE) break;
 	if (fd==NR_OPEN) return -EMFILE;
@@ -67,8 +70,8 @@ int sys_open(const char *filename,int flag,int mode)
 	/////////////////////////////////////
 	// A lot more goes here and there an everywhere
 	/////////////////////////////////////
-	f->flags|=((!flag&O_RDWR) || ((flag&O_RDWR)==O_RDWR)&0xFF)&FMODE_READ;
-	f->flags|=((flag&O_RDWR) || ((flag&O_RDWR)==O_RDWR)&0xFF)&FMODE_WRITE;
+	if ((!flag&3) || (flag&O_RDWR)) f->flags|=FMODE_READ;
+	if ((flag&O_WRONLY) || (flag&O_RDWR)) f->flags|=FMODE_WRITE;
 	open_fs(f->node,f->flags&FMODE_READ,f->flags&FMODE_WRITE);
 	f->fd=fd;
 	return fd;

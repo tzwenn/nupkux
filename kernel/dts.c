@@ -39,6 +39,7 @@ static void idt_set_gate(UCHAR,UINT,USHORT,UCHAR);
 static void write_tss(int,UINT,UINT);
 
 tss_entry tss_ent;
+registers *glob_regs = 0;
 
 EXTERN_ISR(0);
 EXTERN_ISR(1);
@@ -90,7 +91,7 @@ EXTERN_IRQ(14);
 EXTERN_IRQ(15);
 EXTERN_ISR(128);
 
-gdt_entry gdt_entries[5];
+gdt_entry gdt_entries[6];
 gdt_pointer gdt_ptr;
 idt_entry idt_entries[256];
 idt_pointer idt_ptr;
@@ -214,7 +215,7 @@ static void write_tss(int num, UINT ss0, UINT esp0)
 	memset(&tss_ent,0,sizeof(tss_entry));
 	tss_ent.ss0=ss0;
 	tss_ent.esp0=esp0;
-	tss_ent.cs=0x0b;
+	tss_ent.cs=0x0B;
 	tss_ent.ss=tss_ent.ds=tss_ent.es=tss_ent.fs=tss_ent.gs=0x13;
 }
 
@@ -272,11 +273,15 @@ void isr_handler(registers regs)
 {
 	UCHAR int_no = regs.int_no&0xFF;
 	if (interrupt_handlers[int_no]) {
+		glob_regs=&regs;
 		isr_t handler=interrupt_handlers[int_no];
 		handler(&regs);
+		glob_regs=0;
 	} else {
-		if (int_no<32) printf("%s Exception",exception_messages[int_no]);
+		printf("\nEIP 0x%X\n",regs.eip);
+		if (int_no<32) printf("%s Exception\n",exception_messages[int_no]);
 			else printf("unhandled interrupt: 0x%X\n",int_no);
+		for (;;);
 		abort_current_process();
 	}
 }

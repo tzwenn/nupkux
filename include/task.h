@@ -25,10 +25,10 @@
 #include <fs/fs.h>
 
 #define TASK_RUNNING		0
-#define TASK_INTERRUPTIBLE	1
+#define TASK_WAITING		1
 #define TASK_UNINTERRUPTIBLE	2
-#define TASK_ZOMBIE		3
-#define TASK_STOPPED		4
+#define TASK_BLOCKED		4
+#define TASK_ZOMBIE		5
 
 #define ROOT_UID	0
 #define I_AM_ROOT()	(current_task->uid==ROOT_UID)
@@ -48,9 +48,8 @@ typedef int pid_t;
 struct _task
 {
 	pid_t pid,parent;
-	long priority,state;
-	UINT esp,ebp;
-	UINT eip;
+	char priority,state;
+	UINT esp,ebp,eip;
 	page_directory *directory;
 	UINT kernel_stack;
 	USHORT uid, gid;
@@ -63,7 +62,7 @@ extern volatile task *current_task;
 extern void setup_tasking(void);
 extern void switch_task(void);
 extern void move_stack(void *new_stack, UINT size);
-extern void switch_to_user_mode(void);
 extern void abort_current_process(void);
+extern int set_task_state(pid_t pid, char state);
 
 #endif

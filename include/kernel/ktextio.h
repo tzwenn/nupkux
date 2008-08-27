@@ -69,18 +69,10 @@
 #define SPEC_KEY_UP	72
 #define SPEC_KEY_DOWN	80
 
-typedef struct {
-  UCHAR x;
-  UCHAR y;
-} CURSOR_POS;
-
-extern int _kgets(char *instr, int maxlen);
 extern int _kclear(void);
 extern int printf(const char *fmt, ...);
+extern int sprintf(char *str, const char *fmt, ...);
 extern int _kputc(const char chr);
-extern int str2d(char *str);
-extern void setup_input(void);
-extern void setup_ktexto(void);
 
 #endif
 

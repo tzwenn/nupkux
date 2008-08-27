@@ -37,25 +37,24 @@ extern UINT initial_esp;		//main.c
 
 void move_stack(void *new_stack, UINT size)
 {
-	UINT i,pdirpos,old_esp,old_ebp,offset,new_esp,new_ebp,tmp;
+	UINT i,old_esp,old_ebp,new_esp,new_ebp,tmp,offset;
 
 	for (i=(UINT)new_stack;i>=((UINT)new_stack-size);i-=FRAME_SIZE)
 		make_page(i,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | PAGE_FLAG_USERMODE,current_directory,1);
-	asm volatile("mov %%cr3,%0":"=r"(pdirpos));
-	asm volatile("mov %0,%%cr3"::"r"(pdirpos));
-	asm volatile("mov %%esp,%0":"=r"(old_esp));
-	asm volatile("mov %%ebp,%0":"=r"(old_ebp));
+	flush_tlb();
+	asm volatile (	"movl %%esp,%0\n\t"
+					"movl %%ebp,%1\n\t":"=r"(old_esp),"=r"(old_ebp));
 	offset=(UINT)new_stack-initial_esp;
 	new_esp=old_esp+offset;
 	new_ebp=old_ebp+offset;
 	memcpy((void *)new_esp,(void*)old_esp,initial_esp-old_esp);
-	for (i=(UINT)new_stack;i>(UINT)new_stack-size;i-=4) {
+	for (i=(UINT)new_stack;i>(UINT)new_stack-size;i-=sizeof(UINT)) {
 		tmp=*(UINT *)i;
 		if ((old_esp<tmp) && (tmp<initial_esp))
 			*((UINT *)i)=tmp+offset;
 	}
-	asm volatile("mov %0,%%esp"::"r"(new_esp));
-	asm volatile("mov %0,%%ebp"::"r"(new_ebp));
+	asm volatile (	"movl %0,%%esp\n\t"
+					"movl %1,%%ebp\n\t"::"r"(new_esp),"r"(new_ebp));
 }
 
 void setup_tasking()
@@ -66,12 +65,11 @@ void setup_tasking()
 	for (i=1;i<NR_TASKS;i++)
 		tasks[i].pid=NO_TASK;
 	current_task=tasks;
-	//Kernel has pid 0, stupid,
-	//but init on Linux an other Unix-likes seems to have pid 1
 	current_task->pid=0;
 	current_task->parent=0;
 	current_task->esp=current_task->ebp=0;
 	current_task->eip=0;
+	current_task->state=TASK_RUNNING;
 	current_task->directory=current_directory;
 	current_task->gid=FS_GID_ROOT; //root runs it
 	current_task->uid=FS_UID_ROOT;
@@ -86,52 +84,32 @@ void setup_tasking()
 void switch_task()
 {
 	if (!current_task) return;
+	cli();
 	UINT esp,ebp,eip;
-	asm volatile("mov %%esp,%0":"=r"(esp));
-	asm volatile("mov %%ebp,%0":"=r"(ebp));
-	eip=read_eip();
-	if (eip==0x2DF) {
+	asm volatile (	"movl %%esp,%0\n\t"
+			"movl %%ebp,%1\n\t":"=r"(esp),"=r"(ebp));
+	if ((eip=read_eip())==0x2DF) {
 		sti();
 		return; //Just switched
 	}
 	current_task->eip=eip;
 	current_task->esp=esp;
 	current_task->ebp=ebp;
+	if (current_task->state==TASK_RUNNING)
+		current_task->state=TASK_WAITING;
 	current_task=schedule();
+	current_task->state=TASK_RUNNING;
 	eip=current_task->eip;
 	esp=current_task->esp;
 	ebp=current_task->ebp;
 	current_directory=current_task->directory;
 	set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);
-	asm volatile(	"cli\n\t"
-			"mov %0,%%ecx\n\t"
-			"mov %1,%%esp\n\t"
-			"mov %2,%%ebp\n\t"
-			"mov %3,%%cr3\n\t"
-			"mov $0x2DF,%%eax\n\t"
+	asm volatile(	"movl %0,%%ecx\n\t"
+			"movl %1,%%esp\n\t"
+			"movl %2,%%ebp\n\t"
+			"movl %3,%%cr3\n\t"
+			"movl $0x2DF,%%eax\n\t"
 			"jmp *%%ecx\n\t"::"r"(eip),"r"(esp),"r"(ebp),"r"(current_directory->physPos));
-}
-
-void switch_to_user_mode()
-{
-	set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);
-	asm volatile(	"cli\n\t"
-			"mov $0x23, %ax\n\t"
-			"mov %ax, %ds\n\t"
-			"mov %ax, %es\n\t"
-			"mov %ax, %fs\n\t"
-			"mov %ax, %gs\n\t"
-			"mov %esp, %eax\n\t"
-			"pushl $0x23\n\t"
-			"pushl %eax\n\t"
-			"pushf\n\t"
-			"pop %eax\n\t"
-			"or $0x200,%eax\n\t"
-			"push %eax\n\t"
-			"pushl $0x1B\n\t"
-			"push $1f\n\t"
-			"iret\n\t"
-			"1:");
 }
 
 pid_t sys_fork()
@@ -149,6 +127,7 @@ pid_t sys_fork()
 	newtask->ebp=0;
 	newtask->eip=0;
 	newtask->exit_code=0;
+	newtask->state=TASK_WAITING;
 	newtask->parent=parent_task->pid;
 	newtask->gid=parent_task->gid;
 	newtask->uid=parent_task->uid;
@@ -160,8 +139,8 @@ pid_t sys_fork()
 	UINT eip=read_eip();
 	if (current_task==parent_task) {
 		UINT esp,ebp;
-		asm volatile("mov %%esp,%0":"=r"(esp));
-		asm volatile("mov %%ebp,%0":"=r"(ebp));
+		asm volatile (	"movl %%esp,%0\n\t"
+				"movl %%ebp,%1\n\t":"=r"(esp),"=r"(ebp));
 		newtask->esp=esp;
 		newtask->ebp=ebp;
 		newtask->eip=eip;
@@ -181,4 +160,13 @@ pid_t sys_getpid()
 void abort_current_process()
 {
 	sys_exit(0);
+}
+
+int set_task_state(pid_t pid, char state)
+{
+	if (pid<0 || pid>=NR_TASKS) return -EGENERIC;
+	volatile task *atask=&(tasks[pid]);
+	if (atask->pid==NO_TASK) return -EGENERIC;
+	atask->state=state;
+	return 0;
 }
