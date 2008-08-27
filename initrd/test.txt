@@ -1,0 +1,2 @@
+This file shows, there is an initial ramdisk!
+Have an apple!
