@@ -1,2 +1,8 @@
-squaros
-nupkux
+*.o
+bootdisk.img
+tools/mkinitrd/mkinitrd
+usr/.deps
+src/.deps
+usr/bin
+src/nupkux
+initrd/bin/
