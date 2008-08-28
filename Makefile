@@ -1,7 +1,7 @@
 #
 # Makefile for Nupkux Distribution
 # Copyright (C) 2008 Sven Köhler 
-# Use on your own risk.
+# Use on your own risk!
 #
 
 KERNELSOURCE	= src
@@ -17,7 +17,7 @@ KERNELIMAGE	= nupkux
 MAKEINITRD	= $(TOOLSOURCE)/mkinitrd/mkinitrd
 
 AUXFILES	= Makefile
-PRJFILES	= $(KERNELSOURCE) $(USERSOURCE) $(TOOLSOURCE) $(AUXFILES)
+PRJDIRS		= $(KERNELSOURCE) $(USERSOURCE) $(TOOLSOURCE)
 
 MAKE		= make
 CPFLAGS		= -Rax
@@ -115,7 +115,8 @@ distclean:
 dist:	distclean
 	@mkdir -p $(DISTTMP)
 	@echo "===========Copy files============"
-	@for file in $(PRJFILES); do echo "  CP	  $$file"; cp $(CPFLAGS) $$file $(DISTTMP)/; done; true
+	@for file in $(AUXFILES); do echo "  CP	  $$file"; cp $(CPFLAGS) $$file $(DISTTMP)/; done; true
+	@for dir in $(PRJDIRS); do echo "  EXP	  $$dir"; svn export --quiet $$dir $(DISTTMP)/$$dir; done; true
 	@echo "==========Make archive==========="
 	@echo "  AR	  $(DISTNAME)"
 	@cd $(DISTTMP); tar $(TARFLAGS) -cf ../$(DISTNAME) *
