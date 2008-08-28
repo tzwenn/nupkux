@@ -75,6 +75,7 @@ void setup_tasking()
 	current_task->uid=FS_UID_ROOT;
 	current_task->pwd=0;
 	current_task->root=0;//get_root_fs_node();
+	current_task->signals=0;
 	for (i=NR_OPEN;i--;)
 		current_task->files[i].fd=NO_FILE;
 	current_task->kernel_stack=_kmalloc_a(KERNEL_STACK_SIZE);
@@ -134,6 +135,7 @@ pid_t sys_fork()
 	newtask->directory=directory;
 	newtask->pwd=parent_task->pwd;
 	newtask->root=parent_task->root;
+	newtask->signals=0;
 	memcpy(&newtask->files,&parent_task->files,NR_OPEN*sizeof(FILE));
 	current_task->kernel_stack=_kmalloc_a(KERNEL_STACK_SIZE);
 	UINT eip=read_eip();
@@ -155,6 +157,11 @@ pid_t sys_fork()
 pid_t sys_getpid()
 {
 	return current_task->pid;
+}
+
+pid_t sys_getppid()
+{
+	return current_task->parent;
 }
 
 void abort_current_process()

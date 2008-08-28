@@ -88,7 +88,7 @@ int init(void)
 		asm volatile ("int $0x80":"=a"(ret):"a"(SYS_EXECVE),"b"("/bin/init"),"c"(0),"d"(0));
 		asm volatile ("int $0x80"::"a"(SYS_EXIT),"b"(ret));
 		for (;;);
-	} else sys_waitpid(pid,&ret,0); //TODO: Exception handling
+	}
 	return ret;
 }
 
@@ -124,7 +124,7 @@ int _kmain(multiboot_info_t* mbd, UINT magic, UINT initial_stack)
 	setup_syscalls();
 	nish();
 	init();
-	for (;;);
+	for (;;) sys_pause();
 	return 0;
 }
 

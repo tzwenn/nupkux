@@ -54,12 +54,15 @@
 #define SYS_MOUNT	__NR_mount
 #define SYS_UMOUNT	__NR_umount
 #define SYS_FSTAT	__NR_fstat
+#define SYS_PAUSE	__NR_pause
 #define SYS_KILL	__NR_kill
 #define SYS_TIMES	__NR_times
 #define SYS_BRK		__NR_brk
 #define SYS_IOCTL	__NR_ioctl
 #define SYS_FCNTL	__NR_fcntl
+#define SYS_UNAME	__NR_uname
 #define SYS_CHROOT	__NR_chroot
+#define SYS_GETPPID	__NR_getppid
 #define SYS_REBOOT	__NR_reboot
 
 #define NR_SYSCALLS	128
@@ -78,8 +81,10 @@ extern int sys_execve(const char *file,const char **argv,const char **envp);
 extern int sys_chdir(const char *name);
 extern int sys_mknod(const char *name, int mode, int addr);
 extern pid_t sys_getpid(void);
+extern int sys_pause(void);
 extern int sys_ioctl(int fd, UINT cmd, ULONG arg);
 extern int sys_chroot(const char *name);
+extern pid_t sys_getppid(void);
 extern int sys_reboot(int howto);
 
 #endif

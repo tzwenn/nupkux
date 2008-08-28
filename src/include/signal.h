@@ -17,31 +17,37 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <task.h>
+#ifndef _SIGNAL_H
+#define _SIGNAL_H
 
-extern volatile task tasks[NR_TASKS];
+#define SIGHUP		1
+#define SIGINT		2
+#define SIGQUIT		3
+#define SIGILL		4
+#define SIGTRAP		5
+#define SIGABRT		6
+#define SIGIOT		6
+#define SIGUNUSED	7
+#define SIGFPE		8
+#define SIGKILL		9
+#define SIGUSR1		10
+#define SIGSEGV		11
+#define SIGUSR2		12
+#define SIGPIPE		13
+#define SIGALRM		14
+#define SIGTERM		15
+#define SIGSTKFLT	16
+#define SIGCHLD		17
+#define SIGCONT		18
+#define SIGSTOP		19
+#define SIGTSTP		20
+#define SIGTTIN		21
+#define SIGTTOU		22
 
-volatile task* schedule(void)
-{
-	pid_t i;
-	volatile task *new_task=current_task;
-	for (i=NR_TASKS;i>=0;i--) {
-		if (tasks[i].pid!=NO_TASK && tasks[i].signals && tasks[i].state==TASK_BLOCKED)
-			tasks[i].state=TASK_WAITING;
-	}
+struct sigaction {
+	void (*sa_handler)(int);
+	sigset_t sa_mask;
+	int sa_flags;
+};
 
-	for (i=new_task->pid+1;i<NR_TASKS;i++)
-		if (tasks[i].pid!=NO_TASK && tasks[i].state==TASK_WAITING) break;
-	if (i==NR_TASKS) {
-		new_task=tasks; //This runs the kernel task, even if it's paused
-	} else new_task=&(tasks[i]);
-	return new_task;
-}
-
-int sys_pause(void)
-{
-	current_task->state=TASK_BLOCKED;
-	switch_task();
-	return 0;
-}
-
+#endif

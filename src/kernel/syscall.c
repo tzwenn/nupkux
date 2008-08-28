@@ -62,10 +62,6 @@ void SysCallHandler(registers *regs)
 			:"=a"(ret)
 			:"r"(regs->edi),"r"(regs->esi),"r"(regs->edx),"r"(regs->ecx),"r"(regs->ebx),"r"(sys_call));
 	regs->eax=ret;
-	/*if (current_task->new_eip) { //We have done an execve()
-		regs->eip=current_task->new_eip;
-		current_task->new_eip=0;
-	}*/
 }
 
 void setup_syscalls()
@@ -84,8 +80,10 @@ void setup_syscalls()
 	sys_call_table[SYS_CHDIR]=&sys_chdir;
 	sys_call_table[SYS_MKNOD]=&sys_mknod;
 	sys_call_table[SYS_GETPID]=&sys_getpid;
+	sys_call_table[SYS_PAUSE]=&sys_pause;
 	sys_call_table[SYS_IOCTL]=&sys_ioctl;
 	sys_call_table[SYS_CHROOT]=&sys_chroot;
+	sys_call_table[SYS_GETPPID]=&sys_getppid;
 	sys_call_table[SYS_REBOOT]=&sys_reboot;
 
 	register_interrupt_handler(0x80,&SysCallHandler);

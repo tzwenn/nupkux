@@ -54,6 +54,7 @@ struct _task
 	UINT kernel_stack;
 	USHORT uid, gid;
 	int exit_code;
+	UINT signals;
 	FILE files[NR_OPEN];
 	fs_node *pwd,*root;
 };
