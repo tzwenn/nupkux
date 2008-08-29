@@ -20,6 +20,9 @@
 #ifndef _SIGNAL_H
 #define _SIGNAL_H
 
+typedef int sig_atomic_t;
+typedef unsigned int sigset_t;
+
 #define SIGHUP		1
 #define SIGINT		2
 #define SIGQUIT		3

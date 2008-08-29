@@ -46,6 +46,10 @@ int main(void)
 	open("/dev/tty0",O_WRONLY,0);
 	open("/dev/tty0",O_RDONLY,0);
 	open("/dev/tty0",O_RDONLY,0);
+	if (getpid()!=1) {
+		printf("\e[91mWARNING: \e[mDo not run init manually!!\n");
+		exit(1);
+	}
 	printf("\e[32mStarting Nupkux INIT ...\e[m\n");
 	const char *argv[3] = {0,};
 	char cmd[6] = "getty";
@@ -58,6 +62,6 @@ int main(void)
 		if (!fork())
 			exit(execve("/bin/getty",argv,0));
 	}
-	for (;;);
+	for (;;) pause();
 	return 0;
 }

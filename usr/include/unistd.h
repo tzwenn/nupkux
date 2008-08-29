@@ -124,7 +124,7 @@ type name(atype a,btype b) \
 type __res; \
 __asm__ volatile ("int $0x80" \
 	: "=a" (__res) \
-	: "a" (__NR_##name),"b" (a),"c" (b); \
+	: "a" (__NR_##name),"b" (a),"c" (b)); \
 if (__res >= 0) \
 	return __res; \
 errno = -__res; \
@@ -173,6 +173,8 @@ _decl_syscall3(int,execve,const char *,file,const char **,argv,const char **,env
 _decl_syscall1(int,chdir,const char *,name);
 _decl_syscall3(int,mknod,const char *,name,int,mode,int,addr);
 _decl_syscall0(pid_t,getpid);
+_decl_syscall0(int,pause);
+_decl_syscall2(int,kill,pid_t,pid,int,sign);
 _decl_syscall3(int,ioctl,int,fd,unsigned int,cmd,unsigned long,arg);
 _decl_syscall1(int,chroot,const char *,name);
 _decl_syscall0(pid_t,getppid);
