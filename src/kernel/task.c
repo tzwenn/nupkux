@@ -65,14 +65,17 @@ void setup_tasking()
 	for (i=1;i<NR_TASKS;i++)
 		tasks[i].pid=NO_TASK;
 	current_task=tasks;
-	current_task->pid=0;
+	current_task->pid=0;;
+	current_task->pgrp=0;
 	current_task->parent=0;
 	current_task->esp=current_task->ebp=0;
 	current_task->eip=0;
 	current_task->state=TASK_RUNNING;
 	current_task->directory=current_directory;
-	current_task->gid=FS_GID_ROOT; //root runs it
-	current_task->uid=FS_UID_ROOT;
+	current_task->gid=ROOT_UID; //root runs it
+	current_task->egid=ROOT_UID;
+	current_task->uid=ROOT_UID;
+	current_task->euid=ROOT_UID;
 	current_task->pwd=0;
 	current_task->root=0;//get_root_fs_node();
 	current_task->signals=0;

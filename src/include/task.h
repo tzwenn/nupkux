@@ -31,7 +31,7 @@
 #define TASK_ZOMBIE		5
 
 #define ROOT_UID	0
-#define I_AM_ROOT()	(current_task->uid==ROOT_UID)
+#define I_AM_ROOT()	(!current_task->uid || !current_task->euid)
 
 #define NR_TASKS	64
 #define NO_TASK		(-1)
@@ -47,12 +47,13 @@ typedef int pid_t;
 
 struct _task
 {
-	pid_t pid,parent;
+	pid_t pid,parent,pgrp;
 	char priority,state;
 	UINT esp,ebp,eip;
 	page_directory *directory;
 	UINT kernel_stack;
-	USHORT uid, gid;
+	USHORT uid, euid;
+	USHORT gid, egid;
 	int exit_code;
 	UINT signals;
 	FILE files[NR_OPEN];

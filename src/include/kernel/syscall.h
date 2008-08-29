@@ -82,6 +82,7 @@ extern int sys_chdir(const char *name);
 extern int sys_mknod(const char *name, int mode, int addr);
 extern pid_t sys_getpid(void);
 extern int sys_pause(void);
+extern int sys_kill(pid_t pid,int sign);
 extern int sys_ioctl(int fd, UINT cmd, ULONG arg);
 extern int sys_chroot(const char *name);
 extern pid_t sys_getppid(void);

@@ -81,6 +81,7 @@ void setup_syscalls()
 	sys_call_table[SYS_MKNOD]=&sys_mknod;
 	sys_call_table[SYS_GETPID]=&sys_getpid;
 	sys_call_table[SYS_PAUSE]=&sys_pause;
+	sys_call_table[SYS_KILL]=&sys_kill;
 	sys_call_table[SYS_IOCTL]=&sys_ioctl;
 	sys_call_table[SYS_CHROOT]=&sys_chroot;
 	sys_call_table[SYS_GETPPID]=&sys_getppid;

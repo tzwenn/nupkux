@@ -26,6 +26,7 @@
 #include <mm.h>
 #include <kernel/syscall.h>
 #include <drivers/drivers.h>
+#include <signal.h>
 
 #define MAX_ARGS	16
 
@@ -206,7 +207,14 @@ static int nish_cd(int argc, char *argv[])
 
 static int nish_test(int argc, char **argv)
 {
-	printf("Nothing tested!\n");
+	printf("---Pause test---\n");
+	static pid_t waiting_task = 0;
+	if (!waiting_task) {
+		printf("You say goodbye ... \n");
+		waiting_task=current_task->pid;
+		sys_pause();
+		printf("... and I say hello!\n");
+	} else sys_kill(waiting_task,SIGCONT);
 	return 1;
 }
 
