@@ -55,16 +55,19 @@ int sys_open(const char *filename,int flag,int mode)
 {
 	//TODO Check access
 	int fd;
-	volatile FILE *f;
+	FILE *f;
 
 	if (!access_ok(VERIFY_READ,filename,VERIFY_STRLEN)) return -EFAULT;
 	for (fd=0;fd<NR_OPEN;fd++)
-		if (current_task->files[fd].fd==NO_FILE) break;
-	if (fd==NR_OPEN) return -EMFILE;
-	f=&(current_task->files[fd]);
+		if (!current_task->files[fd]) break;
+	if (fd>=NR_OPEN) return -EMFILE;
+	f=malloc(sizeof(FILE));
 	f->flags=0;
 	f->node=namei(filename);
-	if (!f->node) return -ENOENT;
+	if (!f->node) {
+		free(f);
+		return -ENOENT;
+	}
 	if (flag&O_APPEND) f->offset=f->node->size;
 		else f->offset=0;
 	/////////////////////////////////////
@@ -73,15 +76,23 @@ int sys_open(const char *filename,int flag,int mode)
 	if ((!flag&3) || (flag&O_RDWR)) f->flags|=FMODE_READ;
 	if ((flag&O_WRONLY) || (flag&O_RDWR)) f->flags|=FMODE_WRITE;
 	open_fs(f->node,f->flags&FMODE_READ,f->flags&FMODE_WRITE);
+	f->count=1;
+	current_task->close_on_exec&=~(1<<fd);
 	f->fd=fd;
+	current_task->files[fd]=f;
 	return fd;
 }
 
 int sys_close(int fd)
 {
 	if (fd<0 || fd>=NR_OPEN) return -EBADF;
-	if (current_task->files[fd].fd==NO_FILE) return -EBADF;
-	current_task->files[fd].fd=NO_FILE;
-	close_fs(current_task->files[fd].node);
+	if (!current_task->files[fd]) return -EBADF;
+	FILE *f=current_task->files[fd];
+	current_task->close_on_exec&=~(1<<fd);
+	current_task->files[fd]=0;
+	if (f->count && !(--f->count)) {
+		close_fs(f->node);
+		free(f);
+	}
 	return 0;
 }

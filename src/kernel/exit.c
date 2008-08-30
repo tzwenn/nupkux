@@ -75,7 +75,7 @@ int sys_exit(int status)
 		if (tasks[i].pid!=NO_TASK && tasks[i].parent==current_task->pid)
 			tasks[i].parent=1; //INIT inherits the orphan
 	for (i=NR_OPEN;i--;)
-		if (current_task->files[i].fd!=NO_FILE)
+		if (current_task->files)
 			sys_close(i);
 	if (!current_task->pid) {
 		printf("\e[91mKernel Aborted. Halt System!\e[m\n");

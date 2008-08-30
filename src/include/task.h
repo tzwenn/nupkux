@@ -56,8 +56,9 @@ struct _task
 	USHORT gid, egid;
 	int exit_code;
 	UINT signals;
-	FILE files[NR_OPEN];
 	fs_node *pwd,*root;
+	ULONG close_on_exec;
+	FILE *files[NR_OPEN];
 };
 
 extern volatile task *current_task;
@@ -65,6 +66,5 @@ extern void setup_tasking(void);
 extern void switch_task(void);
 extern void move_stack(void *new_stack, UINT size);
 extern void abort_current_process(void);
-extern int set_task_state(pid_t pid, char state);
 
 #endif

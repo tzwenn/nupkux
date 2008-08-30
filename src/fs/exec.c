@@ -17,12 +17,10 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <paging.h>
-#include <fs/fs.h>
-#include <errno.h>
-#include <elf.h>
-#include <kernel/dts.h>
 #include <lib/string.h>
+#include <kernel/syscall.h>
+#include <elf.h>
+#include <errno.h>
 
 #define USER_STACK_POS	0x80000000
 #define USER_STACK_SIZE 0x1000
@@ -80,14 +78,12 @@ UINT make_new_stack(const char **argv,const char **envp, UINT pos)
 	return (UINT)esp;
 }
 
-#include <kernel/ktextio.h>
-
 int sys_execve(const char *file,const char **argv,const char **envp)
 {
 	//TODO: permission check; freeing old core image & stack
 	if (!access_ok(VERIFY_READ,file,VERIFY_STRLEN)) return -EFAULT;
 	char *buf;
-	UINT entry,stack;
+	UINT entry,stack,fd=NR_OPEN;
 	fs_node *node=namei(file);
 
 	if (!node) return -ENOENT;
@@ -109,6 +105,11 @@ int sys_execve(const char *file,const char **argv,const char **envp)
 			return -ENOEXEC;
 	}
 	free(buf);
+	while (fd--) {
+		if (current_task->files[fd] && current_task->close_on_exec&(1<<fd))
+			sys_close(fd);
+	}
+	cli(); //It becomes dangerous
 	if (glob_regs) {
 		glob_regs->eip=entry;
 		glob_regs->ebx=stack;

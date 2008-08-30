@@ -27,23 +27,23 @@ extern void setup_urandom_file(fs_node *);
 
 static int drv_stdin_read(fs_node *node, off_t offset, size_t size, char *buffer)
 {
-	FILE f=current_task->files[STDIN_FILENO];
-	if (f.fd==NO_FILE || !f.node || f.node==node) return 0;
-	return read_fs(f.node,offset,size,buffer);
+	FILE *f=current_task->files[STDIN_FILENO];
+	if (!f || !f->node || f->node==node) return 0;
+	return read_fs(f->node,offset,size,buffer);
 }
 
 static int drv_stdout_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
-	FILE f=current_task->files[STDOUT_FILENO];
-	if (f.fd==NO_FILE || !f.node || f.node==node) return 0;
-	return write_fs(f.node,offset,size,buffer);
+	FILE *f=current_task->files[STDOUT_FILENO];
+	if (!f || !f->node || f->node==node) return 0;
+	return write_fs(f->node,offset,size,buffer);
 }
 
 static int drv_stderr_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
-	FILE f=current_task->files[STDERR_FILENO];
-	if (f.fd==NO_FILE || !f.node || f.node==node) return 0;
-	return write_fs(f.node,offset,size,buffer);
+	FILE *f=current_task->files[STDERR_FILENO];
+	if (!f || !f->node || f->node==node) return 0;
+	return write_fs(f->node,offset,size,buffer);
 }
 
 static int drv_null_read(fs_node *node, off_t offset, size_t size, char *buffer)

@@ -23,7 +23,6 @@
 #include <fs/fs.h>
 #include <errno.h>
 #include <kernel/syscall.h>
-#include <kernel/ktextio.h>
 
 volatile task *current_task = 0;
 volatile task tasks[NR_TASKS];
@@ -43,7 +42,7 @@ void move_stack(void *new_stack, UINT size)
 		make_page(i,PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | PAGE_FLAG_USERMODE,current_directory,1);
 	flush_tlb();
 	asm volatile (	"movl %%esp,%0\n\t"
-					"movl %%ebp,%1\n\t":"=r"(old_esp),"=r"(old_ebp));
+			"movl %%ebp,%1\n\t":"=r"(old_esp),"=r"(old_ebp));
 	offset=(UINT)new_stack-initial_esp;
 	new_esp=old_esp+offset;
 	new_ebp=old_ebp+offset;
@@ -54,8 +53,10 @@ void move_stack(void *new_stack, UINT size)
 			*((UINT *)i)=tmp+offset;
 	}
 	asm volatile (	"movl %0,%%esp\n\t"
-					"movl %1,%%ebp\n\t"::"r"(new_esp),"r"(new_ebp));
+			"movl %1,%%ebp\n\t"::"r"(new_esp),"r"(new_ebp));
 }
+
+#include <kernel/ktextio.h>
 
 void setup_tasking()
 {
@@ -79,8 +80,8 @@ void setup_tasking()
 	current_task->pwd=0;
 	current_task->root=0;//get_root_fs_node();
 	current_task->signals=0;
-	for (i=NR_OPEN;i--;)
-		current_task->files[i].fd=NO_FILE;
+	current_task->close_on_exec=0;
+	memset((void *)(current_task->files),0,sizeof(FILE *)*NR_OPEN);
 	current_task->kernel_stack=_kmalloc_a(KERNEL_STACK_SIZE);
 	sti();
 }
@@ -119,13 +120,14 @@ void switch_task()
 pid_t sys_fork()
 {
 	cli();
-	task *parent_task=(task *)current_task;
+	volatile task *parent_task=current_task;
 	pid_t i;
 	for (i=0;i<NR_TASKS;i++)
 		if (tasks[i].pid==NO_TASK) break;
 	if (i==NR_TASKS) return -1;
 	page_directory *directory=clone_directory(current_directory);
 	volatile task *newtask=(&(tasks[i]));
+	*newtask=*parent_task;
 	newtask->pid=i;
 	newtask->esp=0;
 	newtask->ebp=0;
@@ -133,13 +135,12 @@ pid_t sys_fork()
 	newtask->exit_code=0;
 	newtask->state=TASK_WAITING;
 	newtask->parent=parent_task->pid;
-	newtask->gid=parent_task->gid;
-	newtask->uid=parent_task->uid;
 	newtask->directory=directory;
-	newtask->pwd=parent_task->pwd;
-	newtask->root=parent_task->root;
 	newtask->signals=0;
-	memcpy(&newtask->files,&parent_task->files,NR_OPEN*sizeof(FILE));
+	for (i=NR_OPEN;i--;) {
+		if (newtask->files[i])
+			newtask->files[i]->count++;
+	}
 	current_task->kernel_stack=_kmalloc_a(KERNEL_STACK_SIZE);
 	UINT eip=read_eip();
 	if (current_task==parent_task) {
@@ -172,11 +173,3 @@ void abort_current_process()
 	sys_exit(0);
 }
 
-int set_task_state(pid_t pid, char state)
-{
-	if (pid<0 || pid>=NR_TASKS) return -EGENERIC;
-	volatile task *atask=&(tasks[pid]);
-	if (atask->pid==NO_TASK) return -EGENERIC;
-	atask->state=state;
-	return 0;
-}

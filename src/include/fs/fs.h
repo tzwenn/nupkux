@@ -48,10 +48,9 @@
 #define IS_MNT(NODE)	(NODE->flags&FS_MOUNTPOINT)
 
 #define NR_OPEN		32
-#define NO_FILE		NR_OPEN+1
 
-#define FMODE_READ	1
-#define FMODE_WRITE	2
+#define FMODE_READ		1
+#define FMODE_WRITE		2
 
 typedef struct _fs_node fs_node;
 typedef struct _mountinfo mountinfo;
@@ -112,9 +111,10 @@ struct _mountinfo {
 
 typedef struct file {
 	UINT fd;
-	USHORT flags;
+	UINT flags;
 	fs_node *node;
 	off_t offset;
+	UINT count;
 } FILE;
 
 //VFS functions
