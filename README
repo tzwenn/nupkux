@@ -1,0 +1,73 @@
+
+Nupkux Distribution README file
+
+----------Description
+
+Nupkux is a try to create a Unix-alike kernel with some basic userspace
+applications running on it. It is derived from "Nur plia kripla unikso,"
+Esperanto for "Just another stunted Unix." There no will to reach this aim,
+it is just a way of learning how computers and Unix-Systems work "under the
+hood." 
+
+----------Contents
+
+There are tree main parts in this package:
+	- Nupkux (the kernel) located in ./src
+	- Userspace Applications and a small libc (./usr)
+	- Tools related to Nupkux, help to build it (./tools)
+
+----------Dependencies
+
+I only use to develop, compile and test Debian GNU/Linux, you will need a
+Linux distribution to use "mount -o loop"
+Further needed programs:
+	- gcc (>=4.X)
+	- GNU make
+	- makedepend
+	- subversion (recommended)
+
+----------Compiling
+
+Change to this package directory and type:
+
+	$ make
+
+To customize the building process modify the not well documented Makefiles
+
+----------Installing
+
+Nupkux is pre-alpha software, which can be very harmful to your computer. 	
+I recommend you to use a virtual machine for testing purposes, there is 
+ANY WARRANTY for damage caused by Nupkux.
+Good virtual machines:
+	- Qemu (http://bellard.org/qemu)
+	- VirtualBox (http://www.virtualbox.org)
+	- Bochs (http://bochs.sourceforge.net)
+
+So by default Nupkux is not installed on your real hard drive.
+If you type as superuser:
+
+	# make install
+	
+Nupkux and its userspace applications will be installed on a virtual
+floppy drive. Mounting this drive need superuser-rights (root,sudo).
+
+You will need an image of this floppy, which can be found at:
+
+	http://prdownload.berlios.de/nupkux/bootdisk.img.gz
+
+Qemu users can type:
+
+	# make all install run_qemu
+	
+----------License
+
+Nupkux comes under the GNU General Public License (GPL) version 3, as published
+by the Free Software Foundation. You can find a copy at ./src/COPYING .
+How ever, there are some parts, not written by me under other licenses,
+often highly modified and not in a clear state of copyright.
+Some of them are marked so, others not. I'm really sorry for this and hope
+to line out the foreign parts soon.
+
+Stay up to date: https://developer.berlios.de/projects/nupkux/
+Aug 2008	Sven Koehler (tzwenn<at>users<dot>berlios<dot>de)
