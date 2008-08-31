@@ -46,6 +46,7 @@ typedef unsigned int sigset_t;
 #define SIGTSTP		20
 #define SIGTTIN		21
 #define SIGTTOU		22
+#define SIGSYS		31
 
 struct sigaction {
 	void (*sa_handler)(int);

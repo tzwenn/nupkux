@@ -28,12 +28,10 @@ int main(int argc, char *argv[], char *envp[])
 	int device_nr=atoi(argv[1]);
 	char device[15];
 	sprintf(device,"/dev/tty%d",device_nr);
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
-	close(STDERR_FILENO);
-	open(device,O_RDONLY,0);
-	open(device,O_WRONLY,0);
-	open(device,O_WRONLY,0);
+	close(STDIN_FILENO); //Get rid of old stdin
+	open(device,O_RDWR,0); //Open the tty as new stdin
+	dup2(STDIN_FILENO,STDOUT_FILENO); //Replace old stdout with tty
+	dup2(STDIN_FILENO,STDERR_FILENO);
 	printf("\nNupkux tty%d\n\n",device_nr);
 	execve("/bin/login",0,0);
 	return 0;

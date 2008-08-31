@@ -35,8 +35,10 @@ _syscall3(int,mknod,const char *,name,int,mode,int,addr);
 _syscall0(pid_t,getpid);
 _syscall0(int,pause);
 _syscall2(int,kill,pid_t,pid,int,sign);
+_syscall1(int,dup,int,fd);
 _syscall3(int,ioctl,int,fd,unsigned int,cmd,unsigned long,arg);
 _syscall1(int,chroot,const char *,name);
+_syscall2(int,dup2,int,fd,int,fd2);
 _syscall0(pid_t,getppid);
 _syscall1(int,reboot,int,howto);
 

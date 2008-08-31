@@ -43,9 +43,9 @@
 int main(void)
 {
 	//switch_to_user_mode();
-	open("/dev/tty0",O_WRONLY,0);
-	open("/dev/tty0",O_RDONLY,0);
-	open("/dev/tty0",O_RDONLY,0);
+	open("/dev/tty0",O_RDWR,0); //No open files at this moment
+	dup(STDIN_FILENO);
+	dup(STDIN_FILENO);
 	if (getpid()!=1) {
 		printf("\e[91mWARNING: \e[mDo not run init manually!!\n");
 		exit(1);
