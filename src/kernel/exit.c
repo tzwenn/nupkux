@@ -25,7 +25,7 @@
 
 extern volatile task tasks[NR_TASKS];
 
-int send_signal(volatile task *atask, int sign) //Just inside the kernel
+static int send_signal(volatile task *atask, int sign) //Just inside the kernel
 {
 	if (I_AM_ROOT() || atask->uid==current_task->uid || atask->uid==current_task->euid
 			|| atask->euid==current_task->uid || atask->euid==current_task->euid || sign==SIGCONT) {

@@ -83,12 +83,14 @@ typedef int ssize_t;
 #define __NR_fstat	28
 #define __NR_pause	29
 #define __NR_kill	37
+#define __NR_dup	41
 #define __NR_times	43
 #define __NR_brk	45
 #define __NR_ioctl	54
 #define __NR_fcntl	55
 #define __NR_uname	59
 #define __NR_chroot	61
+#define __NR_dup2	63
 #define __NR_getppid	64
 #define __NR_reboot	88
 
@@ -175,8 +177,10 @@ _decl_syscall3(int,mknod,const char *,name,int,mode,int,addr);
 _decl_syscall0(pid_t,getpid);
 _decl_syscall0(int,pause);
 _decl_syscall2(int,kill,pid_t,pid,int,sign);
+_decl_syscall1(int,dup,int,fd);
 _decl_syscall3(int,ioctl,int,fd,unsigned int,cmd,unsigned long,arg);
 _decl_syscall1(int,chroot,const char *,name);
+_decl_syscall2(int,dup2,int,fd,int,fd2);
 _decl_syscall0(pid_t,getppid);
 _decl_syscall1(int,reboot,int,howto);
 

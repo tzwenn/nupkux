@@ -85,8 +85,8 @@ int init(void)
 	pid_t pid;
 	if (!(pid=sys_fork())) {
 		set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);
-		asm volatile ("int $0x80":"=a"(ret):"a"(SYS_EXECVE),"b"("/bin/init"),"c"(0),"d"(0));
-		asm volatile ("int $0x80"::"a"(SYS_EXIT),"b"(ret));
+		asm volatile ("int $0x80":"=a"(ret):"a"(__NR_execve),"b"("/bin/init"),"c"(0),"d"(0));
+		asm volatile ("int $0x80"::"a"(__NR_exit),"b"(ret));
 		for (;;);
 	}
 	return ret;

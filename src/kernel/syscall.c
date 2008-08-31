@@ -20,6 +20,7 @@
 #include <kernel/syscall.h>
 #include <kernel/ktextio.h>
 #include <lib/memory.h>
+#include <signal.h>
 #include <errno.h>
 
 static void *sys_call_table[NR_SYSCALLS];
@@ -37,8 +38,9 @@ int sys_mknod(const char *name, int mode, int addr)
 
 void SysCallHandler(registers *regs)
 {
-	if (regs->eax>=NR_SYSCALLS) {
-		regs->eax=-1;
+	if (regs->eax<0 || regs->eax>=NR_SYSCALLS) {
+		regs->eax=-ENOSYS;
+		sys_kill(current_task->pid,SIGSYS);
 		return;
 	}
 	void *sys_call=sys_call_table[regs->eax];
@@ -68,24 +70,26 @@ void setup_syscalls()
 {
 	memset(sys_call_table,0,NR_SYSCALLS*sizeof(void *));
 
-	sys_call_table[SYS_PUTCHAR]=&sys_putchar;
-	sys_call_table[SYS_EXIT]=&sys_exit;
-	sys_call_table[SYS_FORK]=&sys_fork;
-	sys_call_table[SYS_READ]=&sys_read;
-	sys_call_table[SYS_WRITE]=&sys_write;
-	sys_call_table[SYS_OPEN]=&sys_open;
-	sys_call_table[SYS_CLOSE]=&sys_close;
-	sys_call_table[SYS_WAITPID]=&sys_waitpid;
-	sys_call_table[SYS_EXECVE]=&sys_execve;
-	sys_call_table[SYS_CHDIR]=&sys_chdir;
-	sys_call_table[SYS_MKNOD]=&sys_mknod;
-	sys_call_table[SYS_GETPID]=&sys_getpid;
-	sys_call_table[SYS_PAUSE]=&sys_pause;
-	sys_call_table[SYS_KILL]=&sys_kill;
-	sys_call_table[SYS_IOCTL]=&sys_ioctl;
-	sys_call_table[SYS_CHROOT]=&sys_chroot;
-	sys_call_table[SYS_GETPPID]=&sys_getppid;
-	sys_call_table[SYS_REBOOT]=&sys_reboot;
+	sys_call_table[__NR_putchar]=&sys_putchar;
+	sys_call_table[__NR_exit]=&sys_exit;
+	sys_call_table[__NR_fork]=&sys_fork;
+	sys_call_table[__NR_read]=&sys_read;
+	sys_call_table[__NR_write]=&sys_write;
+	sys_call_table[__NR_open]=&sys_open;
+	sys_call_table[__NR_close]=&sys_close;
+	sys_call_table[__NR_waitpid]=&sys_waitpid;
+	sys_call_table[__NR_execve]=&sys_execve;
+	sys_call_table[__NR_chdir]=&sys_chdir;
+	sys_call_table[__NR_mknod]=&sys_mknod;
+	sys_call_table[__NR_getpid]=&sys_getpid;
+	sys_call_table[__NR_pause]=&sys_pause;
+	sys_call_table[__NR_dup]=&sys_dup;
+	sys_call_table[__NR_kill]=&sys_kill;
+	sys_call_table[__NR_ioctl]=&sys_ioctl;
+	sys_call_table[__NR_chroot]=&sys_chroot;
+	sys_call_table[__NR_getppid]=&sys_getppid;
+	sys_call_table[__NR_dup2]=&sys_dup2;
+	sys_call_table[__NR_reboot]=&sys_reboot;
 
 	register_interrupt_handler(0x80,&SysCallHandler);
 }

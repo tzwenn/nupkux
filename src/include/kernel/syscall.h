@@ -24,46 +24,7 @@
 #include <kernel/dts.h>
 #include <task.h>
 #include <unistd.h>
-
-//I've taken a look at a list for the Linux kernel, so I hope there is
-//any resemblence to POSIX here
-
-//and some newlib requirements
-//Das ist deutsch, da es für mich ist: Mach ein "environ,isatty"
-#define SYS_PUTCHAR	__NR_putchar
-#define SYS_EXIT	__NR_exit
-#define SYS_FORK	__NR_fork
-#define SYS_READ	__NR_read
-#define SYS_WRITE	__NR_write
-#define SYS_OPEN	__NR_open
-#define SYS_CLOSE	__NR_close
-#define SYS_WAITPID	__NR_waitpid
-#define SYS_CREAT	__NR_creat
-#define SYS_LINK	__NR_link
-#define SYS_UNLINK	__NR_unlink
-#define	SYS_EXECVE	__NR_execve
-#define SYS_CHDIR	__NR_chdir
-#define SYS_TIME	__NR_time
-#define SYS_MKNOD	__NR_mknod
-#define SYS_CHMOD	__NR_chmod
-#define SYS_CHOWN	__NR_chown
-#define SYS_BREAK	__NR_break
-#define SYS_STAT	__NR_stat
-#define SYS_LSEEK	__NR_lseek
-#define SYS_GETPID	__NR_getpid
-#define SYS_MOUNT	__NR_mount
-#define SYS_UMOUNT	__NR_umount
-#define SYS_FSTAT	__NR_fstat
-#define SYS_PAUSE	__NR_pause
-#define SYS_KILL	__NR_kill
-#define SYS_TIMES	__NR_times
-#define SYS_BRK		__NR_brk
-#define SYS_IOCTL	__NR_ioctl
-#define SYS_FCNTL	__NR_fcntl
-#define SYS_UNAME	__NR_uname
-#define SYS_CHROOT	__NR_chroot
-#define SYS_GETPPID	__NR_getppid
-#define SYS_REBOOT	__NR_reboot
+#include <errno.h>
 
 #define NR_SYSCALLS	128
 
@@ -83,8 +44,10 @@ extern int sys_mknod(const char *name, int mode, int addr);
 extern pid_t sys_getpid(void);
 extern int sys_pause(void);
 extern int sys_kill(pid_t pid,int sign);
+extern int sys_dup(int fd);
 extern int sys_ioctl(int fd, UINT cmd, ULONG arg);
 extern int sys_chroot(const char *name);
+extern int sys_dup2(int fd, int fd2);
 extern pid_t sys_getppid(void);
 extern int sys_reboot(int howto);
 
