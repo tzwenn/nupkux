@@ -56,13 +56,14 @@ typedef struct _fs_node fs_node;
 typedef struct _mountinfo mountinfo;
 
 typedef void (*open_proto)(fs_node*);
-typedef int (*read_proto)(fs_node*,off_t,size_t,char*);
-typedef int (*write_proto)(fs_node*,off_t,size_t,const char*);
+typedef int (*read_proto)(fs_node*,off_t,size_t,char *);
+typedef int (*write_proto)(fs_node*,off_t,size_t,const char *);
 typedef void (*close_proto)(fs_node*);
 typedef struct dirent *(*readdir_proto)(fs_node*,UINT);
 typedef fs_node *(*finddir_proto)(fs_node*,const char *);
-typedef void (*free_p_data_proto)(fs_node*);
+typedef void (*free_pdata_proto)(fs_node*);
 typedef int (*ioctl_proto)(fs_node*,UINT,ULONG);
+typedef int (*request_proto)(fs_node*,int,ULONG,ULONG,char *);
 
 struct dirent
 {
@@ -79,8 +80,9 @@ typedef struct _node_operations {
 	close_proto close;
 	readdir_proto readdir;
 	finddir_proto finddir;
-	free_p_data_proto free_p_data;
+	free_pdata_proto free_pdata;
 	ioctl_proto ioctl;
+	request_proto request;
 } node_operations;
 
 struct _fs_node {
@@ -93,7 +95,7 @@ struct _fs_node {
 	UCHAR nlinks;
 	mountinfo *mi; //impl
 	node_operations *f_op;
-	void *p_data;   //This is filesystem specific stuff. DO NOT ACCESS FROM "OUTSIDE"(VFS)
+	void *pdata;   //This is filesystem specific stuff. DO NOT ACCESS FROM "OUTSIDE"(VFS)
 	fs_node *ptr;
 };
 
@@ -125,8 +127,9 @@ extern int write_fs(fs_node *node, off_t offset, size_t size, const char *buffer
 extern void close_fs(fs_node *node);
 extern struct dirent *readdir_fs(fs_node *node, UINT index);
 extern fs_node *finddir_fs(fs_node *node, const char *name);
-extern void free_p_data_fs(fs_node *node);
+extern void free_pdata_fs(fs_node *node);
 extern int ioctl_fs(fs_node *node, UINT cmd, ULONG arg);
+extern int request_fs(fs_node *node, int cmd, ULONG sector, ULONG count, char *buffer);
 
 extern fs_node *get_root_fs_node(void);
 

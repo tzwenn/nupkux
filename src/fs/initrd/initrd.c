@@ -21,6 +21,7 @@
 #include <lib/memory.h>
 #include <lib/string.h>
 #include <mm.h>
+#include <errno.h>
 
 static fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr *discr, mountinfo *mi);
 
@@ -45,7 +46,7 @@ static int initrd_read(fs_node *node, off_t offset, size_t size, char *buffer)
 
 static int initrd_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
-	return 0;
+	return -EINVAL;
 }
 
 static void initrd_close(fs_node *node)
@@ -105,7 +106,6 @@ static fs_node *initrd_inode_to_fs_node(UINT inode, fs_node *node, initrd_discr 
 	node->inode=d_inode.inode;
 	node->size=d_inode.size;
 	node->nlinks=1;
-	node->p_data=0;
 	node->ptr=0;
 	node->mi=mi;
 	node->f_op=&initrd_operations;

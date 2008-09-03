@@ -69,7 +69,7 @@ static int detect_serial_port(USHORT port)
 
 static void serial_open(fs_node *node)
 {
-	USHORT port=(USHORT) ((UINT) node->p_data);
+	USHORT port=(USHORT) ((UINT) device_pdata(node));
 	outportb(port+IER,NO_INTERRUPTS);
 	outportb(port+LCR,SET_DLAB);
 	outportb(port+DL_LO,divisor & 0xFF);
@@ -87,7 +87,7 @@ static void serial_open(fs_node *node)
 static int serial_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
 	size_t i=size;
-	USHORT port=(USHORT) ((UINT) node->p_data);
+	USHORT port=(USHORT) ((UINT) device_pdata(node));
 
 	while (i--)  {
 		while (!(inportb(port+LSR)&THRE));
@@ -99,7 +99,7 @@ static int serial_write(fs_node *node, off_t offset, size_t size, const char *bu
 static int serial_read(fs_node *node, off_t offset, size_t size, char *buffer)
 {
 	size_t i=size;
-	USHORT port=(USHORT) ((UINT) node->p_data);
+	USHORT port=(USHORT) ((UINT) device_pdata(node));
 
 	while (i--) {
 		while (!inportb(port+LSR)&RBF);
@@ -110,7 +110,7 @@ static int serial_read(fs_node *node, off_t offset, size_t size, char *buffer)
 
 static void serial_close(fs_node *node)
 {
-	USHORT port=(USHORT) ((UINT) node->p_data);
+	USHORT port=(USHORT) ((UINT) device_pdata(node));
 
 	outportb(port+IER,NO_INTERRUPTS);
 	outportb(port+MCR,0x00);
@@ -127,11 +127,11 @@ static node_operations serial_ops = {
 void setup_serial(fs_node *devfs)
 {
 	if (detect_serial_port(COM1))
-		devfs_register_device(devfs,"ttyS0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops)->p_data=(void *)COM1;
+		set_device_pdata(devfs_register_device(devfs,"ttyS0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM1);
 	if (detect_serial_port(COM2))
-		devfs_register_device(devfs,"ttyS1",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops)->p_data=(void *)COM2;
+		set_device_pdata(devfs_register_device(devfs,"ttyS1",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM2);
 	if (detect_serial_port(COM3))
-		devfs_register_device(devfs,"ttyS2",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops)->p_data=(void *)COM3;
+		set_device_pdata(devfs_register_device(devfs,"ttyS2",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM3);
 	if (detect_serial_port(COM4))
-		devfs_register_device(devfs,"ttyS3",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops)->p_data=(void *)COM4;
+		set_device_pdata(devfs_register_device(devfs,"ttyS3",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM4);
 }

@@ -104,7 +104,7 @@ void irq_tty_keyboard(registers *regs)
 {
 	UCHAR scan_code = inportb(KEYBD_PORT);
 	USHORT input;
-	tty *atty=(tty *)current_tty->p_data;
+	tty *atty=(tty *)device_pdata(current_tty);
 	handle_key(&scan_code,&input,scan_code&KEYUP);
 	if (escape) return;
 	if (!(scan_code&KEYUP)) {

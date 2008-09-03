@@ -61,27 +61,9 @@ typedef struct DrvGeom {
 #define CMD_VERSION (0x10)  /* FDC version */
 
 #define FLOPPY_SECTOR_SIZE	512
+#define FLOPPY_SECTOR_COUNT	2880
 #define FLOPPY_144IN_SIZE	1474560
 
-/* function prototypes */
-
-void ResetFloppy(void);
-void reset(void);
-UINT diskchange(void);
-void motoron(void);
-void motoroff(void);
-void recalibrate(void);
-UINT flseek(int track);
-UINT log_disk(DrvGeom *g);
-UINT format_track(UCHAR track,DrvGeom *g);
-
-extern UINT fdc_read_block(int block,UCHAR *blockbuff,ULONG nosectors);
-extern UINT fdc_write_block(int block,UCHAR *blockbuff,ULONG nosectors);
 extern void setup_floppy(fs_node *devfs);
-
-
-extern UINT motor;
-extern int mtick;
-extern int tmout;
 
 #endif

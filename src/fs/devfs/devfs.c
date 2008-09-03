@@ -17,6 +17,7 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <drivers/drivers.h>
 #include <fs/devfs.h>
 #include <mm.h>
 #include <lib/string.h>
@@ -42,15 +43,15 @@ static void devfs_add_d_entry(fs_node *dir, const char *name, UINT inode)
 	UINT entr_num = (dir->size/sizeof(devfs_d_entry));
 
 	dir->size=(entr_num+1)*sizeof(devfs_d_entry);
-	dir->p_data=realloc(dir->p_data,dir->size);
-	((devfs_d_entry*)dir->p_data)[entr_num].inode=inode;
-	strncpy(((devfs_d_entry*)dir->p_data)[entr_num].filename,name,DEVFS_FILENAME_LEN);
-	((devfs_d_entry*)dir->p_data)[entr_num].filename[DEVFS_FILENAME_LEN-1]=0;
+	dir->pdata=realloc(dir->pdata,dir->size);
+	((devfs_d_entry*)dir->pdata)[entr_num].inode=inode;
+	strncpy(((devfs_d_entry*)dir->pdata)[entr_num].filename,name,DEVFS_FILENAME_LEN);
+	((devfs_d_entry*)dir->pdata)[entr_num].filename[DEVFS_FILENAME_LEN-1]=0;
 }
 
 static void del_add_d_entry(fs_node *dir, UINT index)
 {
-	devfs_d_entry *entries = (devfs_d_entry *) dir->p_data;
+	devfs_d_entry *entries = (devfs_d_entry *) dir->pdata;
 	UINT count=dir->size/sizeof(devfs_d_entry);
 
 	if (index>count) return;
@@ -59,12 +60,12 @@ static void del_add_d_entry(fs_node *dir, UINT index)
 		index++;
 	}
 	dir->size-=sizeof(devfs_d_entry);
-	dir->p_data=realloc(dir->p_data,dir->size);
+	dir->pdata=realloc(dir->pdata,dir->size);
 }
 
 static void devfs_dirck(fs_node *dir)
 {
-	devfs_d_entry *entries = (devfs_d_entry *) dir->p_data;
+	devfs_d_entry *entries = (devfs_d_entry *) dir->pdata;
 	devfs_discr *discr = (devfs_discr *)(dir->mi->discr);
 	UINT i=0;
 	fs_node *node;
@@ -89,7 +90,7 @@ static void devfs_fsck(fs_node *nodes)
 			if (nodes[i].inode!=DEVFS_INODE_FREE) {
 				if (nodes[i].flags==FS_DIRECTORY) devfs_dirck(&(nodes[i]));
 				val_nodes++;
-			} else nodes[i].p_data=0;
+			} else nodes[i].pdata=0;
 		}
 		if (nodes[DEVFS_INODES_PER_BLOCK].inode!=DEVFS_INODE_LINK) return;
 		if (!nodes[DEVFS_INODES_PER_BLOCK].ptr) {
@@ -109,7 +110,7 @@ static struct dirent *devfs_readdir(fs_node *node, UINT index)
 {
 	if (node->flags!=FS_DIRECTORY) return 0;
 	devfs_discr *discr = (devfs_discr *)(node->mi->discr);
-	devfs_d_entry *entries = (devfs_d_entry *) (node->p_data);
+	devfs_d_entry *entries = (devfs_d_entry *) (node->pdata);
 	fs_node *file_node;
 
 	if (index>=node->size/sizeof(devfs_d_entry)) return 0;
@@ -126,7 +127,7 @@ static fs_node *devfs_finddir(fs_node *node, const char *name)
 {
 	if (node->flags!=FS_DIRECTORY) return 0;
 	devfs_discr *discr = (devfs_discr *)(node->mi->discr);
-	devfs_d_entry *entries = (devfs_d_entry *) (node->p_data);
+	devfs_d_entry *entries = (devfs_d_entry *) (node->pdata);
 	UINT i = node->size/sizeof(devfs_d_entry);
 
 	while (i--)
@@ -136,9 +137,10 @@ static fs_node *devfs_finddir(fs_node *node, const char *name)
 	return 0;
 }
 
-static void devfs_free_p_data(fs_node *node)
+static void devfs_free_pdata(fs_node *node)
 {
-	if (IS_DIR(node)) free(node->p_data);
+	if (IS_DIR(node)) free(node->pdata);
+	node->pdata=0;
 }
 
 static fs_node *devfs_find_free_node(devfs_discr *discr)
@@ -182,6 +184,8 @@ fs_node *devfs_register_device(fs_node *dir, const char *name, UINT mode, UINT u
 	node->ptr=0;
 	node->nlinks=1;
 	node->mi=dir->mi;
+	node->pdata=calloc(1,sizeof(device_t));
+	((device_t *)node->pdata)->node=node;
 	devfs_add_d_entry(dir,name,node->inode);
 
 	return node;
@@ -192,6 +196,9 @@ void devfs_unregister_device(fs_node *device)
 	if (!device || IS_DIR(device) || device->mi->fs_type!=FS_TYPE_DEVFS) return;
 	devfs_discr *discr = (devfs_discr *) device->mi->discr;
 
+	free_pdata_fs(device);
+	free(device->pdata);
+	device->pdata=0;
 	device->inode=DEVFS_INODE_FREE;
 	devfs_fsck(discr->nodes);
 }
@@ -199,7 +206,7 @@ void devfs_unregister_device(fs_node *device)
 node_operations devfs_dir_operations = {
 		readdir: &devfs_readdir,
 		finddir: &devfs_finddir,
-		free_p_data: &devfs_free_p_data,
+		free_pdata: &devfs_free_pdata,
 };
 
 fs_node *setup_devfs(fs_node *mountpoint)
@@ -224,7 +231,7 @@ fs_node *setup_devfs(fs_node *mountpoint)
 	rootentr[0].inode=rootentr[1].inode=0;
 	strcpy(rootentr[0].filename,".");
 	strcpy(rootentr[1].filename,"..");
-	root->p_data=(void *)rootentr;
+	root->pdata=(void *)rootentr;
 
 	root->mode=0755;
 	root->uid=FS_UID_ROOT;
@@ -250,7 +257,8 @@ UINT remove_devfs(fs_node *devfs)
 	fs_node *block = discr->nodes,*tmp;
 	while (block) {
 		for (i=0;i<DEVFS_INODES_PER_BLOCK;i++) {
-			free_p_data_fs(&(block[i]));
+			free_pdata_fs(&(block[i]));
+			if (!IS_DIR((&(block[i])))) free(block[i].pdata);
 		}
 		tmp=block[DEVFS_INODES_PER_BLOCK].ptr;
 		free(block);

@@ -32,14 +32,15 @@ void open_fs(fs_node *node, UCHAR read, UCHAR write)
 
 int read_fs(fs_node *node, off_t offset, size_t size, char *buffer)
 {
+	if (IS_DIR(node)) return -EISDIR;
 	if (node->f_op && node->f_op->read) return node->f_op->read(node,offset,size,buffer);
-		else return 0;
+		else return -EINVAL;
 }
 
 int write_fs(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
 	if (node->f_op && node->f_op->write) return node->f_op->write(node,offset,size,buffer);
-		else return 0;
+		else return -EINVAL;
 }
 
 void close_fs(fs_node *node)
@@ -49,25 +50,33 @@ void close_fs(fs_node *node)
 
 struct dirent *readdir_fs(fs_node *node, UINT index)
 {
-	if (IS_DIR(node) && (node->f_op && node->f_op->readdir)) return node->f_op->readdir(node,index);
+	if (!IS_DIR(node)) return 0;//-ENOTDIR;
+	if (node->f_op && node->f_op->readdir) return node->f_op->readdir(node,index);
 		else return 0;
 }
 
 fs_node *finddir_fs(fs_node *node, const char *name)
 {
-	if (IS_DIR(node) && (node->f_op && node->f_op->finddir)) return node->f_op->finddir(node,name);
+	if (!IS_DIR(node)) return 0;//-ENOTDIR;
+	if (node->f_op && node->f_op->finddir) return node->f_op->finddir(node,name);
 		else return 0;
 }
 
-void free_p_data_fs(fs_node *node)
+void free_pdata_fs(fs_node *node)
 {
-	if (node->f_op && node->f_op->free_p_data) return node->f_op->free_p_data(node);
+	if (node->f_op && node->f_op->free_pdata) return node->f_op->free_pdata(node);
 }
 
 int ioctl_fs(fs_node *node, UINT cmd, ULONG arg)
 {
 	if (node->f_op && node->f_op->ioctl) return node->f_op->ioctl(node,cmd,arg);
 		else return -ENOTTY;
+}
+
+int request_fs(fs_node *node, int cmd, ULONG sector, ULONG count, char *buffer)
+{
+	if (node->f_op && node->f_op->request) return node->f_op->request(node,cmd,sector,count,buffer);
+		else return -EINVAL;
 }
 
 UINT setup_vfs()

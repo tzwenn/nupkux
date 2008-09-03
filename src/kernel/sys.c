@@ -30,14 +30,14 @@
 
 extern void acpiPowerOff(void);
 
-static void halt(void)
+static void do_halt(void)
 {
 	printf("System halted.");
 	cli();
 	hlt();
 }
 
-static void poweroff(void)
+static void do_poweroff(void)
 {
 	printf("Power down.");
 	acpiPowerOff();
@@ -47,7 +47,7 @@ static void poweroff(void)
 	hlt();
 }
 
-static void reboot(void)
+static void do_reboot(void)
 {
 	printf("Restarting system.");
 	while (inportb(0x64)&0x02);
@@ -69,13 +69,13 @@ int sys_reboot(int howto)
 	close_vfs();
 	switch (howto) {
 		case RB_HALT_SYSTEM:
-			halt();
+			do_halt();
 			break;
 		case RB_POWEROFF:
-			poweroff();
+			do_poweroff();
 			break;
 		case RB_AUTOBOOT:
-			reboot();
+			do_reboot();
 			break;
 	}
 	return 0;

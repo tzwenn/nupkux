@@ -68,7 +68,7 @@ static void tty_showcusor(tty *atty)
 
 static void print_tty(void)
 {
-	tty *atty=(tty *)current_tty->p_data;
+	tty *atty=(tty *)device_pdata(current_tty);
 
 	if (atty->memlines-atty->viewln<atty->height) {
 		memcpy((char *)VIDEO_MEM,(char *)(atty->mem+atty->viewln*atty->width),(atty->memlines-atty->viewln)*atty->width*sizeof(USHORT));
@@ -221,7 +221,7 @@ static void tty_interpret_escape(tty *atty) //According to http://en.wikipedia.o
 int tty_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
 	size_t i=size;
-	tty *atty=(tty *)node->p_data;
+	tty *atty=(tty *)device_pdata(node);
 
 	atty->viewln=atty->scrln;
 	while (i--) {
@@ -290,7 +290,7 @@ int tty_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 static int tty_read(fs_node *node, off_t offset, size_t size, char *buffer)
 {
 	size_t i=size;
-	tty *atty=(tty *)node->p_data;
+	tty *atty=(tty *)device_pdata(node);
 	while (i) {
 		sti(); //FIXME: Just delete it
 		if (atty->in_e!=atty->in_s) {
@@ -304,10 +304,10 @@ static int tty_read(fs_node *node, off_t offset, size_t size, char *buffer)
 	return size;
 }
 
-static void tty_free_p_data(fs_node *node)
+static void tty_free_pdata(fs_node *node)
 {
-	free(((tty *)(node->p_data))->mem);
-	free(node->p_data);
+	free(((tty *)device_pdata(node))->mem);
+	free(device_pdata(node));
 }
 
 static int tty_ioctl(fs_node *node, UINT cmd, ULONG arg)
@@ -339,7 +339,7 @@ static tty *create_tty(int nr)
 static node_operations tty_ops = {
 		read: &tty_read,
 		write: &tty_write,
-		free_p_data: &tty_free_p_data,
+		free_pdata: &tty_free_pdata,
 		ioctl: &tty_ioctl,
 };
 
@@ -359,12 +359,13 @@ int setup_tty(fs_node *devfs) // Also replaces ktextio stuff with tty0
 
 	ttys[0]=create_tty(0);
 	current_tty=devfs_register_device(devfs,"tty0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&tty_ops);
-	current_tty->p_data=ttys[0];
+	set_device_pdata(current_tty,ttys[0]);
 	ttys[0]->node=current_tty;
 	for (i=1;i<NR_TTYS;i++) {
 		sprintf(name,"tty%d",i);
 		node=devfs_register_device(devfs,name,0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&tty_ops);
-		node->p_data=ttys[i]=create_tty(i);
+		ttys[i]=create_tty(i);
+		set_device_pdata(node,ttys[i]);
 		ttys[i]->node=node;
 	}
 	memcpy(ttys[0]->mem,(char *)VIDEO_MEM,ttys[0]->width*ttys[0]->height*sizeof(USHORT));

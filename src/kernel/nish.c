@@ -207,16 +207,35 @@ static int nish_cd(int argc, char *argv[])
 
 static int nish_test(int argc, char **argv)
 {
-	printf("---Pause test---\n");
-	static pid_t waiting_task = 0;
-	if (!waiting_task) {
-		printf("You say goodbye ... \n");
-		waiting_task=current_task->pid;
-		sys_pause();
-		printf("... and I say hello!\n");
-	} else sys_kill(waiting_task,SIGCONT);
+	printf("---Floppy test---\n");
+	fs_node *fd0=namei("/dev/fd0"), *ttyS0=namei("/dev/ttyS0");
+	device_t *dev;
+	char *buf=malloc(512);
+	UINT i,j;
+	static int use = 0;
+
+	dev=device_discr(fd0);
+	if (!use) {
+		use=1;
+		printf("/dev/fd0 will be send to /dev/ttyS0\n");
+		for (j=0;j<dev->bcount;j++) {
+			request_fs(fd0,REQUEST_READ,j,1,buf);
+			write_fs(ttyS0,0,512,buf);
+		}
+		use=0;
+	} else {
+		printf("Print MBR of /dev/fd0\n");
+		request_fs(fd0,REQUEST_READ,0,1,buf);
+		for (i=0;i<512;i++)
+			printf("%.2X",buf[i]);
+	}
+	free(buf);
+	printf("Finished\n");
 	return 1;
 }
+
+static char nish_buf[STRLEN] = {0,};
+static int buf_pos=0;
 
 static int _nish_interpret(char *str)
 {
@@ -226,6 +245,8 @@ static int _nish_interpret(char *str)
 	for (i=0;i<MAX_ARGS;i++)
 		argv[i]=calloc(STRLEN,sizeof(char));
 	argc=split_to_argv(str,argv);
+	memset(nish_buf,0,STRLEN);
+	buf_pos=0;
 	if (!strcmp(argv[0],"test")) ret=nish_test(argc,argv);
 		else if (!strcmp(argv[0],"clear")) ret=printf("\e[2J\e[H");
 		else if (!strcmp(argv[0],"ls")) ret=nish_ls(argc,argv);
@@ -243,20 +264,14 @@ static int _nish_interpret(char *str)
 	return ret;
 }
 
-static char nish_buf[STRLEN] = {0,};
-static int buf_pos=0;
-
 static int nish_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 {
 	if (buf_pos+size+1>STRLEN) size=STRLEN-1-buf_pos;
 	size_t i=size;
 	while (i--) {
 		nish_buf[buf_pos++]=*buffer;
-		if (!*buffer) {
+		if (!*buffer)
 			_nish_interpret(nish_buf);
-			buf_pos=0;
-			memset(nish_buf,0,STRLEN);
-		}
 		buffer++;
 	}
 
