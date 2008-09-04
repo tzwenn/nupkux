@@ -331,7 +331,7 @@ static tty *create_tty(int nr)
 	res->show_cursor=0;
 	res->mem=calloc(res->width*res->memlines,sizeof(USHORT));
 	res->in_e=res->in_s=0;
-	res->echo=1;
+	res->echo=0;
 	res->node=0;
 	return res;
 }

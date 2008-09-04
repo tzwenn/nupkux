@@ -25,7 +25,7 @@
 char *sh_gets(char *buf)
 {
 	int i=0;
-	printf("\e[?25h\e[e");
+	printf("\e[?25h");
 	for (;;) {
 		buf[i]=getchar();
 		switch (buf[i]) {
@@ -35,15 +35,19 @@ char *sh_gets(char *buf)
 				break;
 			case '\b':
 				i-=2;
-				if (i<0) i=0;
+				if (i>=-1) printf("\b");
+				if (i<0) i=-1;
 				break;
 			case '\t':
+				break;
+			default:
+				printf("%c",buf[i]);
 				break;
 		}
 		i++;
 	}
 end:
-	printf("\e[?25l\e[0e");
+	printf("\n\e[?25l");
 	return buf;
 
 }
