@@ -205,33 +205,11 @@ static int nish_cd(int argc, char *argv[])
 	return 1;
 }
 
+extern int do_vfs_test(int argc, char **argv);
+
 static int nish_test(int argc, char **argv)
 {
-	printf("---Floppy test---\n");
-	fs_node *fd0=namei("/dev/fd0"), *ttyS0=namei("/dev/ttyS0");
-	device_t *dev;
-	char *buf=malloc(512);
-	UINT i,j;
-	static int use = 0;
-
-	dev=device_discr(fd0);
-	if (!use) {
-		use=1;
-		printf("/dev/fd0 will be send to /dev/ttyS0\n");
-		for (j=0;j<dev->bcount;j++) {
-			request_fs(fd0,REQUEST_READ,j,1,buf);
-			write_fs(ttyS0,0,512,buf);
-		}
-		use=0;
-	} else {
-		printf("Print MBR of /dev/fd0\n");
-		request_fs(fd0,REQUEST_READ,0,1,buf);
-		for (i=0;i<512;i++)
-			printf("%.2X",buf[i]);
-	}
-	free(buf);
-	printf("Finished\n");
-	return 1;
+	return do_vfs_test(argc,argv);
 }
 
 static char nish_buf[STRLEN] = {0,};
