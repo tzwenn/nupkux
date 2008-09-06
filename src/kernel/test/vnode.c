@@ -20,12 +20,13 @@
 #include "vfs.h"
 #include <mm.h>
 
-static vnode *create_empty_inode(super_block *sb)
+static vnode *create_empty_inode(super_block *sb, ULONG ino)
 {
 	vnode *res=calloc(1,sizeof(vnode));
 	res->sb=sb;
-	node->ino=ino;
-	sb->s_op->read_inode(node); //TODO: Error checking
+	res->ino=ino;
+	res->dev=sb->dev;
+	sb->s_op->read_inode(res); //TODO: Error checking
 	res->cache_next=sb->cache;
 	sb->cache=res;
 	return res;
@@ -54,7 +55,7 @@ vnode *iget(super_block *sb, ULONG ino)
 		node=node->cache_next;
 	}
 	if (!sb->s_op) return 0;
-	return create_empty_inode(sb);
+	return create_empty_inode(sb,ino);
 }
 
 void iput(vnode *node)
