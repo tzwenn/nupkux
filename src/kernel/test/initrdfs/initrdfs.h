@@ -22,6 +22,7 @@
 
 #include "../vfs.h"
 
+#define INITRD_FILENAME_LEN	64
 #define INITRD_MAGIC		0x54494E49
 
 typedef struct _initrd_header
@@ -43,10 +44,19 @@ typedef struct _initrd_inode
 	UINT size;
 } initrd_inode;
 
+typedef struct _initrd_d_entry
+{
+	UINT inode;
+	char filename[INITRD_FILENAME_LEN];
+
+} initrd_d_entry;
+
 typedef struct _initrd_discr {
 	char *location;
 	initrd_header *initrdheader;
 	initrd_inode *initrd_inodes;
 } initrd_discr;
+
+extern inode_operations initrd_i_ops;
 
 #endif

@@ -23,13 +23,29 @@
 #define _VFS_H
 
 #include <time.h>
+#include <task.h>
 
 /*
  * I've decided to create an (poorly) interface resembling the Linux-VFS
  * as found at http://www.cse.unsw.edu.au/~neilb/oss/linux-commentary/vfs.htm
  */
 
-#define DNAME_INLINE_LEN 16
+#define FS_FILE		0x01
+#define FS_DIRECTORY	0x02
+#define FS_CHARDEVICE	0x03
+#define FS_BLOCKDEVICE	0x04
+#define FS_PIPE		0x05
+#define FS_SYMLINK 	0x06
+#define FS_MOUNTPOINT	0x08
+
+#define IS_REG2(NODE)	((NODE->flags&0x7)==FS_FILE)
+#define IS_DIR2(NODE)	((NODE->flags&0x7)==FS_DIRECTORY)
+#define IS_CHR2(NODE)	((NODE->flags&0x7)==FS_CHARDEVICE)
+#define IS_BLK2(NODE)	((NODE->flags&0x7)==FS_BLOCKDEVICE)
+#define IS_PIP2(NODE)	((NODE->flags&0x7)==FS_PIPE)
+#define IS_LNK2(NODE)	((NODE->flags&0x7)==FS_SYMLINK)
+#define IS_MNT2(NODE)	(NODE->mount)
+#define IS_MNTED2(NODE)	(NODE->cover)
 
 typedef struct _super_operations super_operations;
 typedef struct _inode_operations inode_operations;
@@ -37,6 +53,10 @@ typedef struct _file_operations file_operations;
 typedef struct _vnode vnode;
 typedef struct _filesystem_t filesystem_t;
 typedef struct _super_block super_block;
+typedef int (*filldir_t)(void *,const char *,int,off_t,ULONG,UINT);
+
+typedef UINT device_t; // To use this I have to include devfs.h and would mix up my code with old-vfs stuff
+typedef UINT FILE2;
 
 struct _super_operations {
 	void (*read_inode) (vnode *);
@@ -44,7 +64,7 @@ struct _super_operations {
 	void (*put_inode) (vnode *);
 	void (*put_super) (super_block *);
 	void (*write_super) (super_block *);
-	int (*remount_fs) (super_block *, int *, char *);
+	int (*remount_fs) (super_block *,int *,char *);
 };
 
 struct _inode_operations {
@@ -57,15 +77,19 @@ struct _inode_operations {
 	int (*mkdir) (vnode *,const char *,int);
 	int (*rmdir) (vnode *,const char *);
 	int (*rename) (vnode *,const char *,vnode *,const char *);
-	vnode *(*follow_link) (vnode *,const char *);
+	vnode *(*follow_link) (vnode *,const char *); //Maybe we should use resolve_link
 
 };
 
 struct _file_operations {
-
+	int (*open) (vnode *,FILE2 *);
+	int (*read) (vnode *,off_t,size_t,char *);
+	int (*write) (vnode *,off_t,size_t,const char *);
+	int (*readdir) (struct file *, void *, filldir_t);
+	int (*close) (vnode *);
+	int (*ioctl)(vnode *,UINT,ULONG);
+	int (*request)(vnode *,int,ULONG,ULONG,char *);
 };
-
-typedef UINT device_t; // To use this I have to include devfs.h and would mix up my code with old-vfs stuff
 
 struct _vnode {
 	ULONG ino;
@@ -119,6 +143,9 @@ struct _filesystem_t {
 extern int init_vfs(void);
 extern int register_filesystem(filesystem_t *fs);
 extern int unregister_filesystem(filesystem_t *fs);
+
+extern int namei_match(const char *s1, const char *s2);
+extern vnode *namei_v2(const char *filename, int *status);
 
 extern vnode *iget(super_block *sb, ULONG ino);
 extern void iput(vnode *node);

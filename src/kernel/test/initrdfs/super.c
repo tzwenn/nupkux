@@ -20,6 +20,7 @@
 #include "initrdfs.h"
 #include <unistd.h>
 #include <mm.h>
+#include <kernel/ktextio.h>
 
 static super_block *read_initrd_sb(super_block *sb, void *data, int verbose);
 
@@ -42,6 +43,7 @@ static void initrd_read_inode(vnode *node) //dev, sb, ino set
 	node->mode=itnode.mode;
 	node->nlinks=1;
 	node->size=itnode.size;
+	node->i_op=&initrd_i_ops;
 }
 
 static void initrd_put_super(super_block *sb)
@@ -64,5 +66,6 @@ static super_block *read_initrd_sb(super_block *sb, void *data, int verbose)
 	discr->initrdheader=(initrd_header *)discr->location;
 	discr->initrd_inodes=(initrd_inode *)(discr->location+sizeof(initrd_header));
 	sb->u.pdata=discr;
+	sb->root=iget(sb,0);
 	return sb;
 }

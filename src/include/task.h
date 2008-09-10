@@ -31,7 +31,7 @@
 #define TASK_ZOMBIE		5
 
 #define ROOT_UID	0
-#define I_AM_ROOT()	(!current_task->uid || !current_task->euid)
+#define I_AM_ROOT()	(!(current_task->uid && current_task->euid))
 
 #define NR_TASKS	64
 #define NO_TASK		(-1)

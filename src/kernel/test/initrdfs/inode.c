@@ -17,55 +17,41 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "vfs.h"
+#include "initrdfs.h"
 #include <lib/string.h>
-#include <errno.h>
 
-static filesystem_t *filesystems = 0;
-vnode *root_vnode = 0;
-
-filesystem_t *vfs_get_fs(const char *name)
+static int initrd_open(vnode *node, FILE2 *file)
 {
-	filesystem_t *fs=filesystems;
+	node->nlinks++;
+	return 0;
+}
 
-	if (!name) return 0;
-	while (fs) {
-		if (!strcmp(fs->name,name)) break;
-		fs=fs->next;
+static int initrd_close(vnode *node)
+{
+	node->nlinks--;
+	return 0;
+}
+
+static vnode *initrd_lookup(vnode *dir,const char *name)
+{
+	initrd_discr *discr = (initrd_discr *) dir->sb->u.pdata;
+	if (dir->ino>discr->initrdheader->inodecount) return 0;
+	initrd_inode inode=discr->initrd_inodes[dir->ino];
+	initrd_d_entry *entries = (initrd_d_entry *) (inode.offset+discr->location);
+	UINT i = inode.size/sizeof(initrd_d_entry);
+	while (i--) {
+		if (namei_match(name,entries[i].filename))
+			return iget(dir->sb,entries[i].inode);
 	}
-	return fs;
-}
-
-int init_vfs(void)
-{
 	return 0;
 }
 
-int register_filesystem(filesystem_t *fs)
-{
-	if (!fs) return -EINVAL;
-	if (fs->next || vfs_get_fs(fs->name)) return -EBUSY;
-	fs->next=filesystems;
-	filesystems=fs;
-	return 0;
-}
+static file_operations initrd_f_ops = {
+		open: &initrd_open,
+		close: &initrd_close,
+};
 
-int unregister_filesystem(filesystem_t *fs)
-{
-	filesystem_t *prev=0, *tmp=filesystems;
-
-	if (!fs || !fs->name) return -EINVAL;
-	while (tmp) {
-		if (!strcmp(fs->name,tmp->name)) break;
-		prev=tmp;
-		tmp=tmp->next;
-	}
-	if (!tmp) return -EINVAL;
-	if (!prev) filesystems=filesystems->next;
-		else {
-			prev->next=tmp->next;
-			tmp->next=0;
-		}
-	return 0;
-}
-
+inode_operations initrd_i_ops = {
+		f_ops: &initrd_f_ops,
+		lookup: &initrd_lookup,
+};

@@ -28,7 +28,7 @@ typedef struct _vfsmount vfsmount;
 #endif
 
 struct _vfsmount {
-	//device_t dev
+	device_t dev;
 	const char *devname;
 	const char *dirname;
 	UINT flags;
@@ -39,5 +39,7 @@ struct _vfsmount {
 extern int sys_mount(	const char *source, const char *target,
 			const char *filesystemtype, unsigned long mountflags,
 			void *data);
+
+extern int sys_umount(const char *target);
 
 #endif

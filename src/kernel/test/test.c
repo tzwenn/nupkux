@@ -21,17 +21,29 @@
 
 #include "vfs.h"
 #include "initrdfs/initrdfs.h"
+#include "mount.h"
 #include <unistd.h>
 #include <kernel/ktextio.h>
 #include <mm.h>
 
+extern vnode *root_vnode;
+
+extern UINT initrd_location;
 extern filesystem_t initrd_fs_type;
 
 int do_vfs_test(int argc, char **argv)
 {
+	vnode *node=0;
+
 	init_vfs();
 	register_filesystem(&initrd_fs_type);
-
+	sys_mount("initrd","/","initrdfs",0,(char *)initrd_location);
+	if (argc>=2) node=namei_v2(argv[1],0);
+	if (node) {
+		printf("%s has inode %d\n",argv[1],node->ino);
+		iput(node);
+	}
+	sys_umount("/");
 	unregister_filesystem(&initrd_fs_type);
 	return 1;
 }

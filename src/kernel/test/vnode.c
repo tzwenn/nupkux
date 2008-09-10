@@ -26,6 +26,7 @@ static vnode *create_empty_inode(super_block *sb, ULONG ino)
 	res->sb=sb;
 	res->ino=ino;
 	res->dev=sb->dev;
+	res->count=1;
 	sb->s_op->read_inode(res); //TODO: Error checking
 	res->cache_next=sb->cache;
 	sb->cache=res;
@@ -51,10 +52,13 @@ vnode *iget(super_block *sb, ULONG ino)
 	if (!sb) return 0;
 	vnode *node=sb->cache;
 	while (node) {
-		if (node->ino==ino) return node;
+		if (node->ino==ino) {
+			node->count++;
+			return node;
+		}
 		node=node->cache_next;
 	}
-	if (!sb->s_op) return 0;
+	if (!sb->s_op || !sb->s_op->read_inode) return 0;
 	return create_empty_inode(sb,ino);
 }
 
