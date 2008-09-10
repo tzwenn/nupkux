@@ -57,6 +57,4 @@ typedef struct _initrd_discr {
 	initrd_inode *initrd_inodes;
 } initrd_discr;
 
-extern inode_operations initrd_i_ops;
-
 #endif

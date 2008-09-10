@@ -18,12 +18,30 @@
  */
 
 #include "initrdfs.h"
-#include <lib/string.h>
+#include <errno.h>
 
 static int initrd_open(vnode *node, FILE2 *file)
 {
 	node->nlinks++;
 	return 0;
+}
+
+static int initrd_read(vnode *node, off_t offset, size_t size, char *buffer)
+{
+	initrd_discr *discr = (initrd_discr *) node->sb->u.pdata;
+	if (node->ino>discr->initrdheader->inodecount) return 0;
+	initrd_inode inode = discr->initrd_inodes[node->ino];
+	if (offset>inode.size)
+		return 0;
+	if (offset+size>inode.size)
+		size=inode.size-offset;
+	memcpy(buffer,(UCHAR*)(inode.offset+offset+discr->location),size);
+	return size;
+}
+
+static int initrd_write(vnode *node, off_t offset, size_t size, const char *buffer)
+{
+	return -EINVAL;
 }
 
 static int initrd_close(vnode *node)
@@ -48,10 +66,12 @@ static vnode *initrd_lookup(vnode *dir,const char *name)
 
 static file_operations initrd_f_ops = {
 		open: &initrd_open,
+		read: &initrd_read,
+		write: &initrd_write,
 		close: &initrd_close,
 };
 
 inode_operations initrd_i_ops = {
-		f_ops: &initrd_f_ops,
+		f_op: &initrd_f_ops,
 		lookup: &initrd_lookup,
 };

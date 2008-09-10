@@ -20,7 +20,8 @@
 #include "initrdfs.h"
 #include <unistd.h>
 #include <mm.h>
-#include <kernel/ktextio.h>
+
+extern inode_operations initrd_i_ops;
 
 static super_block *read_initrd_sb(super_block *sb, void *data, int verbose);
 

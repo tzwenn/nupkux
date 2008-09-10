@@ -26,9 +26,11 @@
 #include <task.h>
 
 /*
- * I've decided to create an (poorly) interface resembling the Linux-VFS
+ * I've decided to create an (poor) interface resembling the Linux-VFS
  * as found at http://www.cse.unsw.edu.au/~neilb/oss/linux-commentary/vfs.htm
  */
+
+#define MNT_FLAG_REQDEV	0x01
 
 #define FS_FILE		0x01
 #define FS_DIRECTORY	0x02
@@ -68,7 +70,7 @@ struct _super_operations {
 };
 
 struct _inode_operations {
-	file_operations *f_ops;
+	file_operations *f_op;
 	int (*create) (vnode *,const char *,int);
 	vnode *(*lookup) (vnode *,const char *);
 	int (*link) (vnode *,vnode *,const char *);
@@ -140,9 +142,10 @@ struct _filesystem_t {
 	filesystem_t *next;
 };
 
-extern int init_vfs(void);
+extern int setup_vfs_v2(void);
 extern int register_filesystem(filesystem_t *fs);
 extern int unregister_filesystem(filesystem_t *fs);
+extern int close_vfs_v2(void);
 
 extern int namei_match(const char *s1, const char *s2);
 extern vnode *namei_v2(const char *filename, int *status);

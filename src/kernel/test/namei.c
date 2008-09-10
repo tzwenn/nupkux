@@ -53,6 +53,7 @@ int namei_match(const char *s1, const char *s2)
 static vnode *getdentry(vnode *node, const char *filename, int *status)
 {
 	vnode *newnode;
+	node->count++;
 	if (IS_MNT2(node)) {
 		newnode=node->mount;
 		iput(node);
@@ -108,7 +109,6 @@ vnode *namei_v2(const char *filename, int *status)
 	const char *basename;
 	node=root_vnode; //TODO: Open pwd/root (!node)
 	if (filename[0]=='/') filename++;
-	node->count++;
 	if (!(node=igetdir(node,filename,&basename,&len,status)))
 		return 0;
 	if (status) *status=0;

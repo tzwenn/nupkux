@@ -34,16 +34,27 @@ extern filesystem_t initrd_fs_type;
 int do_vfs_test(int argc, char **argv)
 {
 	vnode *node=0;
+	char *buf;
+	int i;
 
-	init_vfs();
+	setup_vfs_v2();
 	register_filesystem(&initrd_fs_type);
 	sys_mount("initrd","/","initrdfs",0,(char *)initrd_location);
-	if (argc>=2) node=namei_v2(argv[1],0);
+	sys_mount("initrd","/mnt","initrdfs",0,(char *)initrd_location);
+	if (argc>=2) node=namei_v2(argv[1],&i);
+	printf("---\e[32mStart\e[m---\n\n");
 	if (node) {
-		printf("%s has inode %d\n",argv[1],node->ino);
+		buf=malloc(node->size);
+		node->i_op->f_op->read(node,0,node->size,buf);
+		for (i=0;i<node->size;i++)
+			_kputc(buf[i]);
+		free(buf);
 		iput(node);
-	}
+	} else printf("%s: not found (errno=%d)\n",argv[1],-i);
+	sys_umount("/mnt");
+	printf("\n---\e[32mFinished!\e[m---\n");
 	sys_umount("/");
 	unregister_filesystem(&initrd_fs_type);
+	close_vfs_v2();
 	return 1;
 }

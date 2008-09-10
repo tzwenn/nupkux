@@ -47,6 +47,17 @@ static void free_inode(vnode *node)
 	free(node);
 }
 
+void free_sb_inodes(super_block *sb)
+{
+	if (!sb) return;
+	vnode *node=sb->cache,*tmp;
+	while (node) {
+		tmp=node->cache_next;
+		free(node);
+		node=tmp;
+	}
+}
+
 vnode *iget(super_block *sb, ULONG ino)
 {
 	if (!sb) return 0;
