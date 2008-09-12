@@ -20,12 +20,6 @@
 #include "initrdfs.h"
 #include <errno.h>
 
-static int initrd_open(vnode *node, FILE2 *file)
-{
-	node->nlinks++;
-	return 0;
-}
-
 static int initrd_read(vnode *node, off_t offset, size_t size, char *buffer)
 {
 	initrd_discr *discr = (initrd_discr *) node->sb->u.pdata;
@@ -44,12 +38,6 @@ static int initrd_write(vnode *node, off_t offset, size_t size, const char *buff
 	return -EINVAL;
 }
 
-static int initrd_close(vnode *node)
-{
-	node->nlinks--;
-	return 0;
-}
-
 static vnode *initrd_lookup(vnode *dir,const char *name)
 {
 	initrd_discr *discr = (initrd_discr *) dir->sb->u.pdata;
@@ -65,10 +53,8 @@ static vnode *initrd_lookup(vnode *dir,const char *name)
 }
 
 static file_operations initrd_f_ops = {
-		open: &initrd_open,
 		read: &initrd_read,
 		write: &initrd_write,
-		close: &initrd_close,
 };
 
 inode_operations initrd_i_ops = {

@@ -23,7 +23,8 @@
 #define _VFS_H
 
 #include <time.h>
-#include <task.h>
+#include <mm.h>
+//#include <task.h>
 
 /*
  * I've decided to create an (poor) interface resembling the Linux-VFS
@@ -57,7 +58,7 @@ typedef struct _filesystem_t filesystem_t;
 typedef struct _super_block super_block;
 typedef int (*filldir_t)(void *,const char *,int,off_t,ULONG,UINT);
 
-typedef UINT device_t; // To use this I have to include devfs.h and would mix up my code with old-vfs stuff
+typedef UINT device_t;
 typedef UINT FILE2;
 
 struct _super_operations {
@@ -87,7 +88,7 @@ struct _file_operations {
 	int (*open) (vnode *,FILE2 *);
 	int (*read) (vnode *,off_t,size_t,char *);
 	int (*write) (vnode *,off_t,size_t,const char *);
-	int (*readdir) (struct file *, void *, filldir_t);
+	//int (*readdir) (struct file *, void *, filldir_t);
 	int (*close) (vnode *);
 	int (*ioctl)(vnode *,UINT,ULONG);
 	int (*request)(vnode *,int,ULONG,ULONG,char *);

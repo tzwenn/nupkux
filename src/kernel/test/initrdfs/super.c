@@ -18,7 +18,6 @@
  */
 
 #include "initrdfs.h"
-#include <unistd.h>
 #include <mm.h>
 
 extern inode_operations initrd_i_ops;

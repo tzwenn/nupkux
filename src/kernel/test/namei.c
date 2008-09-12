@@ -21,6 +21,7 @@
 #include <lib/string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <task.h>
 
 extern vnode *root_vnode;
 
@@ -50,19 +51,19 @@ int namei_match(const char *s1, const char *s2)
 	return 1;
 }
 
-static vnode *getdentry(vnode *node, const char *filename, int *status)
+static vnode *getdentry(vnode *node, const char *filename, int *status, int frommount)
 {
 	vnode *newnode;
 	node->count++;
-	if (IS_MNT2(node)) {
+	if (IS_MNT2(node) && !frommount) {
 		newnode=node->mount;
 		iput(node);
-		return getdentry(newnode,filename,status);
+		return getdentry(newnode,filename,status,0);
 	}
 	if (IS_MNTED2(node) && namei_match(filename,"..")) {
 		newnode=node->cover;
 		iput(node);
-		return getdentry(newnode,filename,status);
+		return getdentry(newnode,filename,status,1);
 	}
 	if (!node->i_op || !node->i_op->lookup) {
 		if (status) *status=-EGENERIC;
@@ -83,8 +84,8 @@ static vnode *getdentry(vnode *node, const char *filename, int *status)
 		return 0;
 	}
 	newnode=node->i_op->lookup(node,filename);
-	iput(node);
 	if (status) *status=(newnode)?0:-ENOENT;
+	iput(node);
 	return newnode;
 }
 
@@ -94,7 +95,7 @@ static vnode *igetdir(vnode *node, const char *filename, const char **name, int 
 	int len;
 	while ((pos=strchr(filename,'/'))) {
 		if ((len=pos-filename))
-			if (!(node=getdentry(node,filename,status))) return 0;
+			if (!(node=getdentry(node,filename,status,0))) return 0;
 		filename=pos+1;
 	}
 	if (name) *name=filename;
@@ -113,5 +114,5 @@ vnode *namei_v2(const char *filename, int *status)
 		return 0;
 	if (status) *status=0;
 	if (!len) return node; // we ended with '/' (p.e. "/bin/")
-	return getdentry(node,basename,status);
+	return getdentry(node,basename,status,0);
 }

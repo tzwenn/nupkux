@@ -20,6 +20,7 @@
 #include "mount.h"
 #include <mm.h>
 #include <errno.h>
+#include <task.h>
 
 extern filesystem_t *vfs_get_fs(const char *name);
 extern void free_sb_inodes(super_block *sb);
@@ -61,19 +62,33 @@ int sys_mount(	const char *source, const char *target,
 	int status;
 	vnode *mountpoint=namei_v2(target,&status);
 	if (!mountpoint) return status;
+	vnode *dev=0;
 	if (type->flags&MNT_FLAG_REQDEV) {
-		/* Devicestuff goes here */
+		dev=namei_v2(source,&status);
+		if (!dev) {
+			iput(mountpoint);
+			return status;
+		}
+		/* Devicestuff goes here: open/request */
 	}
 	vfsmount *mnt=calloc(1,sizeof(vfsmount));
 	super_block *sb=calloc(1,sizeof(super_block));
-	//TODO: Open dev and link it in mnt, sb
 	mnt->devname=source;
 	mnt->dirname=target;
 	mnt->flags=mountflags;
+	//sb->dev=dev;
 	sb->flags=mountflags;
 	sb->mi=mnt;
 	sb->type=type;
 	mnt->sb=type->read_super(sb,data,0);
+	if (!sb) {
+		free(mnt);
+		free(sb);
+		iput(mountpoint);
+		//close Device
+		iput(dev);
+		return -EINVAL;
+	}
 	d_mount(mnt);
 	mountpoint->mount=sb->root;
 	sb->root->cover=mountpoint;
@@ -99,6 +114,8 @@ int sys_umount(const char *target)
 	 * FIXME: I've to be sure, no inodes are in the cache any
 	 * more, so the device isn't busy
 	 */
+	//Close device
+	//iput(sb->dev);
 	free_sb_inodes(sb);
 	d_umount(sb);
 	free(sb);

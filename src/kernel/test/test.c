@@ -25,11 +25,23 @@
 #include <unistd.h>
 #include <kernel/ktextio.h>
 #include <mm.h>
+#include "devfs/devfs.h"
 
 extern vnode *root_vnode;
 
 extern UINT initrd_location;
 extern filesystem_t initrd_fs_type;
+extern filesystem_t devfs_fs_type;
+
+static int test_read(vnode *node, off_t offset, size_t size, char *buffer)
+{
+	memset(buffer,'A',size);
+	return size;
+}
+
+file_operations ops = {
+		read: &test_read,
+};
 
 int do_vfs_test(int argc, char **argv)
 {
@@ -40,19 +52,25 @@ int do_vfs_test(int argc, char **argv)
 	setup_vfs_v2();
 	register_filesystem(&initrd_fs_type);
 	sys_mount("initrd","/","initrdfs",0,(char *)initrd_location);
-	sys_mount("initrd","/mnt","initrdfs",0,(char *)initrd_location);
-	if (argc>=2) node=namei_v2(argv[1],&i);
+	register_filesystem(&devfs_fs_type);
+	sys_mount("devfs","/dev","devfs",0,0);
+	devfs_handle *test=devfs_register_device_v2(NULL,"test",664,0,0,FS_CHARDEVICE,&ops);
 	printf("---\e[32mStart\e[m---\n\n");
+	if (argc>=2) node=namei_v2(argv[1],&i);
 	if (node) {
-		buf=malloc(node->size);
-		node->i_op->f_op->read(node,0,node->size,buf);
-		for (i=0;i<node->size;i++)
-			_kputc(buf[i]);
-		free(buf);
+		if (node->i_op && node->i_op->f_op && node->i_op->f_op->read) {
+			buf=malloc(node->size);
+			node->i_op->f_op->read(node,0,node->size,buf);
+			for (i=0;i<node->size;i++)
+				_kputc(buf[i]);
+			free(buf);
+		} else printf("File does not support reading!\n");
 		iput(node);
 	} else printf("%s: not found (errno=%d)\n",argv[1],-i);
-	sys_umount("/mnt");
 	printf("\n---\e[32mFinished!\e[m---\n");
+	devfs_unregister_device_v2(test);
+	sys_umount("/dev");
+	unregister_filesystem(&devfs_fs_type);
 	sys_umount("/");
 	unregister_filesystem(&initrd_fs_type);
 	close_vfs_v2();
