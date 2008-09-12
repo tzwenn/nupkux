@@ -85,6 +85,11 @@ void devfs_unregister_device_v2(devfs_handle *device)
 	devfs_del_from_cache(device);
 }
 
+static void devfs_dir_free_pdata(void *pdata)
+{
+	free(pdata);
+}
+
 file_operations devfs_dir_fop = {
-		0,
+		free_pdata: &devfs_dir_free_pdata,
 };

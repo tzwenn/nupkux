@@ -44,6 +44,7 @@ static void initrd_read_inode(vnode *node) //dev, sb, ino set
 	node->nlinks=1;
 	node->size=itnode.size;
 	node->i_op=&initrd_i_ops;
+	node->u.initrdfs_i=&(discr->initrd_inodes[itnode.inode]);
 }
 
 static void initrd_put_super(super_block *sb)
@@ -58,6 +59,7 @@ static super_operations initrd_s_ops = {
 
 static super_block *read_initrd_sb(super_block *sb, void *data, int verbose)
 {
+	if (*(UINT*)data!=INITRD_MAGIC) return 0;
 	sb->s_op=&initrd_s_ops;
 	sb->blocksize=1;
 	sb->blocksize_bits=0;

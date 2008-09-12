@@ -24,7 +24,6 @@
 
 #include <time.h>
 #include <mm.h>
-//#include <task.h>
 
 /*
  * I've decided to create an (poor) interface resembling the Linux-VFS
@@ -56,9 +55,23 @@ typedef struct _file_operations file_operations;
 typedef struct _vnode vnode;
 typedef struct _filesystem_t filesystem_t;
 typedef struct _super_block super_block;
-typedef int (*filldir_t)(void *,const char *,int,off_t,ULONG,UINT);
 
-typedef UINT device_t;
+#ifndef _INITRD_INODE
+#define _INITRD_INODE
+typedef struct _initrd_inode initrd_inode;
+#endif
+
+#ifndef _DEVFS_HANDLE
+#define _DEVFS_HANDLE
+typedef struct _devfs_handle devfs_handle;
+#endif
+
+#ifndef _VFSMOUNT
+#define _VFSMOUNT
+typedef struct _vfsmount vfsmount;
+#endif
+
+
 typedef UINT FILE2;
 
 struct _super_operations {
@@ -88,10 +101,11 @@ struct _file_operations {
 	int (*open) (vnode *,FILE2 *);
 	int (*read) (vnode *,off_t,size_t,char *);
 	int (*write) (vnode *,off_t,size_t,const char *);
-	//int (*readdir) (struct file *, void *, filldir_t);
+	//int (*readdir) (vnode *, off_t, struct dirent *);
 	int (*close) (vnode *);
-	int (*ioctl)(vnode *,UINT,ULONG);
-	int (*request)(vnode *,int,ULONG,ULONG,char *);
+	int (*ioctl) (vnode *,UINT,ULONG);
+	int (*request) (vnode *,int,ULONG,ULONG,char *);
+	void (*free_pdata) (void *);
 };
 
 struct _vnode {
@@ -104,10 +118,12 @@ struct _vnode {
 	UINT flags;
 	size_t size;
 	time_t atime,mtime,ctime;
-	device_t *dev;
+	vnode *dev;
 	super_block *sb;
 	inode_operations *i_op;
 	union {
+		devfs_handle *devfs_i;
+		initrd_inode *initrdfs_i;
 		void *pdata;
 	} u;
 	// VFS-only
@@ -116,13 +132,8 @@ struct _vnode {
 	vnode *cache_next;
 };
 
-#ifndef _VFSMOUNT
-#define _VFSMOUNT
-typedef struct _vfsmount vfsmount;
-#endif
-
 struct _super_block {
-	device_t *dev;
+	vnode *dev;
 	int flags;
 	filesystem_t *type;
 	super_operations *s_op;

@@ -28,7 +28,6 @@ typedef struct _vfsmount vfsmount;
 #endif
 
 struct _vfsmount {
-	device_t dev;
 	const char *devname;
 	const char *dirname;
 	UINT flags;

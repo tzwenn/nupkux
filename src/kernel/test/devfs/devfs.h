@@ -24,7 +24,10 @@
 
 #define DEVFS_FILENAME_LEN	16
 
+#ifndef _DEVFS_HANDLE
+#define _DEVFS_HANDLE
 typedef struct _devfs_handle devfs_handle;
+#endif
 
 struct _devfs_handle {
 	/* VFS */

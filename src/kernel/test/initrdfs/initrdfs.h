@@ -25,6 +25,11 @@
 #define INITRD_FILENAME_LEN	64
 #define INITRD_MAGIC		0x54494E49
 
+#ifndef _INITRD_INODE
+#define _INITRD_INODE
+typedef struct _initrd_inode initrd_inode;
+#endif
+
 typedef struct _initrd_header
 {
 	UINT magic;
@@ -33,7 +38,7 @@ typedef struct _initrd_header
 } initrd_header;
 
 
-typedef struct _initrd_inode
+struct _initrd_inode
 {
 	UINT inode;
 	UINT offset;
@@ -42,7 +47,7 @@ typedef struct _initrd_inode
 	UINT uid;
 	UCHAR flags;
 	UINT size;
-} initrd_inode;
+};
 
 typedef struct _initrd_d_entry
 {

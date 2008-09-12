@@ -23,8 +23,7 @@
 static int initrd_read(vnode *node, off_t offset, size_t size, char *buffer)
 {
 	initrd_discr *discr = (initrd_discr *) node->sb->u.pdata;
-	if (node->ino>discr->initrdheader->inodecount) return 0;
-	initrd_inode inode = discr->initrd_inodes[node->ino];
+	initrd_inode inode = *(node->u.initrdfs_i);
 	if (offset>inode.size)
 		return 0;
 	if (offset+size>inode.size)
@@ -41,8 +40,7 @@ static int initrd_write(vnode *node, off_t offset, size_t size, const char *buff
 static vnode *initrd_lookup(vnode *dir,const char *name)
 {
 	initrd_discr *discr = (initrd_discr *) dir->sb->u.pdata;
-	if (dir->ino>discr->initrdheader->inodecount) return 0;
-	initrd_inode inode=discr->initrd_inodes[dir->ino];
+	initrd_inode inode = *(dir->u.initrdfs_i);
 	initrd_d_entry *entries = (initrd_d_entry *) (inode.offset+discr->location);
 	UINT i = inode.size/sizeof(initrd_d_entry);
 	while (i--) {

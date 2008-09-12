@@ -76,7 +76,7 @@ int sys_mount(	const char *source, const char *target,
 	mnt->devname=source;
 	mnt->dirname=target;
 	mnt->flags=mountflags;
-	//sb->dev=dev;
+	sb->dev=dev;
 	sb->flags=mountflags;
 	sb->mi=mnt;
 	sb->type=type;

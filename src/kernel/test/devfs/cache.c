@@ -29,6 +29,7 @@ void devfs_add_to_cache(devfs_handle *handle)
 
 void devfs_del_from_cache(devfs_handle *handle)
 {
+	if (!handle) return;
 	devfs_handle *tmp=cache,*prev=0;
 	while (tmp) {
 		if (handle==tmp) break;
@@ -37,7 +38,8 @@ void devfs_del_from_cache(devfs_handle *handle)
 	}
 	if (!prev) cache=handle->cache_next;
 		else prev->cache_next=handle->cache_next;
-	if (IS_DIR2(handle)) free(handle->pdata); //Other devices?
+	if (handle->f_op && handle->f_op->free_pdata)
+		handle->f_op->free_pdata(handle->pdata);
 	free(handle);
 }
 
@@ -56,7 +58,8 @@ void devfs_free_cache(void)
 	devfs_handle *tmp;
 	while (cache) {
 		tmp=cache->cache_next;
-		if (IS_DIR2(cache)) free(cache->pdata);
+		if (cache->f_op && cache->f_op->free_pdata)
+			cache->f_op->free_pdata(cache->pdata);
 		free(cache);
 		cache=tmp;
 	}

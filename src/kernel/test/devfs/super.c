@@ -50,7 +50,7 @@ void devfs_handle2vnode(vnode *node, devfs_handle *handle)
 	node->i_op=&devfs_i_ops;
 	node->i_op->f_op=handle->f_op;
 	handle->node=node;
-	node->u.pdata=handle;
+	node->u.devfs_i=handle;
 }
 
 static devfs_handle *devfs_empty_dir(ULONG ino, ULONG parent)
@@ -82,7 +82,7 @@ static void devfs_read_inode(vnode *node)
 static void devfs_put_inode(vnode *node)
 {
 	if (node->count==1)
-		((devfs_handle *)node->u.pdata)->node=0;
+		node->u.devfs_i->node=0;
 }
 
 static void devfs_put_super(super_block *sb)

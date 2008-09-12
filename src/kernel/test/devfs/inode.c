@@ -21,7 +21,7 @@
 
 static vnode *devfs_lookup(vnode *dir,const char *name)
 {
-	devfs_handle *handle = (devfs_handle *) (dir->u.pdata);
+	devfs_handle *handle = dir->u.devfs_i;
 	if (!handle) return 0;
 	devfs_d_entry *entries = handle->pdata;
 	UINT i = dir->size/sizeof(devfs_d_entry);
