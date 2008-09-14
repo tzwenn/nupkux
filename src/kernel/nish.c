@@ -30,7 +30,11 @@
 
 #define MAX_ARGS	16
 
-extern int init(void);
+static int nish_write(vnode *node, off_t offset, size_t size, const char *buffer);
+
+static file_operations nish_ops = {
+		write: &nish_write,
+};
 
 static int ltrim(char *cmd)
 {
@@ -69,7 +73,7 @@ static int _nish_split_par(char *cmd, char *args)
 	return 0;
 }
 
-int split_to_argv(char *str, char *argv[])
+static int split_to_argv(char *str, char *argv[])
 { //I've done something with strtok() but it didn't work
 	if (!str) return -1;
 	if (!*str) return 0;
@@ -87,7 +91,7 @@ int split_to_argv(char *str, char *argv[])
 	return i;
 }
 
-static void format_mode(fs_node *node, char *output)
+static void format_mode(vnode *node, char *output)
 {
 	strcpy(output,"??????????");
 
@@ -144,48 +148,52 @@ static int nish_time(void)
 
 static int nish_cat(int argc, char *argv[])
 {
-	fs_node *node;
+	vnode *node;
 	char *buf;
 	UINT i;
 
 	if (argc==1) return 1;
-	node=namei(argv[1]);
+	node=namei(argv[1],0);
 	if (node) {
-		open_fs(node,1,0);
+		open_fs(node,0);
 		buf=(char *)malloc(node->size);
 		read_fs(node,0,node->size,buf);
 		for (i=0;i<node->size;i++)
 			_kputc(buf[i]);
 		free(buf);
 		close_fs(node);
+		iput(node);
 	} else printf("Error: Cannot find file %s.\n",argv[1]);
 	return 1;
 }
 
 static int nish_ls(int argc, char *argv[])
 {
-	fs_node *node, *tmp;
+	vnode *node, *tmp;
 	UINT i;
 	char the_mode[11];
-	struct dirent *pDirEnt;
+	struct dirent DirEnt;
 
-	if (argc==1) node=current_task->pwd;
-		else node=namei(argv[1]);
+	if (argc==1)  {
+		node=current_task->pwd;
+		node->count++;
+	} else node=namei(argv[1],0);
 	if (node) {
 		i=0;
 		printf("Inode\tMode\t\tUID\tGID\tSize\tName\n");
-		if ((node->flags&0x7)!=FS_DIRECTORY) {
+		if (!IS_DIR(node)) {
 			tmp=node;
 			format_mode(tmp,the_mode);
-			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,argv[1]);
-		} else while ((pDirEnt=readdir_fs(node,i++))) {
-			if (pDirEnt->d_name[0]=='.') continue;
-			tmp=finddir_fs(node,pDirEnt->d_name);
-			format_mode(tmp,the_mode);
-			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->inode,the_mode,tmp->uid,tmp->gid,tmp->size,pDirEnt->d_name);
+			printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->ino,the_mode,tmp->uid,tmp->gid,tmp->size,argv[1]);
+		}  else while (!readdir_fs(node,i++,&DirEnt)) {
+				if (DirEnt.d_name[0]=='.') continue;
+				tmp=node->i_op->lookup(node,DirEnt.d_name); //also stat
+				format_mode(tmp,the_mode);
+				printf("%d\t%s\t%d\t%d\t%d\t%s\n",tmp->ino,the_mode,tmp->uid,tmp->gid,tmp->size,DirEnt.d_name);
+				iput(tmp);
 		}
+		iput(node);
 	} else printf("Error: Could not find file %s.\n",argv[1]);
-
 	return 1;
 }
 
@@ -205,11 +213,12 @@ static int nish_cd(int argc, char *argv[])
 	return 1;
 }
 
-extern int do_vfs_test(int argc, char **argv);
+
 
 static int nish_test(int argc, char **argv)
 {
-	return do_vfs_test(argc,argv);
+	printf("---Nothing tested---\n");
+	return 1;
 }
 
 static char nish_buf[STRLEN] = {0,};
@@ -242,7 +251,7 @@ static int _nish_interpret(char *str)
 	return ret;
 }
 
-static int nish_write(fs_node *node, off_t offset, size_t size, const char *buffer)
+static int nish_write(vnode *node, off_t offset, size_t size, const char *buffer)
 {
 	if (buf_pos+size+1>STRLEN) size=STRLEN-1-buf_pos;
 	size_t i=size;
@@ -256,15 +265,46 @@ static int nish_write(fs_node *node, off_t offset, size_t size, const char *buff
 	return size;
 }
 
-static node_operations nish_ops = {
-		write: &nish_write,
-};
+static void _kgets(char *buf,int maxlen)
+{
+	int status;
+	vnode *node=namei("/dev/tty0",&status);
+	if (!node) {
+		printf("Error reading: %d!\n",-status);
+		for (;;);
+	}
+	int i=0;
+	printf("\e[?25h");
+	for (;;) {
+		read_fs(node,0,1,buf+i);
+		switch (buf[i]) {
+			case '\n':
+				buf[i]='\0';
+				goto end;
+				break;
+			case '\b':
+				i-=2;
+				if (i>=-1) printf("\b");
+				if (i<0) i=-1;
+				break;
+			case '\t':
+				break;
+			default:
+				_kputc(buf[i]);
+				break;
+		}
+		i++;
+	}
+end:
+	printf("\n\e[?25l");
+	iput(node);
+}
 
 int nish()
 {
-	devfs_register_device(namei("/dev"),"nish",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&nish_ops);
+	devfs_register_device(NULL,"nish",0660,1234,FS_GID_ROOT,FS_CHARDEVICE,&nish_ops);
 	return 0;
-	/*char input[STRLEN];
+	char input[STRLEN];
 	int ret;
 
 	printf("\nNupkux intern shell (nish) started.\nType \"help\" for a list of built-in commands.\n\n");
@@ -275,5 +315,5 @@ int nish()
 		ret=_nish_interpret(input);
 		if ((ret & 0xF0)==0xE0) break;
 	}
-	return ret;*/
+	return ret;
 }

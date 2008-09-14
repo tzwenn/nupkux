@@ -33,13 +33,14 @@
 #define TTY_ESCAPE_CHR(C)	(TTY_ESCAPE_END(C) || (C)==';' || (C)=='?' || is_digit(C))
 
 static UCHAR ansi_col_map[8] = {TTY_COL_BLACK,TTY_COL_RED,TTY_COL_GREEN,TTY_COL_BROWN,TTY_COL_BLUE,TTY_COL_MAGENTA,TTY_COL_CYAN,TTY_COL_GRAY};
-fs_node *current_tty = 0;
-extern int (*ktexto)(fs_node *,off_t,size_t,const char*);
+devfs_handle *current_tty = 0; //TODO: Change to tty*
+extern int (*ktexto)(devfs_handle *,off_t,size_t,const char*);
 extern tty_cursor _cursor_pos;
 extern void irq_tty_keyboard(registers *regs);
 
 tty *ttys[NR_TTYS] = {0,};
 
+extern int printf(const char *fmt, ...);
 extern int sprintf(char *str, const char *fmt, ...);
 
 static int atoi(const char *str)
@@ -218,10 +219,11 @@ static void tty_interpret_escape(tty *atty) //According to http://en.wikipedia.o
 	}
 }
 
-int tty_write(fs_node *node, off_t offset, size_t size, const char *buffer)
+static int do_tty_write(devfs_handle *handle, off_t offset, size_t size, const char *buffer)
 {
+	if (!handle) return -EINVAL;
 	size_t i=size;
-	tty *atty=(tty *)device_pdata(node);
+	tty *atty=(tty *)device_pdata(handle);
 
 	atty->viewln=atty->scrln;
 	while (i--) {
@@ -283,14 +285,20 @@ int tty_write(fs_node *node, off_t offset, size_t size, const char *buffer)
 		}
 		buffer++;
 	}
-	if (node==current_tty) print_tty();
+	if (handle==current_tty) print_tty();
 	return size;
 }
 
-static int tty_read(fs_node *node, off_t offset, size_t size, char *buffer)
+int tty_write(vnode *node, off_t offset, size_t size, const char *buffer)
+{
+	if (node->ino==13) printf("Stupid!");
+	return do_tty_write(device_discr(node),offset,size,buffer);
+}
+
+static int tty_read(vnode *node, off_t offset, size_t size, char *buffer)
 {
 	size_t i=size;
-	tty *atty=(tty *)device_pdata(node);
+	tty *atty=(tty *)devicen_pdata(node);
 	while (i) {
 		sti(); //FIXME: Just delete it
 		if (atty->in_e!=atty->in_s) {
@@ -304,13 +312,13 @@ static int tty_read(fs_node *node, off_t offset, size_t size, char *buffer)
 	return size;
 }
 
-static void tty_free_pdata(fs_node *node)
+static void tty_free_pdata(void *data)
 {
-	free(((tty *)device_pdata(node))->mem);
-	free(device_pdata(node));
+	free(((tty *)data)->mem);
+	free(data);
 }
 
-static int tty_ioctl(fs_node *node, UINT cmd, ULONG arg)
+static int tty_ioctl(vnode *node, UINT cmd, ULONG arg)
 {
 	return -ENOTTY;
 }
@@ -332,45 +340,45 @@ static tty *create_tty(int nr)
 	res->mem=calloc(res->width*res->memlines,sizeof(USHORT));
 	res->in_e=res->in_s=0;
 	res->echo=0;
-	res->node=0;
+	res->dev=NULL;
 	return res;
 }
 
-static node_operations tty_ops = {
+static file_operations tty_ops = {
 		read: &tty_read,
 		write: &tty_write,
 		free_pdata: &tty_free_pdata,
 		ioctl: &tty_ioctl,
 };
 
-fs_node *set_current_tty(int nr)
+devfs_handle *set_current_tty(int nr)
 {
 	if (nr<0 || nr>=NR_TTYS || !ttys[nr]) return 0;
-	current_tty=ttys[nr]->node;
+	current_tty=ttys[nr]->dev;
 	print_tty();
 	return current_tty;
 }
 
-int setup_tty(fs_node *devfs) // Also replaces ktextio stuff with tty0
+int setup_tty(void) // Also replaces ktextio stuff with tty0
 {
 	int i;
-	char name[6];
-	fs_node *node;
+	char name[16];
+	devfs_handle *dev;
 
 	ttys[0]=create_tty(0);
-	current_tty=devfs_register_device(devfs,"tty0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&tty_ops);
+	current_tty=devfs_register_device(NULL,"tty0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&tty_ops);
 	set_device_pdata(current_tty,ttys[0]);
-	ttys[0]->node=current_tty;
+	ttys[0]->dev=current_tty;
 	for (i=1;i<NR_TTYS;i++) {
-		sprintf(name,"tty%d",i);
-		node=devfs_register_device(devfs,name,0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&tty_ops);
 		ttys[i]=create_tty(i);
-		set_device_pdata(node,ttys[i]);
-		ttys[i]->node=node;
+		sprintf(name,"tty%d",i);
+		dev=devfs_register_device(NULL,name,0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&tty_ops);
+		set_device_pdata(dev,ttys[i]);
+		ttys[i]->dev=dev;
 	}
 	memcpy(ttys[0]->mem,(char *)VIDEO_MEM,ttys[0]->width*ttys[0]->height*sizeof(USHORT));
 	ttys[0]->cursor=_cursor_pos;
-	ktexto=tty_write;
+	ktexto=do_tty_write;
 	register_interrupt_handler(IRQ1,&irq_tty_keyboard);
 	return 0;
 }

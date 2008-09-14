@@ -57,13 +57,13 @@ typedef struct _tty {
 	UCHAR nr: 5;
 	USHORT width,height,memlines,viewln,scrln,esc_ind,attr;
 	USHORT *mem,in_s,in_e;
-	fs_node *node;
+	devfs_handle *dev;
 	tty_cursor cursor,_cursor;
 	USHORT input_buffer[TTY_INBUF_LEN];
 	char escape_seq[TTY_ESCAPE_LEN];
 } tty;
 
-extern int setup_tty(fs_node *devfs);
-extern fs_node *set_current_tty(int nr);
+extern int setup_tty(void);
+extern devfs_handle *set_current_tty(int nr);
 
 #endif

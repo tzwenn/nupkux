@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007,2008 Sven Köhler
+ *  Copyright (C) 2008 Sven Köhler
  *
  *  This file is part of Nupkux.
  *
@@ -17,14 +17,18 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _INITRD_H
-#define _INITRD_H
+#ifndef _INITRDFS_H
+#define _INITRDFS_H
 
-#include <kernel.h>
-#include <fs/fs.h>
+#include <fs/vfs.h>
 
 #define INITRD_FILENAME_LEN	64
 #define INITRD_MAGIC		0x54494E49
+
+#ifndef _INITRD_INODE
+#define _INITRD_INODE
+typedef struct _initrd_inode initrd_inode;
+#endif
 
 typedef struct _initrd_header
 {
@@ -34,7 +38,7 @@ typedef struct _initrd_header
 } initrd_header;
 
 
-typedef struct _initrd_inode
+struct _initrd_inode
 {
 	UINT inode;
 	UINT offset;
@@ -43,7 +47,7 @@ typedef struct _initrd_inode
 	UINT uid;
 	UCHAR flags;
 	UINT size;
-} initrd_inode;
+};
 
 typedef struct _initrd_d_entry
 {
@@ -52,16 +56,10 @@ typedef struct _initrd_d_entry
 
 } initrd_d_entry;
 
-typedef struct _initrd_discr
-{
-	UINT location;
+typedef struct _initrd_discr {
+	char *location;
 	initrd_header *initrdheader;
 	initrd_inode *initrd_inodes;
-	UINT initrd_inode_count;
-	fs_node *nodes, *root;
 } initrd_discr;
-
-extern fs_node *setup_initrd(UINT location, fs_node *mountpoint);
-extern UINT remove_initrd(fs_node *node);
 
 #endif

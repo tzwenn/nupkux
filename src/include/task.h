@@ -56,7 +56,7 @@ struct _task
 	USHORT gid, egid;
 	int exit_code;
 	UINT signals;
-	fs_node *pwd,*root;
+	vnode *pwd,*root;
 	ULONG close_on_exec;
 	FILE *files[NR_OPEN];
 };

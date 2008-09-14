@@ -141,6 +141,8 @@ pid_t sys_fork()
 		if (newtask->files[i])
 			newtask->files[i]->count++;
 	}
+	if (current_task->pwd) current_task->pwd->count++;
+	if (current_task->root) current_task->root->count++;
 	current_task->kernel_stack=_kmalloc_a(KERNEL_STACK_SIZE);
 	UINT eip=read_eip();
 	if (current_task==parent_task) {

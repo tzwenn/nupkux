@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007,2008 Sven Köhler
+ *  Copyright (C) 2008 Sven Köhler
  *
  *  This file is part of Nupkux.
  *
@@ -17,42 +17,121 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <fs/fs.h>
+#include <fs/vfs.h>
 #include <lib/string.h>
+#include <errno.h>
+#include <unistd.h>
 #include <task.h>
 
-fs_node *namei(const char *filename)
-{
-	//TODO: Permissioncheck
-	//Maybe a IS_DIR-Makro?
-	char sname[NODE_NAME_LEN],*token,*ptr;
-	fs_node *node;
+extern vnode *root_vnode;
 
-	if (!filename) return 0;
-	if (!current_task || !(current_task->pwd)) node=get_root_fs_node();
-		else node=current_task->pwd;
-	if (filename[0]=='/') {
-		node=get_root_fs_node();
-		filename++;
+static int node_permission(vnode *node, int mask)
+{
+	int mode = node->mode;
+
+	if (I_AM_ROOT()) mode=0777;
+		else if (current_task->uid==node->uid || current_task->euid==node->uid)	mode >>= 6;
+		else if (current_task->gid==node->gid || current_task->egid==node->gid)	mode >>= 3;
+
+	return mode & mask & 0007;
+}
+
+static inline int is_end_chr(char chr)
+{
+	return (!chr || chr=='/');
+}
+
+int namei_match(const char *s1, const char *s2)
+{
+	if ((!s1) || (!s2)) return 0;
+	while (!is_end_chr(*s1) && !is_end_chr(*s2)) {
+		if (*s1++!=*s2++) return 0;
 	}
-	if (!filename) return 0;
-	strcpy(sname,filename);
-	token=strtok_save(sname,"/",&ptr);
-	while (token) {
-		if (!strcmp(token,"..")) {
-			if (node==get_root_fs_node()) {
-				token=strtok_save(0,"/",&ptr);
-				continue;
-			}
-			if (node==node->mi->root && node->mi->parent_dir) {
-				node=node->mi->parent_dir;
-				token=strtok_save(0,"/",&ptr);
-				continue;
-			}
-		}
-		node=resolve_node(finddir_fs(node,token));
-		if (!node) return 0;
-		token=strtok_save(0,"/",&ptr);
+	if (is_end_chr(*s1)!=is_end_chr(*s2)) return 0;
+	return 1;
+}
+
+static inline vnode *resolve_mount(vnode *node)
+{
+	vnode *newnode;
+	newnode=node->mount;
+	iput(node);
+	return newnode;
+}
+
+static vnode *getdentry(vnode *node, const char *filename, int *status, int frommount)
+{
+	vnode *newnode;
+	node->count++;
+	if (IS_MNT(node) && !frommount)
+		return getdentry(resolve_mount(node),filename,status,0);
+	if (IS_MNTED(node) && namei_match(filename,"..")) {
+		newnode=node->cover;
+		iput(node);
+		return getdentry(newnode,filename,status,1);
 	}
+	if (!node->i_op || !node->i_op->lookup) {
+		if (status) *status=-EGENERIC;
+		iput(node);
+		return 0;
+	}
+	/*
+	 * TODO: Symlinks go here
+	 */
+	if (!IS_DIR(node)) {
+		if (status) *status=-ENOTDIR;
+		iput(node);
+		return 0;
+	}
+	if (!node_permission(node,X_OK)) {
+		if (status) *status=-EACCES;
+		iput(node);
+		return 0;
+	}
+	newnode=node->i_op->lookup(node,filename);
+	if (status) *status=(newnode)?0:-ENOENT;
+	iput(node);
+	if (IS_MNT(newnode)) {
+		node=newnode->mount;
+		node->count++;
+		iput(newnode);
+		return node;
+	}
+	return newnode;
+}
+
+static vnode *igetdir(vnode *node, const char *filename, const char **name, int *length, int *status)
+{
+	const char *pos;
+	int len;
+	while ((pos=strchr(filename,'/'))) {
+		if ((len=pos-filename))
+			if (!(node=getdentry(node,filename,status,0))) return 0;
+		filename=pos+1;
+	}
+	if (name) *name=filename;
+	if (length) *length=strlen(filename);
 	return node;
+}
+
+vnode *namei(const char *filename, int *status)
+{
+	if (!filename || !*filename) {
+		if (status) *status=-ENOENT;
+		return 0;
+	}
+	vnode *node = 0;
+	int len;
+	const char *basename;
+	if (filename[0]=='/') {
+		node=current_task->root;
+		filename++;
+	} else node=current_task->pwd;
+	if (!node) node=root_vnode;
+	if (!(node=igetdir(node,filename,&basename,&len,status)))
+		return 0;
+	if (status) *status=0;
+	if (!len)  // we ended with '/' (p.e. "/bin/")
+		return node;
+	return getdentry(node,basename,status,0);
 }

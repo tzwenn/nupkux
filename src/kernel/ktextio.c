@@ -24,11 +24,11 @@
 #include <lib/string.h>
 #include <drivers/tty.h>
 
-extern fs_node *current_tty;
+extern devfs_handle *current_tty;
 
 static int _ksetcursor(UCHAR x, UCHAR y);
-static int _kout(fs_node *node, off_t offset, size_t size, const char *output);
-int (*ktexto)(fs_node *,off_t,size_t,const char*) = _kout;
+static int _kout(devfs_handle *handle, off_t offset, size_t size, const char *output);
+int (*ktexto)(devfs_handle *,off_t,size_t,const char*) = _kout;
 
 tty_cursor _cursor_pos;
 
@@ -111,7 +111,7 @@ static int _kiomove(int x, int y, int len)
 	return 0;
 }
 
-static int _kout(fs_node *node, off_t offset, size_t size, const char *output)
+static int _kout(devfs_handle *handle, off_t offset, size_t size, const char *output)
 {
 	UCHAR x = _cursor_pos.x, y = _cursor_pos.y;
 	int i;

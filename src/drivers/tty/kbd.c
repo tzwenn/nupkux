@@ -25,7 +25,7 @@
 
 #define KEYBD_PORT	0x60
 
-extern fs_node *current_tty;
+extern devfs_handle *current_tty;
 extern keymap_t german_keymap;
 keymap_t *keymap=&german_keymap;
 
@@ -45,7 +45,7 @@ static void create_key_state(void)
 	if (ctrl)	key_state=5;
 }
 
-extern int tty_write(fs_node *node, off_t offset, size_t size, const char *buffer);
+extern int tty_write(vnode *node, off_t offset, size_t size, const char *buffer);
 
 static void handle_key(UCHAR *scan_code, USHORT *key, int up)
 {

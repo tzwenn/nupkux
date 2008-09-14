@@ -84,10 +84,11 @@ int sys_execve(const char *file,const char **argv,const char **envp)
 	if (!access_ok(VERIFY_READ,file,VERIFY_STRLEN)) return -EFAULT;
 	char *buf;
 	UINT entry,stack,fd=NR_OPEN;
-	fs_node *node=namei(file);
+	int status;
+	vnode *node=namei(file,&status);
 
-	if (!node) return -ENOENT;
-	open_fs(node,1,0);
+	if (!node) return status;
+	open_fs(node,NULL);
 	buf=malloc(node->size);
 	read_fs(node,0,node->size,buf);
 	close_fs(node);

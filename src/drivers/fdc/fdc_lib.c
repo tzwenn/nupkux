@@ -260,7 +260,7 @@ UINT fdc_read_block(int block,char *blockbuff, ULONG nosectors)
 	return fdc_rw(block,blockbuff,1,nosectors);
 }
 
-static int floppy_request(fs_node *node, int cmd, ULONG sector, ULONG count, char *buffer)
+static int floppy_request(vnode *node, int cmd, ULONG sector, ULONG count, char *buffer)
 {
 	if (sector>=FLOPPY_SECTOR_COUNT) return -EINVAL;
 	device_lock(node);
@@ -278,16 +278,16 @@ static int floppy_request(fs_node *node, int cmd, ULONG sector, ULONG count, cha
 	return count;
 }
 
-node_operations floppy_ops = {
+file_operations floppy_ops = {
 		request: floppy_request,};
 
-void setup_floppy(fs_node *devfs)
+void setup_floppy(void)
 {
 	outportb(0x70,0x10);
 	if (!inportb(0x71)) return;
 	register_interrupt_handler(IRQ6,FloppyIRQ);
 	reset();
-	device_t *dev=device_discr(devfs_register_device(devfs,"fd0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_BLOCKDEVICE,&floppy_ops));
+	devfs_handle *dev=devfs_register_device(NULL,"fd0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_BLOCKDEVICE,&floppy_ops);
 	dev->bcount=FLOPPY_SECTOR_COUNT;
 	dev->bsize=FLOPPY_SECTOR_SIZE;
 }

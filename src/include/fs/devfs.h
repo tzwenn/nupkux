@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007,2008 Sven Köhler
+ *  Copyright (C) 2008 Sven Köhler
  *
  *  This file is part of Nupkux.
  *
@@ -20,31 +20,55 @@
 #ifndef _DEVFS_H
 #define _DEVFS_H
 
-#include <kernel.h>
-#include <fs/fs.h>
+#include <fs/vfs.h>
+#include <task.h>
 
-#define DEVFS_INODE_FREE	0xFFFFFFFF
-#define DEVFS_INODE_LINK	0xFFFFFFFE
 #define DEVFS_FILENAME_LEN	16
-#define DEVFS_INODES_PER_BLOCK	32
+
+#ifndef _DEVFS_HANDLE
+#define _DEVFS_HANDLE
+typedef struct _devfs_handle devfs_handle;
+#endif
+
+typedef struct _request request_t;
+
+struct _request {
+	pid_t pid;
+	request_t *next;
+};
+
+struct _devfs_handle {
+	/* VFS */
+	ULONG ino;
+	UCHAR nlinks;
+	USHORT uid;
+	USHORT gid;
+	UINT mode;
+	UINT flags;
+	size_t size;
+	/* Driver */
+	void *pdata;
+	request_t *queue;
+	UINT bsize;   // Blocksize
+	ULONG bcount; // Blockcount if blk-dev
+	file_operations *f_op;
+	/* DevFS */
+	devfs_handle *cache_next, *parent;
+	vnode *node;
+};
 
 typedef struct _devfs_d_entry
 {
-	UINT inode;
-	char filename[DEVFS_FILENAME_LEN];
+	ULONG inode;
+	char filename[DEVFS_FILENAME_LEN+1];
 } devfs_d_entry;
 
-typedef struct _devfs_discr
-{
-	fs_node *nodes;  //Here is something special: just a linked list
-	fs_node *root;
-} devfs_discr;
+extern devfs_handle *devfs_register_device(devfs_handle *dir, const char *name, UINT mode, UINT uid, UINT gid, UINT type, file_operations *f_op);
+extern void devfs_unregister_device(devfs_handle *device);
 
-extern fs_node *setup_devfs(fs_node *mountpoint);
-//TODO A seperated mount may be achieved
-extern UINT remove_devfs(fs_node *devfs);
-
-extern fs_node *devfs_register_device(fs_node *dir, const char *name, UINT mode, UINT uid, UINT gid, UINT type, node_operations *f_op);
-extern void devfs_unregister_device(fs_node *device);
+extern void devfs_add_to_cache(devfs_handle *handle);
+extern void devfs_del_from_cache(devfs_handle *handle);
+devfs_handle *devfs_iget(ULONG ino);
+extern void devfs_free_cache(void);
 
 #endif

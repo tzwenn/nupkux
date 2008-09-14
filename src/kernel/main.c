@@ -25,7 +25,7 @@
 #include <time.h>
 #include <task.h>
 #include <mm.h>
-#include <fs/initrd.h>
+#include <fs/initrdfs.h>
 #include <drivers/drivers.h>
 
 char _kabort_func = 0;
@@ -33,12 +33,11 @@ int errno = 0;
 UINT initial_esp = 0;
 char kernel_cmdline[256] = {0,};
 boot_module boot_modules[NR_BOOT_MODULES];
-UINT		boot_modules_count = 0;
+UINT boot_modules_count = 0;
 ULONG memory_end = 0;
 UINT __working_memstart = 0;
-UINT initrd_location = 0;
+static UINT initrd_location = 0;
 extern UINT kmalloc_pos;
-fs_node *root = 0, *devfs = 0;
 
 extern int setup_ACPI(void);
 
@@ -92,6 +91,8 @@ int init(void)
 	return ret;
 }
 
+#include <fs/mount.h>
+
 int _kmain(multiboot_info_t* mbd, UINT magic, UINT initial_stack)
 {
 	read_multiboot_info(mbd);
@@ -110,17 +111,14 @@ int _kmain(multiboot_info_t* mbd, UINT magic, UINT initial_stack)
 	printf("Finished.\nSetup VFS ... ");
 	setup_vfs();
 	printf("Finished.\nMount initrd read-only on root ... ");
-	root=setup_initrd(initrd_location,get_root_fs_node());
-	current_task->pwd=root;
-	if (root) printf("Finished.\n");
+	sys_mount(NULL,"/","initrdfs",0,(void *)initrd_location);
+	current_task->pwd=namei("/.",0);
+	if (current_task->pwd) printf("Finished.\n");
 		else printf("FAILED.\n");
-	if ((devfs=namei("/dev"))) {
-		printf("Populating Devfs ... ");
-		devfs=setup_devfs(devfs);
-		setup_drivers(devfs);
-		if (devfs) printf("Finished.\n");
-			else printf("FAILED.\n");
-	}
+	printf("Populating Devfs ... ");
+	sys_mount(NULL,"/dev","devfs",0,0);
+	setup_drivers();
+	printf("Finished.\n");
 	setup_syscalls();
 	nish();
 	init();

@@ -22,7 +22,6 @@
 #include <kernel/ktextio.h>
 #include <drivers/drivers.h>
 #include <errno.h>
-#include <fs/initrd.h>
 
 #define RB_HALT_SYSTEM	0x01
 #define RB_AUTOBOOT	0x02
@@ -54,7 +53,7 @@ static void do_reboot(void)
 	outportb(0x64,0xFE);
 }
 
-extern fs_node *root, *devfs; //in main.c
+#include <fs/mount.h>
 
 int sys_reboot(int howto)
 {
@@ -62,9 +61,9 @@ int sys_reboot(int howto)
 	//TODO: Send SIGTERM and SIGKILL
 	//FIXME: I unmount devfs and so delete the tty I'm printing on
 	printf("Unmount devfs (/dev) ... \n");
-	remove_devfs(devfs);
+	sys_umount("/dev");
 	printf("Unmount initrd (/) ... \n");
-	remove_initrd(root);
+	sys_umount("/");
 	printf("Close VFS ... \n");
 	close_vfs();
 	switch (howto) {

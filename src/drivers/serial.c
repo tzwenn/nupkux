@@ -67,9 +67,9 @@ static int detect_serial_port(USHORT port)
 	return 1;
 }
 
-static void serial_open(fs_node *node)
+static int serial_open(vnode *node, FILE *f)
 {
-	USHORT port=(USHORT) ((UINT) device_pdata(node));
+	USHORT port=(USHORT) ((UINT) devicen_pdata(node));
 	outportb(port+IER,NO_INTERRUPTS);
 	outportb(port+LCR,SET_DLAB);
 	outportb(port+DL_LO,divisor & 0xFF);
@@ -81,13 +81,13 @@ static void serial_open(fs_node *node)
 	//By now this is my first "real hardware" driver, nupkux is without "real" scheduling
 	//For this reason this is non-interrupt-driven and therefore ugly one
 	//outportb(port+IER,ERBFI);
-	node->nlinks++;
+	return 0;
 }
 
-static int serial_write(fs_node *node, off_t offset, size_t size, const char *buffer)
+static int serial_write(vnode *node, off_t offset, size_t size, const char *buffer)
 {
 	size_t i=size;
-	USHORT port=(USHORT) ((UINT) device_pdata(node));
+	USHORT port=(USHORT) ((UINT) devicen_pdata(node));
 
 	while (i--)  {
 		while (!(inportb(port+LSR)&THRE));
@@ -96,10 +96,10 @@ static int serial_write(fs_node *node, off_t offset, size_t size, const char *bu
 	return size;
 }
 
-static int serial_read(fs_node *node, off_t offset, size_t size, char *buffer)
+static int serial_read(vnode *node, off_t offset, size_t size, char *buffer)
 {
 	size_t i=size;
-	USHORT port=(USHORT) ((UINT) device_pdata(node));
+	USHORT port=(USHORT) ((UINT) devicen_pdata(node));
 
 	while (i--) {
 		while (!inportb(port+LSR)&RBF);
@@ -108,30 +108,30 @@ static int serial_read(fs_node *node, off_t offset, size_t size, char *buffer)
 	return size;
 }
 
-static void serial_close(fs_node *node)
+static int serial_close(vnode *node)
 {
-	USHORT port=(USHORT) ((UINT) device_pdata(node));
+	USHORT port=(USHORT) ((UINT) devicen_pdata(node));
 
 	outportb(port+IER,NO_INTERRUPTS);
 	outportb(port+MCR,0x00);
-	node->nlinks--;
+	return 0;
 }
 
-static node_operations serial_ops = {
+static file_operations serial_ops = {
 		open: &serial_open,
 		read: &serial_read,
 		write: &serial_write,
 		close: &serial_close,
 };
 
-void setup_serial(fs_node *devfs)
+void setup_serial(void)
 {
 	if (detect_serial_port(COM1))
-		set_device_pdata(devfs_register_device(devfs,"ttyS0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM1);
+		set_device_pdata(devfs_register_device(NULL,"ttyS0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM1);
 	if (detect_serial_port(COM2))
-		set_device_pdata(devfs_register_device(devfs,"ttyS1",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM2);
+		set_device_pdata(devfs_register_device(NULL,"ttyS1",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM2);
 	if (detect_serial_port(COM3))
-		set_device_pdata(devfs_register_device(devfs,"ttyS2",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM3);
+		set_device_pdata(devfs_register_device(NULL,"ttyS2",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM3);
 	if (detect_serial_port(COM4))
-		set_device_pdata(devfs_register_device(devfs,"ttyS3",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM4);
+		set_device_pdata(devfs_register_device(NULL,"ttyS3",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM4);
 }

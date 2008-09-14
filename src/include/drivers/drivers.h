@@ -25,32 +25,19 @@
 #include <kernel/syscall.h>
 #include <signal.h>
 
-typedef struct _request request_t;
-
-struct _request {
-	pid_t pid;
-	request_t *next;
-};
-
-typedef struct _device {
-	void *pdata;
-	fs_node *node;
-	request_t *queue;
-	UINT bsize;   // Blocksize
-	ULONG bcount; // Blockcount if blk-dev
-} device_t;
-
 #define REQUEST_READ	0x2EAD
 #define REQUEST_WRITE	0x217E
 
-extern UINT setup_drivers(fs_node *devfs);
+extern UINT setup_drivers(void);
 
-extern inline void *device_pdata(fs_node *node);
-extern inline void set_device_pdata(fs_node *node, void *pdata);
-extern inline device_t *device_discr(fs_node *node);
-extern void device_lock(fs_node *node);
-extern void device_unlock(fs_node *node);
-extern inline pid_t requesting_pid(fs_node *node);
+extern inline void *devicen_pdata(vnode *node);
+//extern inline void set_device_pdata(vnode *node, void *pdata);
+extern inline void *device_pdata(devfs_handle *handle);
+extern inline void set_device_pdata(devfs_handle *handle, void *pdata);
+extern inline devfs_handle *device_discr(vnode *node);
+extern void device_lock(vnode *node);
+extern void device_unlock(vnode *node);
+extern inline pid_t requesting_pid(vnode *node);
 extern inline void outportb(USHORT port, UCHAR value);
 extern inline UCHAR inportb(USHORT port);
 extern inline void outportw(USHORT port, USHORT value);

@@ -64,6 +64,6 @@ typedef struct DrvGeom {
 #define FLOPPY_SECTOR_COUNT	2880
 #define FLOPPY_144IN_SIZE	1474560
 
-extern void setup_floppy(fs_node *devfs);
+extern void setup_floppy(void);
 
 #endif

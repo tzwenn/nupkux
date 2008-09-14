@@ -23,32 +23,38 @@
 #include <mm.h>
 #include <kernel/syscall.h>
 
-extern void setup_pseudo_devices(fs_node *devfs); //pseudo.c
-extern void setup_serial(fs_node *); //serial.c
+extern void setup_pseudo_devices(void); //pseudo.c
+extern void setup_serial(void); //serial.c
 
-inline void *device_pdata(fs_node *node)
+inline void *devicen_pdata(vnode *node)
 {
-	if (!node || !node->pdata) return 0;
-	return ((device_t *)node->pdata)->pdata;
+	if (!node || !node->u.devfs_i) return 0;
+	return node->u.devfs_i->pdata;
 }
 
-inline void set_device_pdata(fs_node *node, void *pdata)
+inline void *device_pdata(devfs_handle *handle)
 {
-	if (node && node->pdata)
-		((device_t *)node->pdata)->pdata=pdata;
+	if (!handle) return 0;
+	return handle->pdata;
 }
 
-inline device_t *device_discr(fs_node *node)
+inline void set_device_pdata(devfs_handle *handle, void *pdata)
+{
+	if (handle)
+		handle->pdata=pdata;
+}
+
+inline devfs_handle *device_discr(vnode *node)
 {
 	if (!node) return 0;
-	return (device_t *)node->pdata;
+	return  node->u.devfs_i;
 }
 
-void device_lock(fs_node *node)
+void device_lock(vnode *node)
 {
-	if (!node || !node->pdata) return;
+	devfs_handle *dev=device_discr(node);
+	if (!dev) return;
 	cli();
-	device_t *dev=(device_t *) node->pdata;
 	request_t *newreq=malloc(sizeof(request_t)), *tmp;
 	newreq->pid=current_task->pid;
 	newreq->next=0;
@@ -62,10 +68,10 @@ void device_lock(fs_node *node)
 	while (dev->queue->pid!=current_task->pid) sys_pause();
 }
 
-void device_unlock(fs_node *node)
+void device_unlock(vnode *node)
 {
-	if (!node || !node->pdata) return;
-	device_t *dev=(device_t *) node->pdata;
+	devfs_handle *dev=device_discr(node);
+	if (!dev) return;
 	request_t *req=dev->queue;
 	if (req->pid!=current_task->pid) return;
 	cli();
@@ -75,9 +81,9 @@ void device_unlock(fs_node *node)
 	if (dev->queue) sys_kill(dev->queue->pid,SIGCONT);
 }
 
-inline pid_t requesting_pid(fs_node *node)
+inline pid_t requesting_pid(vnode *node)
 {
-	device_t *dev=device_discr(node);
+	devfs_handle *dev=device_discr(node);
 	if (!dev || !dev->queue) return -1;
 	return dev->queue->pid;
 }
@@ -108,13 +114,11 @@ inline USHORT inportw(USHORT port)
 	return value;
 }
 
-UINT setup_drivers(fs_node *devfs)
+UINT setup_drivers(void)
 {
-	if (!devfs) return 2;
-
-	setup_pseudo_devices(devfs);
-	setup_tty(devfs);
-	setup_serial(devfs);
-	setup_floppy(devfs);
+	setup_pseudo_devices();
+	setup_tty();
+	setup_serial();
+	setup_floppy();
 	return 0;
 }
