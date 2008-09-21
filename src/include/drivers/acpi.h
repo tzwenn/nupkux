@@ -17,27 +17,38 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <fcntl.h>
-#include <fs/vfs.h>
-#include <task.h>
-#include <kernel/syscall.h>
+#ifndef _ACPI_H
+#define _ACPI_H
 
-int sys_dup2(int fd, int fd2)
-{
-	if (fd<0 || fd>=NR_OPEN || fd2<0 || fd2>=NR_OPEN) return -EBADF;
-	if (!current_task->files[fd]) return -EBADF;
-	sys_close(fd2);
-	current_task->close_on_exec&=~(1<<fd2);
-	current_task->files[fd2]=current_task->files[fd];
-	current_task->files[fd2]->count++;
-	return fd2; //man 2 dup on BSD told me to return 0 here, but Linux returns fd
-}
+#include <drivers/drivers.h>
 
-int sys_dup(int fd)
+struct RSDPtr
 {
-	int fd2;
-	for (fd2=0;fd2<NR_OPEN;fd2++)
-		if (!current_task->files[fd2]) break;
-	if (fd2>=NR_OPEN) return -EMFILE;
-	return sys_dup2(fd,fd2);
-}
+	char Signature[8];
+	char CheckSum;
+	char OemID[6];
+	char Revision;
+	UINT *RsdtAddress;
+};
+
+struct FACP
+{
+	char Signature[4];
+	UINT Length;
+	char unneded1[32];
+	UINT *DSDT;
+	char unneded2[4];
+	UINT *SMI_CMD;
+	char ACPI_ENABLE;
+	char ACPI_DISABLE;
+	char unneded3[10];
+	UINT *PM1a_CNT_BLK;
+	UINT *PM1b_CNT_BLK;
+	char unneded4[17];
+	char PM1_CNT_LEN;
+};
+
+extern void acpiPowerOff(void);
+extern int setup_ACPI(void);
+
+#endif

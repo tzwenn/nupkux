@@ -22,7 +22,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <task.h>
-#include <kernel/ktextio.h>
 
 extern vnode *root_vnode;
 
@@ -52,24 +51,44 @@ int namei_match(const char *s1, const char *s2)
 	return 1;
 }
 
-static inline vnode *resolve_mount(vnode *node)
+static inline vnode *resolve_mount(vnode *node, int *status, int steps)
 {
-	vnode *newnode;
-	newnode=node->mount;
-	iput(node);
-	return newnode;
+	if (IS_MNT(node)) {
+		if (!steps) {
+			if (status) *status=-EMLINK;
+			iput(node);
+			return 0;
+		}
+		vnode *newnode;
+		newnode=node->mount;
+		iput(node);
+		newnode->count++;
+		return resolve_mount(newnode,status,steps--);
+	}
+	return node;
 }
 
 static vnode *getdentry(vnode *node, const char *filename, int *status, int frommount)
 {
 	vnode *newnode;
 	node->count++;
-	if (IS_MNT(node) && !frommount)
-		return getdentry(resolve_mount(node),filename,status,0);
-	if (IS_MNTED(node) && namei_match(filename,"..")) {
-		newnode=node->cover;
-		iput(node);
-		return getdentry(newnode,filename,status,1);
+	if (!frommount)
+		node=resolve_mount(node,status,MOUNT_MAX);
+	if (!node) return 0;
+	if (namei_match(filename,"."))
+		return node;
+	if (namei_match(filename,"..")) {
+		if (IS_MNTED(node)) {
+			newnode=node->cover;
+			iput(node);
+			return getdentry(newnode,filename,status,1);
+		}
+		current_task->root->count++;
+		if (node==(newnode=resolve_mount(current_task->root,status,MOUNT_MAX))) {
+			iput(newnode);
+			return node;
+		}
+		iput(newnode);
 	}
 	/*
 	 * TODO: Symlinks go here
@@ -93,11 +112,7 @@ static vnode *getdentry(vnode *node, const char *filename, int *status, int from
 	if (status) *status=(newnode)?0:-ENOENT;
 	iput(node);
 	if (!newnode) return 0;
-	if (IS_MNT(newnode)) {
-		newnode=resolve_mount(newnode);
-		newnode->count++;
-	}
-	return newnode;
+	return resolve_mount(newnode,status,MOUNT_MAX);
 }
 
 static vnode *igetdir(vnode *node, const char *filename, const char **name, int *length, int *status)
@@ -111,15 +126,12 @@ static vnode *igetdir(vnode *node, const char *filename, const char **name, int 
 	if (!*filename) {
 		if (length) *length=0;
 		node->count++;
-		if (IS_MNT(node)) {
-			node=resolve_mount(node);
-			node->count++;
-		}
-		return node;
+		return resolve_mount(node,status,MOUNT_MAX);
 	}
 	while ((pos=strchr(filename,'/'))) {
-		if ((len=pos-filename))
+		if ((len=pos-filename)) {
 			if (!(node=getdentry(node,filename,status,0))) return 0;
+		} else if (!(node=getdentry(node,".",status,0))) return 0;
 		filename=pos+1;
 	}
 	if (name) *name=filename;

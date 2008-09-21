@@ -26,9 +26,8 @@
 #include <task.h>
 #include <mm.h>
 #include <fs/initrdfs.h>
-#include <drivers/drivers.h>
+#include <drivers/acpi.h>
 
-char _kabort_func = 0;
 int errno = 0;
 UINT initial_esp = 0;
 char kernel_cmdline[256] = {0,};
@@ -38,8 +37,6 @@ ULONG memory_end = 0;
 UINT __working_memstart = 0;
 static UINT initrd_location = 0;
 extern UINT kmalloc_pos;
-
-extern int setup_ACPI(void);
 
 static void read_multiboot_info(multiboot_info_t* mbd)
 {

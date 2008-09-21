@@ -17,8 +17,6 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file contains stuff related to the new virtual filesystem */
-
 #ifndef _VFS_H
 #define _VFS_H
 
@@ -78,6 +76,9 @@ typedef struct _vfsmount vfsmount;
 
 #define FMODE_READ              1
 #define FMODE_WRITE             2
+
+#define MOUNT_MAX	16
+#define LINK_MAX	16
 
 struct dirent {
 	ULONG d_ino;

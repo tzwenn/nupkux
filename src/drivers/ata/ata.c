@@ -17,12 +17,12 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <time.h>
 #include <drivers/ata.h>
+#include <kernel/syscall.h>
 
 int lba28_init(USHORT controller, UCHAR drive, UINT addr, UCHAR sectorcount)
 {
-	while ((inportb(controller + ATA_CHK2) & 0x80)) {_kabort_func_return(0)};
+	while ((inportb(controller + ATA_CHK2) & 0x80)) sys_pause();
 	outportb(controller | ATA_FEAT,0x00);
 	outportb(controller | ATA_SECS,sectorcount);
 	outportb(controller | ATA_SNUM,(UCHAR) addr);
@@ -57,7 +57,7 @@ int lba28_read(UCHAR* buf, USHORT controller, UCHAR drive, UINT addr, UCHAR sect
 	if ((drive!=ATA_MASTER) && (drive!=ATA_SLAVE)) return 0;
 	if (!lba28_init(controller,drive,addr,sectorcount)) return 0;
 	outportb(controller | ATA_CMD,ATA_READ_CMD);
-	while (!(inportb(controller | ATA_CMD) & 0x08)) {_kabort_func_return(0)};
+	while (!(inportb(controller | ATA_CMD) & 0x08)) sys_pause();
 	for (i=0;i<256*(sectorcount+1);i++) {
 		value=inportw(controller);
 		buf[i*2]=(UCHAR) (value & 0xFF);
@@ -76,7 +76,7 @@ int lba28_write(UCHAR* buf, USHORT controller, UCHAR drive, UINT addr, UCHAR sec
 	if ((drive!=ATA_MASTER) && (drive!=ATA_SLAVE)) return 0;
 	if (!lba28_init(controller,drive,addr,sectorcount)) return 0;
 	outportb(controller | ATA_CMD,ATA_WRITE_CMD);
-	while (!(inportb(controller | ATA_CMD) & 0x08)) {_kabort_func_return(0)};
+	while (!(inportb(controller | ATA_CMD) & 0x08)) sys_pause();
 	for (i=0;i<256*(sectorcount+1);i++) {
 		value=buf[i*2];
 		value|=buf[i*2+1] << 8;

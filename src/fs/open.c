@@ -18,7 +18,7 @@
  */
 
 #include <task.h>
-#include <fs/fs.h>
+#include <fs/vfs.h>
 #include <errno.h>
 #include <fcntl.h>
 

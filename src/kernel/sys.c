@@ -20,14 +20,12 @@
 #include <task.h>
 #include <time.h>
 #include <kernel/ktextio.h>
-#include <drivers/drivers.h>
+#include <drivers/acpi.h>
 #include <errno.h>
 
 #define RB_HALT_SYSTEM	0x01
 #define RB_AUTOBOOT	0x02
 #define RB_POWEROFF	0x04
-
-extern void acpiPowerOff(void);
 
 static void do_halt(void)
 {

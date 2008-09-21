@@ -18,7 +18,6 @@
  */
 
 #include <drivers/drivers.h>
-#include <kernel/ktextio.h>
 
 //A REALLY good source: http://www.nondot.org/sabre/os/files/Communication/ser_port.txt
 

@@ -36,6 +36,12 @@ char *mem = (char *) VIDEO_MEM_ENTRY;
 
 extern int vsprintf(char *buf, const char *fmt, va_list args);
 
+int sys_putchar(char chr)
+{
+	_kputc(chr);
+	return chr;
+}
+
 int printf(const char *fmt, ...)
 {
 	char str[STRLEN];

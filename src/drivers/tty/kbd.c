@@ -21,7 +21,6 @@
 #include <kernel/dts.h>
 #include <task.h>
 #include "keymap.h"
-#include <kernel/ktextio.h>
 
 #define KEYBD_PORT	0x60
 

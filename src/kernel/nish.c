@@ -30,12 +30,6 @@
 
 #define MAX_ARGS	16
 
-static int nish_write(vnode *node, off_t offset, size_t size, const char *buffer);
-
-static file_operations nish_ops = {
-		write: &nish_write,
-};
-
 static int ltrim(char *cmd)
 {
 	char *str = cmd;
@@ -215,12 +209,10 @@ static int nish_cd(int argc, char *argv[])
 
 static int nish_test(int argc, char **argv)
 {
-	printf("---Nothing tested---\n");
+	printf("---chroot test---\n");
+	sys_chroot("/home");
 	return 1;
 }
-
-static char nish_buf[STRLEN] = {0,};
-static int buf_pos=0;
 
 static int _nish_interpret(char *str)
 {
@@ -230,8 +222,6 @@ static int _nish_interpret(char *str)
 	for (i=0;i<MAX_ARGS;i++)
 		argv[i]=calloc(STRLEN,sizeof(char));
 	argc=split_to_argv(str,argv);
-	memset(nish_buf,0,STRLEN);
-	buf_pos=0;
 	if (!strcmp(argv[0],"test")) ret=nish_test(argc,argv);
 		else if (!strcmp(argv[0],"clear")) ret=printf("\e[2J\e[H");
 		else if (!strcmp(argv[0],"ls")) ret=nish_ls(argc,argv);
@@ -241,6 +231,7 @@ static int _nish_interpret(char *str)
 		else if (!strcmp(argv[0],"halt")) ret=sys_reboot(0x04);
 		else if (!strcmp(argv[0],"reboot")) ret=sys_reboot(0x02);
 		else if (!strcmp(argv[0],"help")) ret=nish_help();
+		else if (!strcmp(argv[0],"exit")) ret=NISH_EXIT;
 		else printf("nish: %s: command not found.\n",argv[0]);
 	for (i=0;i<MAX_ARGS;i++) {
 		free(argv[i]);
@@ -249,32 +240,18 @@ static int _nish_interpret(char *str)
 	return ret;
 }
 
-static int nish_write(vnode *node, off_t offset, size_t size, const char *buffer)
-{
-	if (buf_pos+size+1>STRLEN) size=STRLEN-1-buf_pos;
-	size_t i=size;
-	while (i--) {
-		nish_buf[buf_pos++]=*buffer;
-		if (!*buffer)
-			_nish_interpret(nish_buf);
-		buffer++;
-	}
+//#define DIRECT_NISH  //If you only want to use one single nish-session uncomment this line
 
-	return size;
-}
+#ifdef DIRECT_NISH
 
-void _kgets(char *buf,int maxlen)
+static vnode *ttynode = 0;
+
+static void _kgets(char *buf)
 {
-	int status;
-	vnode *node=namei("/dev/tty0",&status);
-	if (!node) {
-		printf("Error reading: %d!\n",-status);
-		for (;;);
-	}
 	int i=0;
 	printf("\e[?25h");
 	for (;;) {
-		read_fs(node,0,1,buf+i);
+		read_fs(ttynode,0,1,buf+i);
 		switch (buf[i]) {
 			case '\n':
 				buf[i]='\0';
@@ -295,23 +272,59 @@ void _kgets(char *buf,int maxlen)
 	}
 end:
 	printf("\n\e[?25l");
-	iput(node);
 }
+
+#else
+
+static char nish_buf[STRLEN] = {0,};
+static int buf_pos=0;
+
+static int nish_write(vnode *node, off_t offset, size_t size, const char *buffer)
+{
+	if (buf_pos+size+1>STRLEN) size=STRLEN-1-buf_pos;
+	size_t i=size;
+	while (i--) {
+		nish_buf[buf_pos++]=*buffer;
+		if (!*buffer) {
+			_nish_interpret(nish_buf);
+			memset(nish_buf,0,STRLEN);
+			buf_pos=0;
+		}
+		buffer++;
+	}
+
+	return size;
+}
+
+static file_operations nish_ops = {
+		write: &nish_write,
+};
+
+#endif
 
 int nish()
 {
-	devfs_register_device(NULL,"nish",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&nish_ops);
-	return 0;
-	/*char input[STRLEN];
+#ifdef DIRECT_NISH
+	char input[STRLEN];
 	int ret;
-
+	ttynode=namei("/dev/tty0",&ret);
+	if (!ttynode) {
+		printf("Cannot open tty0: %d\n",-ret);
+		for (;;);
+	}
 	printf("\nNupkux intern shell (nish) started.\nType \"help\" for a list of built-in commands.\n\n");
 	while (1) {
 		printf("# ");
 		memset(input,0,STRLEN);
-		_kgets(input,STRLEN);
+		_kgets(input);
 		ret=_nish_interpret(input);
 		if ((ret & 0xF0)==0xE0) break;
 	}
-	return ret;*/
+	iput(ttynode);
+	sys_reboot(0x04);
+	return ret;
+#else
+	devfs_register_device(NULL,"nish",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&nish_ops);
+	return 0;
+#endif
 }

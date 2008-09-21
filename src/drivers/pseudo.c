@@ -18,7 +18,6 @@
  */
 
 #include <drivers/drivers.h>
-#include <kernel/ktextio.h>
 #include <lib/memory.h>
 #include <unistd.h>
 #include <task.h>

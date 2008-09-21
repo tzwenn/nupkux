@@ -22,7 +22,7 @@
 
 #include <kernel.h>
 #include <paging.h>
-#include <fs/fs.h>
+#include <fs/vfs.h>
 
 #define TASK_RUNNING		0
 #define TASK_WAITING		1

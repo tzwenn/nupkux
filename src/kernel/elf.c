@@ -17,10 +17,8 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel/ktextio.h>
 #include <task.h>
 #include <mm.h>
-#include <fs/fs.h>
 #include <lib/string.h>
 #include <elf.h>
 

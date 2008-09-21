@@ -19,7 +19,6 @@
 
 #include <fs/devfs.h>
 #include <lib/string.h>
-#include <kernel/ktextio.h>
 
 extern inode_operations devfs_i_ops;
 extern file_operations devfs_dir_fop;

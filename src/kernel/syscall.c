@@ -18,18 +18,11 @@
  */
 
 #include <kernel/syscall.h>
-#include <kernel/ktextio.h>
 #include <lib/memory.h>
 #include <signal.h>
 #include <errno.h>
 
 static void *sys_call_table[NR_SYSCALLS];
-
-int sys_putchar(char chr)
-{
-	_kputc(chr);
-	return chr;
-}
 
 int sys_mknod(const char *name, int mode, int addr)
 {

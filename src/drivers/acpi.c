@@ -17,53 +17,25 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel.h>
-#include <drivers/drivers.h>
+#include <drivers/acpi.h>
 #include <time.h>
 #include <lib/memory.h>
 
 #define TIME_TO_WAIT	300
 #define DELAY		10
 
-UINT *SMI_CMD;
-char ACPI_ENABLE;
-char ACPI_DISABLE;
-UINT *PM1a_CNT;
-UINT *PM1b_CNT;
-USHORT SLP_TYPa;
-USHORT SLP_TYPb;
-USHORT SLP_EN;
-USHORT SCI_EN;
-char PM1_CNT_LEN;
-int ACPI;
+static UINT *SMI_CMD;
+static char ACPI_ENABLE;
+static char ACPI_DISABLE;
+static UINT *PM1a_CNT;
+static UINT *PM1b_CNT;
+static USHORT SLP_TYPa;
+static USHORT SLP_TYPb;
+static USHORT SLP_EN;
+static USHORT SCI_EN;
+static char PM1_CNT_LEN;
 
-struct RSDPtr
-{
-	char Signature[8];
-	char CheckSum;
-	char OemID[6];
-	char Revision;
-	UINT *RsdtAddress;
-};
-
-struct FACP
-{
-	char Signature[4];
-	UINT Length;
-	char unneded1[32];
-	UINT *DSDT;
-	char unneded2[4];
-	UINT *SMI_CMD;
-	char ACPI_ENABLE;
-	char ACPI_DISABLE;
-	char unneded3[10];
-	UINT *PM1a_CNT_BLK;
-	UINT *PM1b_CNT_BLK;
-	char unneded4[17];
-	char PM1_CNT_LEN;
-};
-
-UINT *acpiCheckRSDPtr(UINT *ptr)
+static UINT *acpiCheckRSDPtr(UINT *ptr)
 {
 	const char *sig = "RSD PTR ";
 	struct RSDPtr *rsdp = (struct RSDPtr *) ptr;
@@ -81,7 +53,7 @@ UINT *acpiCheckRSDPtr(UINT *ptr)
 		else return 0;
 }
 
-UINT *acpiGetRSDPtr(void)
+static UINT *acpiGetRSDPtr(void)
 {
 	UINT *addr;
 	UINT *rsdp;
@@ -99,7 +71,7 @@ UINT *acpiGetRSDPtr(void)
 	return 0;
 }
 
-int acpiCheckHeader(UINT *ptr, const char *sig)
+static int acpiCheckHeader(UINT *ptr, const char *sig)
 {
 	if (!memcmp(ptr,sig,4)) {
 		char *checkPtr=(char *)ptr;
@@ -114,7 +86,7 @@ int acpiCheckHeader(UINT *ptr, const char *sig)
 	return -1;
 }
 
-int acpiEnable(void)
+static int acpiEnable(void)
 {
 	if (inportw((UINT)PM1a_CNT)&SCI_EN) return 0;
 	if (!(SMI_CMD && ACPI_ENABLE)) return -1;

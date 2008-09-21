@@ -20,7 +20,6 @@
 #include <task.h>
 #include <lib/memory.h>
 #include <kernel/dts.h>
-#include <fs/fs.h>
 #include <errno.h>
 #include <kernel/syscall.h>
 
@@ -55,8 +54,6 @@ void move_stack(void *new_stack, UINT size)
 	asm volatile (	"movl %0,%%esp\n\t"
 			"movl %1,%%ebp\n\t"::"r"(new_esp),"r"(new_ebp));
 }
-
-#include <kernel/ktextio.h>
 
 void setup_tasking()
 {

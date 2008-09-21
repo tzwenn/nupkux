@@ -18,10 +18,8 @@
  */
 
 #include <task.h>
-#include <fs/fs.h>
+#include <fs/vfs.h>
 #include <errno.h>
-
-#include <kernel/ktextio.h>
 
 int sys_ioctl(int fd, UINT cmd, ULONG arg)
 {

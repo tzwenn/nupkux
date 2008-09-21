@@ -291,7 +291,6 @@ static int do_tty_write(devfs_handle *handle, off_t offset, size_t size, const c
 
 int tty_write(vnode *node, off_t offset, size_t size, const char *buffer)
 {
-	if (node->ino==13) printf("Stupid!");
 	return do_tty_write(device_discr(node),offset,size,buffer);
 }
 
