@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <task.h>
+#include <kernel/ktextio.h>
 
 extern vnode *root_vnode;
 
@@ -70,11 +71,6 @@ static vnode *getdentry(vnode *node, const char *filename, int *status, int from
 		iput(node);
 		return getdentry(newnode,filename,status,1);
 	}
-	if (!node->i_op || !node->i_op->lookup) {
-		if (status) *status=-EGENERIC;
-		iput(node);
-		return 0;
-	}
 	/*
 	 * TODO: Symlinks go here
 	 */
@@ -88,14 +84,18 @@ static vnode *getdentry(vnode *node, const char *filename, int *status, int from
 		iput(node);
 		return 0;
 	}
+	if (!node->i_op || !node->i_op->lookup) {
+		if (status) *status=-EGENERIC;
+		iput(node);
+		return 0;
+	}
 	newnode=node->i_op->lookup(node,filename);
 	if (status) *status=(newnode)?0:-ENOENT;
 	iput(node);
+	if (!newnode) return 0;
 	if (IS_MNT(newnode)) {
-		node=newnode->mount;
-		node->count++;
-		iput(newnode);
-		return node;
+		newnode=resolve_mount(newnode);
+		newnode->count++;
 	}
 	return newnode;
 }
@@ -104,6 +104,19 @@ static vnode *igetdir(vnode *node, const char *filename, const char **name, int 
 {
 	const char *pos;
 	int len;
+	if (!filename) {
+		if (status) *status=-ENOENT;
+		return 0;
+	}
+	if (!*filename) {
+		if (length) *length=0;
+		node->count++;
+		if (IS_MNT(node)) {
+			node=resolve_mount(node);
+			node->count++;
+		}
+		return node;
+	}
 	while ((pos=strchr(filename,'/'))) {
 		if ((len=pos-filename))
 			if (!(node=getdentry(node,filename,status,0))) return 0;

@@ -40,7 +40,7 @@ static int ltrim(char *cmd)
 {
 	char *str = cmd;
 
-	while ((*str<=32) && (*str)) str++;
+	while ((*str>0) && (*str<=32)) str++;
 	strcpy(cmd,str);
 	return str-cmd;
 }
@@ -52,7 +52,7 @@ static int rtrim(char *cmd)
 	if (!*str) return 0;
 	while (*str) str++;
 	str--;
-	while ((*str<=32) && (str>=cmd)) str--;
+	while ((*str>0) && (*str<=32) && (str>=cmd)) str--;
 	str++;
 	*str=0;
 	return str-cmd;
@@ -174,10 +174,8 @@ static int nish_ls(int argc, char *argv[])
 	char the_mode[11];
 	struct dirent DirEnt;
 
-	if (argc==1)  {
-		node=current_task->pwd;
-		node->count++;
-	} else node=namei(argv[1],0);
+	if (argc==1) node=namei(".",0);
+		else node=namei(argv[1],0);
 	if (node) {
 		i=0;
 		printf("Inode\tMode\t\tUID\tGID\tSize\tName\n");
@@ -265,7 +263,7 @@ static int nish_write(vnode *node, off_t offset, size_t size, const char *buffer
 	return size;
 }
 
-static void _kgets(char *buf,int maxlen)
+void _kgets(char *buf,int maxlen)
 {
 	int status;
 	vnode *node=namei("/dev/tty0",&status);
@@ -302,9 +300,9 @@ end:
 
 int nish()
 {
-	devfs_register_device(NULL,"nish",0660,1234,FS_GID_ROOT,FS_CHARDEVICE,&nish_ops);
+	devfs_register_device(NULL,"nish",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&nish_ops);
 	return 0;
-	char input[STRLEN];
+	/*char input[STRLEN];
 	int ret;
 
 	printf("\nNupkux intern shell (nish) started.\nType \"help\" for a list of built-in commands.\n\n");
@@ -315,5 +313,5 @@ int nish()
 		ret=_nish_interpret(input);
 		if ((ret & 0xF0)==0xE0) break;
 	}
-	return ret;
+	return ret;*/
 }
