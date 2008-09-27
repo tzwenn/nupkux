@@ -21,6 +21,11 @@
 
 static devfs_handle *cache = 0;
 
+void devfs_create_cache(void)
+{
+	cache=0;
+}
+
 void devfs_add_to_cache(devfs_handle *handle)
 {
 	handle->cache_next=cache;

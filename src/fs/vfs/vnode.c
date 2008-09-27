@@ -47,6 +47,11 @@ static void free_inode(vnode *node)
 	free(node);
 }
 
+vnode *vfs_create_cache(void)
+{
+	return 0;
+}
+
 void free_sb_inodes(super_block *sb)
 {
 	if (!sb) return;

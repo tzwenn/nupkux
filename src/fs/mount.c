@@ -69,7 +69,7 @@ int sys_mount(	const char *source, const char *target,
 			iput(mountpoint);
 			return status;
 		}
-		/* Devicestuff goes here: open/request */
+		/* Device stuff goes here: open/request */
 	}
 	vfsmount *mnt=calloc(1,sizeof(vfsmount));
 	super_block *sb=calloc(1,sizeof(super_block));
@@ -80,6 +80,7 @@ int sys_mount(	const char *source, const char *target,
 	sb->flags=mountflags;
 	sb->mi=mnt;
 	sb->type=type;
+	sb->cache=vfs_create_cache();
 	mnt->sb=type->read_super(sb,data,0);
 	if (!sb) {
 		free(mnt);

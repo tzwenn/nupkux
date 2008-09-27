@@ -36,7 +36,6 @@
 #define FS_BLOCKDEVICE	0x04
 #define FS_PIPE		0x05
 #define FS_SYMLINK 	0x06
-#define FS_MOUNTPOINT	0x08
 
 #define IS_REG(NODE)	((NODE->flags&0x7)==FS_FILE)
 #define IS_DIR(NODE)	((NODE->flags&0x7)==FS_DIRECTORY)
@@ -62,6 +61,16 @@ typedef struct _initrd_inode initrd_inode;
 #ifndef _DEVFS_HANDLE
 #define _DEVFS_HANDLE
 typedef struct _devfs_handle devfs_handle;
+#endif
+
+#ifndef _EXT2_DISCR
+#define _EXT2_DISCR
+typedef struct _ext2_discr ext2_discr;
+#endif
+
+#ifndef _EXT2_INODE
+#define _EXT2_INODE
+typedef struct _ext2_inode ext2_inode;
 #endif
 
 #ifndef _VFSMOUNT
@@ -143,8 +152,9 @@ struct _vnode {
 	super_block *sb;
 	inode_operations *i_op;
 	union {
-		devfs_handle *devfs_i;
-		initrd_inode *initrdfs_i;
+		devfs_handle	*devfs_i;
+		ext2_inode	*ext2_i;
+		initrd_inode	*initrdfs_i;
 		void *pdata;
 	} u;
 	// VFS-only
@@ -162,6 +172,7 @@ struct _super_block {
 	UCHAR blocksize_bits;
 	vnode *root;
 	union {
+		ext2_discr *ext2_s;
 		void *pdata;
 	} u;
 	vfsmount *mi;
@@ -183,12 +194,15 @@ extern int close_vfs(void);
 extern int namei_match(const char *s1, const char *s2);
 extern vnode *namei(const char *filename, int *status);
 
+extern vnode *vfs_create_cache(void);
+
 extern vnode *iget(super_block *sb, ULONG ino);
 extern void iput(vnode *node);
 
 extern int open_fs(vnode *node, FILE *f);
 extern int read_fs(vnode *node, off_t offset, size_t size, char *buffer);
 extern int write_fs(vnode *node, off_t offset, size_t size, const char *buffer);
+extern int request_fs(vnode *node, int cmd, ULONG sector, ULONG count, char *buffer);
 extern int close_fs(vnode *node);
 extern int readdir_fs(vnode *node, off_t index, struct dirent *buf);
 extern int ioctl_fs(vnode *node, UINT cmd, ULONG arg);

@@ -110,6 +110,7 @@ int setup_vfs(void)
 	super_block *sb=calloc(1,sizeof(super_block));
 	sb->mi=mnt;
 	sb->type=&rootfs_type;
+	sb->cache=vfs_create_cache();
 	mnt->sb=read_rootfs_sb(sb,0,0);
 	root_vnode=sb->root;
 	d_mount(mnt);
@@ -152,6 +153,13 @@ int write_fs(vnode *node, off_t offset, size_t size, const char *buffer)
 	if (node->i_op && node->i_op->f_op && node->i_op->f_op->write)
 		return node->i_op->f_op->write(node,offset,size,buffer);
 	else return -EINVAL;
+}
+
+int request_fs(vnode *node, int cmd, ULONG sector, ULONG count, char *buffer)
+{
+	if (IS_DIR(node)) return -EISDIR;
+	if (node->i_op && node->i_op->f_op && node->i_op->f_op->request) return node->i_op->f_op->request(node,cmd,sector,count,buffer);
+		else return -EINVAL;
 }
 
 int close_fs(vnode *node)

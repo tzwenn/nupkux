@@ -66,6 +66,7 @@ typedef struct _devfs_d_entry
 extern devfs_handle *devfs_register_device(devfs_handle *dir, const char *name, UINT mode, UINT uid, UINT gid, UINT type, file_operations *f_op);
 extern void devfs_unregister_device(devfs_handle *device);
 
+extern void devfs_create_cache(void);
 extern void devfs_add_to_cache(devfs_handle *handle);
 extern void devfs_del_from_cache(devfs_handle *handle);
 devfs_handle *devfs_iget(ULONG ino);

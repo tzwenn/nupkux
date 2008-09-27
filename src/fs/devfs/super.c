@@ -108,6 +108,7 @@ static super_block *read_devfs_sb(super_block *sb, void *data, int verbose)
 	sb->s_op=&devfs_s_ops;
 	sb->blocksize=1;
 	sb->blocksize_bits=0;
+	devfs_create_cache();
 	devfs_root=devfs_empty_dir(0,0);
 	sb->root=iget(sb,0);
 	return sb;

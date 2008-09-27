@@ -205,12 +205,12 @@ static int nish_cd(int argc, char *argv[])
 	return 1;
 }
 
-
+extern void ext2_test(void);
 
 static int nish_test(int argc, char **argv)
 {
-	printf("---chroot test---\n");
-	sys_chroot("/home");
+	printf("---ext2 test---\n");
+	ext2_test();
 	return 1;
 }
 
