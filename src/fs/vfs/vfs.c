@@ -24,7 +24,7 @@
 #include <task.h>
 
 static filesystem_t *filesystems = 0;
-/*static */vnode *root_vnode = 0;
+vnode *root_vnode = 0;
 
 filesystem_t *vfs_get_fs(const char *name)
 {
@@ -102,6 +102,7 @@ extern void free_sb_inodes(super_block *sb);
 
 extern filesystem_t initrd_fs_type;
 extern filesystem_t devfs_fs_type;
+extern filesystem_t ext2_fs_type;
 
 int setup_vfs(void)
 {
@@ -116,6 +117,7 @@ int setup_vfs(void)
 	d_mount(mnt);
 	register_filesystem(&initrd_fs_type);
 	register_filesystem(&devfs_fs_type);
+	register_filesystem(&ext2_fs_type);
 	current_task->root=root_vnode;
 	current_task->pwd=root_vnode;
 	root_vnode->count+=2;
@@ -125,6 +127,9 @@ int setup_vfs(void)
 int close_vfs(void)
 {
 	if (!root_vnode) return -1;
+	unregister_filesystem(&ext2_fs_type);
+	unregister_filesystem(&devfs_fs_type);
+	unregister_filesystem(&initrd_fs_type);
 	super_block *sb=root_vnode->sb;
 	free_sb_inodes(sb);
 	d_umount(sb);

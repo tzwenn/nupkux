@@ -17,22 +17,13 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MOUNT_H
-#define _MOUNT_H
+#include <drivers/drivers.h>
+#include <kernel/ktextio.h>
 
-#include <fs/vfs.h>
-
-#ifndef _VFSMOUNT
-#define _VFSMOUNT
-typedef struct _vfsmount vfsmount;
-#endif
-
-struct _vfsmount {
-	const char *devname;
-	const char *dirname;
-	UINT flags;
-	super_block *sb;
-	vfsmount *next;
-};
-
-#endif
+int fs_read_block(super_block *sb, ULONG block, ULONG count, char *buffer)
+{
+	UINT start_sector=sb->skip_bytes/sb->dev->u.devfs_i->bsize;
+	UINT sec_block=sb->blocksize/sb->dev->u.devfs_i->bsize;
+	//FIXME: I assume sb->blocksize > sb->dev->u.devfs_i->bsize
+	return request_fs(sb->dev,REQUEST_READ,block*sec_block+start_sector,count*sec_block,buffer);
+}

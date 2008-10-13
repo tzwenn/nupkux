@@ -20,6 +20,7 @@
 #include <drivers/drivers.h>
 #include <drivers/fdc.h>
 #include <drivers/tty.h>
+#include <drivers/ramdisk.h>
 #include <mm.h>
 #include <kernel/syscall.h>
 
@@ -120,5 +121,6 @@ UINT setup_drivers(void)
 	setup_tty();
 	setup_serial();
 	setup_floppy();
+	setup_ramdisk();
 	return 0;
 }

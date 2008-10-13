@@ -78,6 +78,8 @@ typedef struct _ext2_inode ext2_inode;
 typedef struct _vfsmount vfsmount;
 #endif
 
+#define VFS_NAME_LEN	255
+
 #define FS_UID_ROOT     0
 #define FS_GID_ROOT     0
 
@@ -91,7 +93,7 @@ typedef struct _vfsmount vfsmount;
 
 struct dirent {
 	ULONG d_ino;
-	char d_name[255];
+	char d_name[VFS_NAME_LEN];
 	int d_namlen;
 	UINT d_type;
 };
@@ -170,6 +172,7 @@ struct _super_block {
 	super_operations *s_op;
 	ULONG blocksize;
 	UCHAR blocksize_bits;
+	ULONG skip_bytes;
 	vnode *root;
 	union {
 		ext2_discr *ext2_s;
@@ -192,9 +195,11 @@ extern int unregister_filesystem(filesystem_t *fs);
 extern int close_vfs(void);
 
 extern int namei_match(const char *s1, const char *s2);
+extern int namei_nmatch(const char *s1, const char *s2, size_t s2len);
 extern vnode *namei(const char *filename, int *status);
 
 extern vnode *vfs_create_cache(void);
+extern int fs_read_block(super_block *sb, ULONG block, ULONG count, char *buffer);
 
 extern vnode *iget(super_block *sb, ULONG ino);
 extern void iput(vnode *node);

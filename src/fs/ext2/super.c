@@ -18,9 +18,7 @@
  */
 
 #include <fs/ext2.h>
-#include <drivers/drivers.h>
 #include <fs/mount.h>
-#include <kernel/ktextio.h>
 
 extern inode_operations ext2_i_ops;
 
@@ -28,7 +26,11 @@ static super_block *read_ext2_sb(super_block *sb, void *data, int verbose);
 
 inline int ext2_read_block(super_block *sb, UINT block, char *buffer)
 {
-	return request_fs(sb->dev,REQUEST_READ,block*2,2,buffer);
+	if (!block) {
+		memset(buffer,0,1024);
+		return 2;
+	}
+	return fs_read_block(sb,block-1,1,buffer);
 }
 
 static inline int ext2_inode_used(char *inode_bitmap,int group_off)
@@ -44,8 +46,11 @@ static void ext2_read_inode(vnode *node)
 	if (group>=discr.group_count) return;
 	UINT goff=(node->ino-1)%(discr.pysb->s_inodes_per_group);
 	if (!ext2_inode_used(discr.groups[group].inode_bitmap,goff)) return;
-	char buf[1024];
-	if (ext2_read_block(node->sb,discr.groups[group].phys.bg_inode_table+goff/discr.inodes_per_block,buf)<=0) return;
+	char *buf=malloc(node->sb->blocksize);
+	if (ext2_read_block(node->sb,discr.groups[group].phys.bg_inode_table+goff/discr.inodes_per_block,buf)<=0) {
+		free(buf);
+		return;
+	}
 	ext2_inode *p_node=(ext2_inode *)((UINT)buf+((goff%discr.inodes_per_block)*discr.pysb->s_ino_size));
 	node->atime=p_node->i_atime;
 	node->ctime=p_node->i_ctime;
@@ -70,8 +75,9 @@ static void ext2_read_inode(vnode *node)
 		case EXT2_TYPE_LINK:
 			node->flags=FS_SYMLINK;
 			break;
-		default: return;
-			break;
+		default:
+			free(buf);
+			return;
 	}
 	node->uid=p_node->i_uid;
 	node->gid=p_node->i_gid;
@@ -80,6 +86,7 @@ static void ext2_read_inode(vnode *node)
 	node->i_op=&ext2_i_ops;
 	node->u.ext2_i=malloc(sizeof(ext2_inode));
 	memcpy(node->u.ext2_i,p_node,sizeof(ext2_inode));
+	free(buf);
 }
 
 static void ext2_put_inode(vnode *node)
@@ -122,6 +129,8 @@ static super_block *read_ext2_sb(super_block *sb, void *data, int verbose)
 {
 	char buf[1024];
 	int i;
+	sb->blocksize=0x400; //Just the first super block ...
+	sb->skip_bytes=0x400;
 	ext2_sb *py_super=malloc(sizeof(ext2_sb));
 	if (ext2_read_block(sb,1,buf)<=0) {
 		free(py_super);
@@ -159,17 +168,7 @@ static super_block *read_ext2_sb(super_block *sb, void *data, int verbose)
 	}
 	sb->s_op=&ext2_s_ops;
 	sb->root=iget(sb,EXT2_ROOT_INO);
-	//////////////////////////////return sb;
-
-	free_ext2_discr(discr);
-	return 0;
+	return sb;
 }
 
-void ext2_test(void)
-{
-	register_filesystem(&ext2_fs_type);
-	sys_mount("/dev/fd0","/mnt","ext2",0,0);
-	sys_umount("/mnt");
-	unregister_filesystem(&ext2_fs_type);
-}
 

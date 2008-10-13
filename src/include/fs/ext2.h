@@ -40,6 +40,8 @@
 #define EXT2_UNDEL_DIR_INO	6
 #define EXT2_FIRST_INO		11
 
+#define EXT2_NAME_LEN		255
+
 #ifndef _EXT2_DISCR
 #define _EXT2_DISCR
 typedef struct _ext2_discr ext2_discr;
@@ -75,6 +77,14 @@ struct _ext2_inode {
 	USHORT i_upper_gid;
 	UINT i_unused3;
 };
+
+typedef struct _ext2_d_entry {
+	ULONG inode;
+	USHORT rec_len;
+	UCHAR name_len;
+	UCHAR file_type;
+	char name[EXT2_NAME_LEN];
+} ext2_d_entry;
 
 typedef struct _ext2_group_dt {
 	UINT bg_block_bitmap;

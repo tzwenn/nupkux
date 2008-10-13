@@ -17,22 +17,14 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MOUNT_H
-#define _MOUNT_H
+#ifndef _RAMDISK_H
+#define _RAMDISK_H
 
-#include <fs/vfs.h>
+#include <drivers/drivers.h>
 
-#ifndef _VFSMOUNT
-#define _VFSMOUNT
-typedef struct _vfsmount vfsmount;
-#endif
+#define RAMDISK_SECTOR_SIZE	512
+#define RAMDISK_SECTOR_COUNT	2880
 
-struct _vfsmount {
-	const char *devname;
-	const char *dirname;
-	UINT flags;
-	super_block *sb;
-	vfsmount *next;
-};
+extern void setup_ramdisk(void);
 
 #endif

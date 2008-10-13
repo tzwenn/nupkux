@@ -78,16 +78,11 @@ UINT make_new_stack(const char **argv,const char **envp, UINT pos)
 	return (UINT)esp;
 }
 
-int sys_execve(const char *file,const char **argv,const char **envp)
+int do_exec(vnode *node, const char **argv, const char **envp)
 {
-	//TODO: permission check; freeing old core image & stack
-	if (!access_ok(VERIFY_READ,file,VERIFY_STRLEN)) return -EFAULT;
 	char *buf;
 	UINT entry,stack,fd=NR_OPEN;
-	int status;
-	vnode *node=namei(file,&status);
 
-	if (!node) return status;
 	open_fs(node,NULL);
 	buf=malloc(node->size);
 	read_fs(node,0,node->size,buf);
@@ -117,4 +112,17 @@ int sys_execve(const char *file,const char **argv,const char **envp)
 		//glob_regs->useresp=stack;
 	}
 	return 0;
+}
+
+int sys_execve(const char *file,const char **argv,const char **envp)
+{
+	//TODO: permission check; freeing old core image & stack
+	if (!access_ok(VERIFY_READ,file,VERIFY_STRLEN)) return -EFAULT;
+	int status;
+	vnode *node=namei(file,&status);
+
+	if (!node) return status;
+	status=do_exec(node,argv,envp);
+	iput(node);
+	return status;
 }

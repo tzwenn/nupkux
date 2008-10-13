@@ -51,6 +51,17 @@ int namei_match(const char *s1, const char *s2)
 	return 1;
 }
 
+int namei_nmatch(const char *s1, const char *s2, size_t s2len)
+{
+        if ((!s1) || (!s2)) return 0;
+        while (!is_end_chr(*s1) && !is_end_chr(*s2) && s2len--) {
+                if (*s1++!=*s2++) return 0;
+        }
+        if (is_end_chr(*s1) && !s2len) return 1;
+        if (is_end_chr(*s1)!=is_end_chr(*s2)) return 0;
+        return 1;
+}
+
 static inline vnode *resolve_mount(vnode *node, int *status, int steps)
 {
 	if (IS_MNT(node)) {

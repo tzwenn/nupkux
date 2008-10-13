@@ -204,13 +204,10 @@ static int nish_cd(int argc, char *argv[])
 	}
 	return 1;
 }
-
-extern void ext2_test(void);
-
-static int nish_test(int argc, char **argv)
+static int nish_test(int argc, char **argv)
 {
-	printf("---ext2 test---\n");
-	ext2_test();
+	printf("---ext2 test: Mount /dev/ram0 on /mnt---\n");
+	sys_mount("/dev/ram0","/mnt","ext2",0,0);
 	return 1;
 }
 

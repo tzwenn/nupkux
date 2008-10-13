@@ -117,7 +117,7 @@ int _kmain(multiboot_info_t* mbd, UINT magic, UINT initial_stack)
 	setup_drivers();
 	printf("Finished.\n");
 	setup_syscalls();
-	nish();
+	if (nish()) sys_reboot(0x04);
 	init();
 	for (;;) sys_pause();
 	return 0;
