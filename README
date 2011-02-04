@@ -23,7 +23,7 @@ You will need a Linux distribution, since you've got to use "mount -o loop"
 Further needed:
 	- gcc (>=4.X)
 	- GNU make
-	- makedepend (from x-utils
+	- makedepend (from xutils-dev)
 	- git for archiving
 
 ----------Compiling
