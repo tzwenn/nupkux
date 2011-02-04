@@ -77,7 +77,7 @@ static void read_multiboot_info(multiboot_info_t* mbd)
 
 int init(void)
 {
-	int ret;
+	int ret = 0;
 	pid_t pid;
 	if (!(pid=sys_fork())) {
 		set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);

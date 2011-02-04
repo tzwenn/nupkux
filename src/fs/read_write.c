@@ -46,7 +46,7 @@ int sys_write(int fd, const char *buffer, size_t size)
 	if (fd<0 || fd>=NR_OPEN) return -EBADF;
 	FILE *f = current_task->files[fd];
 	if (!f) return -EBADF;
-	if (!f->flags&FMODE_WRITE) return -EBADF;
+	if (!(f->flags&FMODE_WRITE)) return -EBADF;
 	if (!access_ok(VERIFY_READ,buffer,size)) return -EFAULT;
 	size=write_fs(f->node,f->offset,size,buffer);
 	if (!IS_CHR(f->node)) f->offset+=size;

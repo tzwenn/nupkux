@@ -113,12 +113,6 @@ distclean:
 	@$(MAKE) -sC $(TOOLSOURCE) distclean
 
 dist:	distclean
-	@mkdir -p $(DISTTMP)
-	@echo "===========Copy files============"
-	@for file in $(AUXFILES); do echo "  CP	  $$file"; cp $(CPFLAGS) $$file $(DISTTMP)/; done; true
-	@for dir in $(PRJDIRS); do echo "  EXP	  $$dir"; svn export --quiet $$dir $(DISTTMP)/$$dir; done; true
-	@echo "==========Make archive==========="
 	@echo "  AR	  $(DISTNAME)"
-	@cd $(DISTTMP); tar $(TARFLAGS) -cf ../$(DISTNAME) *
-	@rm -rf $(DISTTMP)
-	@echo "============Finished============="
+	@git archive HEAD | gzip > $(DISTNAME)
+

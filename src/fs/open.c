@@ -75,7 +75,7 @@ int sys_open(const char *filename,int flag,int mode)
 	/////////////////////////////////////
 	// A lot more goes here and there an everywhere
 	/////////////////////////////////////
-	if ((!flag&3) || (flag&O_RDWR)) f->flags|=FMODE_READ;
+	if ((!(flag&3)) || (flag&O_RDWR)) f->flags|=FMODE_READ;
 	if ((flag&O_WRONLY) || (flag&O_RDWR)) f->flags|=FMODE_WRITE;
 	open_fs(f->node,f);
 	f->count=1;
