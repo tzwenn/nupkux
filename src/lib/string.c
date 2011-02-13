@@ -25,12 +25,12 @@ int strcmp(const char *s1, const char *s2)
 {
 	if ((!s1) || (!s2)) return 0;
 	while ((*s1) && (*s2)) {
-		if (*s1<*s2) return -1;
-		if (*s1>*s2) return 1;
+		if (*s1 < *s2) return -1;
+		if (*s1 > *s2) return 1;
 		s1++;
 		s2++;
 	}
-	if (*s1!=*s2) return (*s1<*s2)?-1:1;
+	if (*s1 != *s2) return (*s1 < *s2) ? -1 : 1;
 	return 0;
 }
 
@@ -38,12 +38,12 @@ int strncmp(const char *s1, const char *s2, size_t n)
 {
 	if ((!s1) || (!s2)) return 0;
 	while ((*s1) && (*s2) && (n--)) {
-			if (*s1<*s2) return -1;
-			if (*s1>*s2) return 1;
-			s1++;
-			s2++;
+		if (*s1 < *s2) return -1;
+		if (*s1 > *s2) return 1;
+		s1++;
+		s2++;
 	}
-	if (n && *s1!=*s2) return (*s1<*s2)?-1:1;
+	if (n && *s1 != *s2) return (*s1 < *s2) ? -1 : 1;
 	return 0;
 }
 
@@ -57,7 +57,7 @@ size_t strlen(const char *str)
 
 char *strchr(const char *str, char chr)
 {
-	while ((*str) && (*str!=chr)) str++;
+	while ((*str) && (*str != chr)) str++;
 	if (!(*str)) return 0;
 	return (char *)((UINT)str);
 }
@@ -65,58 +65,58 @@ char *strchr(const char *str, char chr)
 char *strcpy(char *dest, const char *src)
 {
 	char *tmp = dest;
-	while (*src) *(tmp++)=*(src++);
-	*tmp=0;
+	while (*src) *(tmp++) = *(src++);
+	*tmp = 0;
 	return dest;
 }
 
 char *strncpy(char *dest, const char *src, size_t num)
 {
 	char *tmp = dest;
-	while (*src && num--) *(tmp++)=*(src++);
-	while (num--) *(tmp++)=0;
+	while (*src && num--) *(tmp++) = *(src++);
+	while (num--) *(tmp++) = 0;
 
 	return dest;
 }
 
 char *strtok_save(char *s, const char *delim, char **ptr)
 {
-	char *tmp,*occ;
+	char *tmp, *occ;
 	const char *del;
-	int skip=0;
+	int skip = 0;
 
 	if (!delim || !*delim) return s;
-	if (!s) s=*ptr;
+	if (!s) s = *ptr;
 	if (!s) return 0;
 	while (!skip) {
-		skip=1;
-		del=delim;
+		skip = 1;
+		del = delim;
 		while (*del && *s) {
-			if (*s==*del) {
-				skip=0;
+			if (*s == *del) {
+				skip = 0;
 				s++;
 			}
 			del++;
 		}
 	}
 	if (!*s) return 0;
-	tmp=s+strlen(s);
-	del=delim;
+	tmp = s + strlen(s);
+	del = delim;
 	while (*del) {
-		occ=strchr(s,*del);
-		if (occ && occ<tmp) tmp=occ;
+		occ = strchr(s, *del);
+		if (occ && occ < tmp) tmp = occ;
 		del++;
 	}
 	if (*tmp) {
-		*ptr=tmp+1;
-		*tmp=0;
+		*ptr = tmp + 1;
+		*tmp = 0;
 		return s;
 	}
-	*ptr=0;
+	*ptr = 0;
 	return s;
 }
 
 char *strtok(char *s, const char *delim)
 {
-	return strtok_save(s,delim,&strtok_save_ptr);
+	return strtok_save(s, delim, &strtok_save_ptr);
 }

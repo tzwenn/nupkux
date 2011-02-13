@@ -34,9 +34,9 @@ extern void idt_flush(UINT);
 extern void tss_flush(void);
 static void init_gdt(void);
 static void init_idt(void);
-static void gdt_set_gate(int,UINT,UINT,UCHAR,UCHAR);
-static void idt_set_gate(UCHAR,UINT,USHORT,UCHAR);
-static void write_tss(int,UINT,UINT);
+static void gdt_set_gate(int, UINT, UINT, UCHAR, UCHAR);
+static void idt_set_gate(UCHAR, UINT, USHORT, UCHAR);
+static void write_tss(int, UINT, UINT);
 
 tss_entry tss_ent;
 registers *glob_regs = 0;
@@ -102,19 +102,19 @@ void setup_dts()
 
 	init_gdt();
 	init_idt();
-	memset(&interrupt_handlers,0,sizeof(isr_t)*256);
+	memset(&interrupt_handlers, 0, sizeof(isr_t) * 256);
 }
 
 static void init_gdt()
 {
-	gdt_ptr.limit=(sizeof(gdt_entry)*6)-1;
-	gdt_ptr.base=(UINT)&gdt_entries;
-	gdt_set_gate(0,0,0,0,0);
-	gdt_set_gate(1,0,0xFFFFFFFF,0x9A,0xCF);
-	gdt_set_gate(2,0,0xFFFFFFFF,0x92,0xCF);
-	gdt_set_gate(3,0,0xFFFFFFFF,0xFA,0xCF);
-	gdt_set_gate(4,0,0xFFFFFFFF,0xF2,0xCF);
-	write_tss(5,0x10,0x00);
+	gdt_ptr.limit = (sizeof(gdt_entry) * 6) - 1;
+	gdt_ptr.base = (UINT)&gdt_entries;
+	gdt_set_gate(0, 0, 0, 0, 0);
+	gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);
+	gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);
+	gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);
+	gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);
+	write_tss(5, 0x10, 0x00);
 	gdt_flush((UINT)&gdt_ptr);
 	tss_flush();
 }
@@ -122,30 +122,30 @@ static void init_gdt()
 
 static void gdt_set_gate(int num, UINT base, UINT limit, UCHAR access, UCHAR gran)
 {
-	gdt_entries[num].base_low    =(base & 0xFFFF);
-	gdt_entries[num].base_middle =(base >> 16) & 0xFF;
-	gdt_entries[num].base_high   =(base >> 24) & 0xFF;
-	gdt_entries[num].limit_low   =(limit & 0xFFFF);
-	gdt_entries[num].granularity =(limit >> 16) & 0x0F;
-	gdt_entries[num].granularity|=gran & 0xF0;
-	gdt_entries[num].access      =access;
+	gdt_entries[num].base_low    = (base & 0xFFFF);
+	gdt_entries[num].base_middle = (base >> 16) & 0xFF;
+	gdt_entries[num].base_high   = (base >> 24) & 0xFF;
+	gdt_entries[num].limit_low   = (limit & 0xFFFF);
+	gdt_entries[num].granularity = (limit >> 16) & 0x0F;
+	gdt_entries[num].granularity |= gran & 0xF0;
+	gdt_entries[num].access      = access;
 }
 
 static void init_idt()
 {
-	idt_ptr.limit=sizeof(idt_entry)*256-1;
-	idt_ptr.base=(UINT)&idt_entries;
-	memset(&idt_entries,0,sizeof(idt_entry)*256);
-	outportb(0x20,0x11);
-	outportb(0xA0,0x11);
-	outportb(0x21,0x20);
-	outportb(0xA1,0x28);
-	outportb(0x21,0x04);
-	outportb(0xA1,0x02);
-	outportb(0x21,0x01);
-	outportb(0xA1,0x01);
-	outportb(0x21,0x0);
-	outportb(0xA1,0x0);
+	idt_ptr.limit = sizeof(idt_entry) * 256 - 1;
+	idt_ptr.base = (UINT)&idt_entries;
+	memset(&idt_entries, 0, sizeof(idt_entry) * 256);
+	outportb(0x20, 0x11);
+	outportb(0xA0, 0x11);
+	outportb(0x21, 0x20);
+	outportb(0xA1, 0x28);
+	outportb(0x21, 0x04);
+	outportb(0xA1, 0x02);
+	outportb(0x21, 0x01);
+	outportb(0xA1, 0x01);
+	outportb(0x21, 0x0);
+	outportb(0xA1, 0x0);
 	IDT_SET_GATE_ISR(0);
 	IDT_SET_GATE_ISR(1);
 	IDT_SET_GATE_ISR(2);
@@ -200,28 +200,28 @@ static void init_idt()
 
 static void idt_set_gate(UCHAR num, UINT base, USHORT sel, UCHAR flags)
 {
-	idt_entries[num].base_lo=base&0xFFFF;
-	idt_entries[num].base_hi=(base>>16)&0xFFFF;
-	idt_entries[num].sel=sel;
-	idt_entries[num].always0=0;
-	idt_entries[num].flags=flags|0x60;
+	idt_entries[num].base_lo = base & 0xFFFF;
+	idt_entries[num].base_hi = (base >> 16) & 0xFFFF;
+	idt_entries[num].sel = sel;
+	idt_entries[num].always0 = 0;
+	idt_entries[num].flags = flags | 0x60;
 }
 
 static void write_tss(int num, UINT ss0, UINT esp0)
 {
-	UINT base=(UINT)&tss_ent;
-	UINT limit=base+sizeof(tss_entry);
-	gdt_set_gate(num,base,limit,0xE9,0x00);
-	memset(&tss_ent,0,sizeof(tss_entry));
-	tss_ent.ss0=ss0;
-	tss_ent.esp0=esp0;
-	tss_ent.cs=0x0B;
-	tss_ent.ss=tss_ent.ds=tss_ent.es=tss_ent.fs=tss_ent.gs=0x13;
+	UINT base = (UINT)&tss_ent;
+	UINT limit = base + sizeof(tss_entry);
+	gdt_set_gate(num, base, limit, 0xE9, 0x00);
+	memset(&tss_ent, 0, sizeof(tss_entry));
+	tss_ent.ss0 = ss0;
+	tss_ent.esp0 = esp0;
+	tss_ent.cs = 0x0B;
+	tss_ent.ss = tss_ent.ds = tss_ent.es = tss_ent.fs = tss_ent.gs = 0x13;
 }
 
 void set_kernel_stack(UINT stack)
 {
-	tss_ent.esp0=stack;
+	tss_ent.esp0 = stack;
 }
 
 //Interrupt Service Routines and related stuff
@@ -266,21 +266,21 @@ const char *exception_messages[] = {
 
 void register_interrupt_handler(UCHAR n, isr_t handler)
 {
-	interrupt_handlers[n]=handler;
+	interrupt_handlers[n] = handler;
 }
 
 void isr_handler(registers regs)
 {
-	UCHAR int_no = regs.int_no&0xFF;
+	UCHAR int_no = regs.int_no & 0xFF;
 	if (interrupt_handlers[int_no]) {
-		glob_regs=&regs;
-		isr_t handler=interrupt_handlers[int_no];
+		glob_regs = &regs;
+		isr_t handler = interrupt_handlers[int_no];
 		handler(&regs);
-		glob_regs=0;
+		glob_regs = 0;
 	} else {
-		printf("\nEIP 0x%X\n",regs.eip);
-		if (int_no<32) printf("%s Exception\n",exception_messages[int_no]);
-			else printf("unhandled interrupt: 0x%X\n",int_no);
+		printf("\nEIP 0x%X\n", regs.eip);
+		if (int_no < 32) printf("%s Exception\n", exception_messages[int_no]);
+		else printf("unhandled interrupt: 0x%X\n", int_no);
 		for (;;);
 		abort_current_process();
 	}
@@ -288,12 +288,12 @@ void isr_handler(registers regs)
 
 void irq_handler(registers regs)
 {
-    if (regs.int_no>=40) {
-        outportb(0xA0,0x20);
-    }
-    outportb(0x20,0x20);
-    if (interrupt_handlers[regs.int_no]) {
-        isr_t handler=interrupt_handlers[regs.int_no];
-        handler(&regs);
-    }
+	if (regs.int_no >= 40) {
+		outportb(0xA0, 0x20);
+	}
+	outportb(0x20, 0x20);
+	if (interrupt_handlers[regs.int_no]) {
+		isr_t handler = interrupt_handlers[regs.int_no];
+		handler(&regs);
+	}
 }

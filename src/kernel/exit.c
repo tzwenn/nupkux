@@ -27,9 +27,9 @@ extern volatile task tasks[NR_TASKS];
 
 static int send_signal(volatile task *atask, int sign) //Just inside the kernel
 {
-	if (I_AM_ROOT() || atask->uid==current_task->uid || atask->uid==current_task->euid
-			|| atask->euid==current_task->uid || atask->euid==current_task->euid || sign==SIGCONT) {
-		atask->signals|=(1<<(sign-1));
+	if (I_AM_ROOT() || atask->uid == current_task->uid || atask->uid == current_task->euid
+	        || atask->euid == current_task->uid || atask->euid == current_task->euid || sign == SIGCONT) {
+		atask->signals |= (1 << (sign - 1));
 		return 0;
 	}
 	return -EPERM;
@@ -37,31 +37,34 @@ static int send_signal(volatile task *atask, int sign) //Just inside the kernel
 
 int sys_kill(pid_t pid, int sign)
 {
-	if (sign<1 || sign>32)
+	if (sign < 1 || sign > 32)
 		return -EINVAL;
-	pid_t i=0;
-	int ret=-1,perm=0,found=0;
-	if (!pid) for (;i<NR_TASKS;i++) {
-			if (tasks[i].pid!=NO_TASK && tasks[i].pgrp==current_task->pgrp) {
-				ret=send_signal(&(tasks[i]),sign);
-				found=1;
-				if (ret!=-EPERM) perm=1;
+	pid_t i = 0;
+	int ret = -1, perm = 0, found = 0;
+	if (!pid) for (; i < NR_TASKS; i++) {
+			if (tasks[i].pid != NO_TASK && tasks[i].pgrp == current_task->pgrp) {
+				ret = send_signal(&(tasks[i]), sign);
+				found = 1;
+				if (ret != -EPERM) perm = 1;
 			}
-	} else if (pid==-1) for (;i<NR_TASKS;i++) {
-			if (tasks[i].pid!=NO_TASK) {
-				ret=send_signal(&(tasks[i]),sign);
-				found=1;
-				if (ret!=-EPERM) perm=1;
-			}
-	} else if (pid<-1) for (;i<NR_TASKS;i++) {
-		if (tasks[i].pid!=NO_TASK && tasks[i].pgrp==-pid) {
-			ret=send_signal(&(tasks[i]),sign);
-			found=1;
-			if (ret!=-EPERM) perm=1;
 		}
-	} else if (pid>NR_TASKS || tasks[pid].pid==NO_TASK) {
+	else if (pid == -1) for (; i < NR_TASKS; i++) {
+			if (tasks[i].pid != NO_TASK) {
+				ret = send_signal(&(tasks[i]), sign);
+				found = 1;
+				if (ret != -EPERM) perm = 1;
+			}
+		}
+	else if (pid < -1) for (; i < NR_TASKS; i++) {
+			if (tasks[i].pid != NO_TASK && tasks[i].pgrp == -pid) {
+				ret = send_signal(&(tasks[i]), sign);
+				found = 1;
+				if (ret != -EPERM) perm = 1;
+			}
+		}
+	else if (pid > NR_TASKS || tasks[pid].pid == NO_TASK) {
 		return -ESRCH;
-	} else return send_signal(&(tasks[pid]),sign);
+	} else return send_signal(&(tasks[pid]), sign);
 	if (!found) return -ESRCH;
 	if (!perm) return -EPERM;
 	return 0;
@@ -71,10 +74,10 @@ int sys_exit(int status)
 {
 	UINT i;
 	cli(); //switch_task does sti()
-	for (i=0;i<NR_TASKS;i++)
-		if (tasks[i].pid!=NO_TASK && tasks[i].parent==current_task->pid)
-			tasks[i].parent=1; //INIT inherits the orphan
-	for (i=NR_OPEN;i--;)
+	for (i = 0; i < NR_TASKS; i++)
+		if (tasks[i].pid != NO_TASK && tasks[i].parent == current_task->pid)
+			tasks[i].parent = 1; //INIT inherits the orphan
+	for (i = NR_OPEN; i--;)
 		if (current_task->files)
 			sys_close(i);
 	if (!current_task->pid) {
@@ -82,9 +85,9 @@ int sys_exit(int status)
 		cli();
 		hlt();
 	}
-	current_task->state=TASK_ZOMBIE;
-	current_task->exit_code=status;
-	sys_kill(current_task->parent,SIGCHLD);
+	current_task->state = TASK_ZOMBIE;
+	current_task->exit_code = status;
+	sys_kill(current_task->parent, SIGCHLD);
 	free_directory(current_task->directory);
 	free((void *)current_task->kernel_stack);
 	switch_task();
@@ -93,15 +96,15 @@ int sys_exit(int status)
 
 pid_t sys_waitpid(pid_t pid, int *statloc, int options)
 {
-	if (pid<=0 || pid>=NR_TASKS) return -ECHILD;
-	while (tasks[pid].state!=TASK_ZOMBIE);
+	if (pid <= 0 || pid >= NR_TASKS) return -ECHILD;
+	while (tasks[pid].state != TASK_ZOMBIE);
 	if (statloc) {
-		if (!access_ok(VERIFY_WRITE,statloc,sizeof(int))) {
-			tasks[pid].pid=NO_TASK;
+		if (!access_ok(VERIFY_WRITE, statloc, sizeof(int))) {
+			tasks[pid].pid = NO_TASK;
 			return -EFAULT;
 		}
-		*statloc=tasks[pid].exit_code;
+		*statloc = tasks[pid].exit_code;
 	}
-	tasks[pid].pid=NO_TASK;
+	tasks[pid].pid = NO_TASK;
 	return pid;
 }

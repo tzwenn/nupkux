@@ -46,19 +46,19 @@
 #define NR_TTYS		4
 
 typedef struct {
-  char x;
-  char y;
+	char x;
+	char y;
 } tty_cursor;
 
 typedef struct _tty {
-	UCHAR is_esc:1;
-	UCHAR show_cursor:1;
+	UCHAR is_esc: 1;
+	UCHAR show_cursor: 1;
 	UCHAR echo: 1;
 	UCHAR nr: 5;
-	USHORT width,height,memlines,viewln,scrln,esc_ind,attr;
-	USHORT *mem,in_s,in_e;
+	USHORT width, height, memlines, viewln, scrln, esc_ind, attr;
+	USHORT *mem, in_s, in_e;
 	devfs_handle *dev;
-	tty_cursor cursor,_cursor;
+	tty_cursor cursor, _cursor;
 	USHORT input_buffer[TTY_INBUF_LEN];
 	char escape_seq[TTY_ESCAPE_LEN];
 } tty;

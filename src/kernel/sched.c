@@ -24,23 +24,23 @@ extern volatile task tasks[NR_TASKS];
 volatile task* schedule(void)
 {
 	pid_t i;
-	volatile task *new_task=current_task;
-	for (i=NR_TASKS;i>=0;i--) {
-		if (tasks[i].pid!=NO_TASK && tasks[i].signals && tasks[i].state==TASK_BLOCKED)
-			tasks[i].state=TASK_WAITING;
+	volatile task *new_task = current_task;
+	for (i = NR_TASKS; i >= 0; i--) {
+		if (tasks[i].pid != NO_TASK && tasks[i].signals && tasks[i].state == TASK_BLOCKED)
+			tasks[i].state = TASK_WAITING;
 	}
 
-	for (i=new_task->pid+1;i<NR_TASKS;i++)
-		if (tasks[i].pid!=NO_TASK && tasks[i].state==TASK_WAITING) break;
-	if (i==NR_TASKS) {
-		new_task=tasks; //This runs the kernel task, even if it's paused
-	} else new_task=&(tasks[i]);
+	for (i = new_task->pid + 1; i < NR_TASKS; i++)
+		if (tasks[i].pid != NO_TASK && tasks[i].state == TASK_WAITING) break;
+	if (i == NR_TASKS) {
+		new_task = tasks; //This runs the kernel task, even if it's paused
+	} else new_task = &(tasks[i]);
 	return new_task;
 }
 
 int sys_pause(void)
 {
-	current_task->state=TASK_BLOCKED;
+	current_task->state = TASK_BLOCKED;
 	switch_task();
 	return 0;
 }

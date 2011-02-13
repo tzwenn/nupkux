@@ -24,14 +24,14 @@
 
 int main(int argc, char *argv[], char *envp[])
 {
-	if (argc<2) return 1;
+	if (argc < 2) return 1;
 	char device[15];
-	sprintf(device,"/dev/tty%s",argv[1]);
+	sprintf(device, "/dev/tty%s", argv[1]);
 	close(STDIN_FILENO); //Get rid of old stdin
-	open(device,O_RDWR,0); //Open the tty as new stdin
-	dup2(STDIN_FILENO,STDOUT_FILENO); //Replace old stdout with tty
-	dup2(STDIN_FILENO,STDERR_FILENO);
-	printf("\nNupkux tty%s\n\n",argv[1]);
-	execve("/bin/login",0,0);
+	open(device, O_RDWR, 0); //Open the tty as new stdin
+	dup2(STDIN_FILENO, STDOUT_FILENO); //Replace old stdout with tty
+	dup2(STDIN_FILENO, STDERR_FILENO);
+	printf("\nNupkux tty%s\n\n", argv[1]);
+	execve("/bin/login", 0, 0);
 	return 0;
 }

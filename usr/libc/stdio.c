@@ -20,9 +20,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-static FILE __stdin=STDIN_FILENO;
-static FILE __stdout=STDOUT_FILENO;
-static FILE __stderr=STDERR_FILENO;
+static FILE __stdin = STDIN_FILENO;
+static FILE __stdout = STDOUT_FILENO;
+static FILE __stderr = STDERR_FILENO;
 
 FILE *stdin = &__stdin;
 FILE *stdout = &__stdout;
@@ -31,7 +31,7 @@ FILE *stderr = &__stderr;
 int getc(FILE *stream)
 {
 	char res;
-	read(*stream,&res,1);
+	read(*stream, &res, 1);
 	return res;
 }
 
@@ -41,14 +41,14 @@ extern int vsprintf(char *buf, const char *fmt, va_list args);
 
 int printf(const char *fmt, ...)
 {
-	char str[BUFSIZE]={0,};
+	char str[BUFSIZE] = {0,};
 	int res;
 	va_list ap;
 
-	va_start(ap,fmt);
-	res=vsprintf(str,fmt,ap);
+	va_start(ap, fmt);
+	res = vsprintf(str, fmt, ap);
 	va_end(ap);
-	write(STDOUT_FILENO,str,res);
+	write(STDOUT_FILENO, str, res);
 	return res;
 }
 
@@ -57,8 +57,8 @@ int sprintf(char *str, const char *fmt, ...)
 	int res;
 	va_list ap;
 
-	va_start(ap,fmt);
-	res=vsprintf(str,fmt,ap);
+	va_start(ap, fmt);
+	res = vsprintf(str, fmt, ap);
 	va_end(ap);
 	return res;
 }

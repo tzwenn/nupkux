@@ -22,28 +22,28 @@
 
 static vnode *create_empty_inode(super_block *sb, ULONG ino)
 {
-	vnode *res=calloc(1,sizeof(vnode));
-	res->sb=sb;
-	res->ino=ino;
-	res->dev=sb->dev;
-	res->count=1;
+	vnode *res = calloc(1, sizeof(vnode));
+	res->sb = sb;
+	res->ino = ino;
+	res->dev = sb->dev;
+	res->count = 1;
 	sb->s_op->read_inode(res); //TODO: Error checking
-	res->cache_next=sb->cache;
-	sb->cache=res;
+	res->cache_next = sb->cache;
+	sb->cache = res;
 	return res;
 }
 
 static void free_inode(vnode *node)
 {
-	vnode *tmp=node->sb->cache, *prev=0;
+	vnode *tmp = node->sb->cache, *prev = 0;
 	while (tmp) {
-		if (tmp==node) break;
-		prev=tmp;
-		tmp=tmp->cache_next;
+		if (tmp == node) break;
+		prev = tmp;
+		tmp = tmp->cache_next;
 	}
 	if (!prev)
-		node->sb->cache=node->cache_next;
-	else prev->cache_next=node->cache_next;
+		node->sb->cache = node->cache_next;
+	else prev->cache_next = node->cache_next;
 	free(node);
 }
 
@@ -55,30 +55,30 @@ vnode *vfs_create_cache(void)
 void free_sb_inodes(super_block *sb)
 {
 	if (!sb) return;
-	vnode *node=sb->cache,*tmp;
+	vnode *node = sb->cache, *tmp;
 	while (node) {
-		tmp=node->cache_next;
-		node->count=1; //We are going to free all instances ... Well, let the filesystem think so.
+		tmp = node->cache_next;
+		node->count = 1; //We are going to free all instances ... Well, let the filesystem think so.
 		if (sb->s_op->put_inode)
 			sb->s_op->put_inode(node);
 		free(node);
-		node=tmp;
+		node = tmp;
 	}
 }
 
 vnode *iget(super_block *sb, ULONG ino)
 {
 	if (!sb) return 0;
-	vnode *node=sb->cache;
+	vnode *node = sb->cache;
 	while (node) {
-		if (node->ino==ino) {
+		if (node->ino == ino) {
 			node->count++;
 			return node;
 		}
-		node=node->cache_next;
+		node = node->cache_next;
 	}
 	if (!sb->s_op || !sb->s_op->read_inode) return 0;
-	return create_empty_inode(sb,ino);
+	return create_empty_inode(sb, ino);
 }
 
 void iput(vnode *node)

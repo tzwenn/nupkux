@@ -25,26 +25,29 @@ extern inode_operations initrd_i_ops;
 static super_block *read_initrd_sb(super_block *sb, void *data, int verbose);
 
 filesystem_t initrd_fs_type = {
-		name: "initrdfs",
-		flags: 0,
-		read_super: &read_initrd_sb,
-		next: NULL
+name: "initrdfs"
+	,
+	flags: 0,
+read_super:
+	&read_initrd_sb,
+next:
+	NULL
 };
 
 static void initrd_read_inode(vnode *node) //dev, sb, ino set
 {
 	initrd_discr *discr = (initrd_discr *) node->sb->u.pdata;
-	if (node->ino>discr->initrdheader->inodecount) return;
-	initrd_inode itnode=discr->initrd_inodes[node->ino];
-	node->flags=itnode.flags;
-	node->ctime=node->atime=node->mtime=0;
-	node->gid=itnode.gid;
-	node->uid=itnode.uid;
-	node->mode=itnode.mode;
-	node->nlinks=1;
-	node->size=itnode.size;
-	node->i_op=&initrd_i_ops;
-	node->u.initrdfs_i=&(discr->initrd_inodes[itnode.inode]);
+	if (node->ino > discr->initrdheader->inodecount) return;
+	initrd_inode itnode = discr->initrd_inodes[node->ino];
+	node->flags = itnode.flags;
+	node->ctime = node->atime = node->mtime = 0;
+	node->gid = itnode.gid;
+	node->uid = itnode.uid;
+	node->mode = itnode.mode;
+	node->nlinks = 1;
+	node->size = itnode.size;
+	node->i_op = &initrd_i_ops;
+	node->u.initrdfs_i = &(discr->initrd_inodes[itnode.inode]);
 }
 
 static void initrd_put_super(super_block *sb)
@@ -53,21 +56,23 @@ static void initrd_put_super(super_block *sb)
 }
 
 static super_operations initrd_s_ops = {
-		read_inode: &initrd_read_inode,
-		put_super: &initrd_put_super,
+read_inode:
+	&initrd_read_inode,
+put_super:
+	&initrd_put_super,
 };
 
 static super_block *read_initrd_sb(super_block *sb, void *data, int verbose)
 {
-	if (*(UINT*)data!=INITRD_MAGIC) return 0;
-	sb->s_op=&initrd_s_ops;
-	sb->blocksize=1;
-	sb->blocksize_bits=0;
+	if (*(UINT*)data != INITRD_MAGIC) return 0;
+	sb->s_op = &initrd_s_ops;
+	sb->blocksize = 1;
+	sb->blocksize_bits = 0;
 	initrd_discr *discr = malloc(sizeof(initrd_discr));
-	discr->location=(char *)data;
-	discr->initrdheader=(initrd_header *)discr->location;
-	discr->initrd_inodes=(initrd_inode *)(discr->location+sizeof(initrd_header));
-	sb->u.pdata=discr;
-	sb->root=iget(sb,0);
+	discr->location = (char *)data;
+	discr->initrdheader = (initrd_header *)discr->location;
+	discr->initrd_inodes = (initrd_inode *)(discr->location + sizeof(initrd_header));
+	sb->u.pdata = discr;
+	sb->root = iget(sb, 0);
 	return sb;
 }

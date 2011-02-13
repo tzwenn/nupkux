@@ -47,16 +47,16 @@ typedef int pid_t;
 
 struct _task
 {
-	pid_t pid,parent,pgrp;
-	char priority,state;
-	UINT esp,ebp,eip;
+	pid_t pid, parent, pgrp;
+	char priority, state;
+	UINT esp, ebp, eip;
 	page_directory *directory;
 	UINT kernel_stack;
 	USHORT uid, euid;
 	USHORT gid, egid;
 	int exit_code;
 	UINT signals;
-	vnode *pwd,*root;
+	vnode *pwd, *root;
 	ULONG close_on_exec;
 	FILE *files[NR_OPEN];
 };

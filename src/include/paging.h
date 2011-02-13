@@ -58,8 +58,8 @@ typedef struct _page_table page_table;
 typedef struct _page page;
 
 struct _page {
-   UINT flags: 12;
-   UINT frame: 20;
+	UINT flags: 12;
+	UINT frame: 20;
 };
 
 struct _page_table {

@@ -25,11 +25,11 @@ static int initrd_read(vnode *node, off_t offset, size_t size, char *buffer)
 {
 	initrd_discr *discr = (initrd_discr *) node->sb->u.pdata;
 	initrd_inode inode = *(node->u.initrdfs_i);
-	if (offset>inode.size)
+	if (offset > inode.size)
 		return 0;
-	if (offset+size>inode.size)
-		size=inode.size-offset;
-	memcpy(buffer,(UCHAR*)(inode.offset+offset+discr->location),size);
+	if (offset + size > inode.size)
+		size = inode.size - offset;
+	memcpy(buffer, (UCHAR*)(inode.offset + offset + discr->location), size);
 	return size;
 }
 
@@ -42,38 +42,43 @@ static int initrd_readdir(vnode *dir, off_t index, struct dirent *buf)
 {
 	initrd_discr *discr = (initrd_discr *) dir->sb->u.pdata;
 	initrd_inode inode = *(dir->u.initrdfs_i);
-	initrd_d_entry *entries = (initrd_d_entry *) (inode.offset+discr->location);
+	initrd_d_entry *entries = (initrd_d_entry *) (inode.offset + discr->location);
 
-	if (index>=inode.size/sizeof(initrd_d_entry)) return -EINVAL;
-	inode=discr->initrd_inodes[entries[index].inode];
-	strncpy(buf->d_name,entries[index].filename,INITRD_FILENAME_LEN);
-	buf->d_name[INITRD_FILENAME_LEN-1]=0;
-	buf->d_namlen=strlen(buf->d_name);
-	buf->d_ino=entries[index].inode;
-	buf->d_type=inode.flags;
+	if (index >= inode.size / sizeof(initrd_d_entry)) return -EINVAL;
+	inode = discr->initrd_inodes[entries[index].inode];
+	strncpy(buf->d_name, entries[index].filename, INITRD_FILENAME_LEN);
+	buf->d_name[INITRD_FILENAME_LEN-1] = 0;
+	buf->d_namlen = strlen(buf->d_name);
+	buf->d_ino = entries[index].inode;
+	buf->d_type = inode.flags;
 	return 0;
 }
 
-static vnode *initrd_lookup(vnode *dir,const char *name)
+static vnode *initrd_lookup(vnode *dir, const char *name)
 {
 	initrd_discr *discr = (initrd_discr *) dir->sb->u.pdata;
 	initrd_inode inode = *(dir->u.initrdfs_i);
-	initrd_d_entry *entries = (initrd_d_entry *) (inode.offset+discr->location);
-	UINT i = inode.size/sizeof(initrd_d_entry);
+	initrd_d_entry *entries = (initrd_d_entry *) (inode.offset + discr->location);
+	UINT i = inode.size / sizeof(initrd_d_entry);
 	while (i--) {
-		if (namei_match(name,entries[i].filename))
-			return iget(dir->sb,entries[i].inode);
+		if (namei_match(name, entries[i].filename))
+			return iget(dir->sb, entries[i].inode);
 	}
 	return 0;
 }
 
 static file_operations initrd_f_ops = {
-		read: &initrd_read,
-		write: &initrd_write,
-		readdir: &initrd_readdir,
+read:
+	&initrd_read,
+write:
+	&initrd_write,
+readdir:
+	&initrd_readdir,
 };
 
 inode_operations initrd_i_ops = {
-		f_op: &initrd_f_ops,
-		lookup: &initrd_lookup,
+f_op:
+	&initrd_f_ops,
+lookup:
+	&initrd_lookup,
 };

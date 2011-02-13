@@ -99,11 +99,11 @@ struct dirent {
 };
 
 typedef struct file {
-        UINT fd;
-        UINT flags;
-        vnode *node;
-        off_t offset;
-        UINT count;
+	UINT fd;
+	UINT flags;
+	vnode *node;
+	off_t offset;
+	UINT count;
 } FILE;
 
 struct _super_operations {
@@ -112,31 +112,31 @@ struct _super_operations {
 	void (*put_inode) (vnode *);
 	void (*put_super) (super_block *);
 	void (*write_super) (super_block *);
-	int (*remount_fs) (super_block *,int *,char *);
+	int (*remount_fs) (super_block *, int *, char *);
 };
 
 struct _inode_operations {
 	file_operations *f_op;
-	int (*create) (vnode *,const char *,int);
-	vnode *(*lookup) (vnode *,const char *);
-	int (*link) (vnode *,vnode *,const char *);
-	int (*unlink) (vnode *,const char *);
-	int (*symlink) (vnode *,const char *,const char *);
-	int (*mkdir) (vnode *,const char *,int);
-	int (*rmdir) (vnode *,const char *);
-	int (*rename) (vnode *,const char *,vnode *,const char *);
-	vnode *(*follow_link) (vnode *,const char *); //Maybe we should use resolve_link
+	int (*create) (vnode *, const char *, int);
+	vnode *(*lookup) (vnode *, const char *);
+	int (*link) (vnode *, vnode *, const char *);
+	int (*unlink) (vnode *, const char *);
+	int (*symlink) (vnode *, const char *, const char *);
+	int (*mkdir) (vnode *, const char *, int);
+	int (*rmdir) (vnode *, const char *);
+	int (*rename) (vnode *, const char *, vnode *, const char *);
+	vnode *(*follow_link) (vnode *, const char *); //Maybe we should use resolve_link
 
 };
 
 struct _file_operations {
-	int (*open) (vnode *,FILE *);
-	int (*read) (vnode *,off_t,size_t,char *);
-	int (*write) (vnode *,off_t,size_t,const char *);
+	int (*open) (vnode *, FILE *);
+	int (*read) (vnode *, off_t, size_t, char *);
+	int (*write) (vnode *, off_t, size_t, const char *);
 	int (*readdir) (vnode *, off_t, struct dirent *);
 	int (*close) (vnode *);
-	int (*ioctl) (vnode *,UINT,ULONG);
-	int (*request) (vnode *,int,ULONG,ULONG,char *);
+	int (*ioctl) (vnode *, UINT, ULONG);
+	int (*request) (vnode *, int, ULONG, ULONG, char *);
 	void (*free_pdata) (void *);
 };
 
@@ -149,7 +149,7 @@ struct _vnode {
 	UINT mode;
 	UINT flags;
 	size_t size;
-	time_t atime,mtime,ctime;
+	time_t atime, mtime, ctime;
 	vnode *dev;
 	super_block *sb;
 	inode_operations *i_op;
@@ -185,7 +185,7 @@ struct _super_block {
 struct _filesystem_t {
 	const char *name;
 	int flags;
-	super_block *(*read_super)(super_block*,void *,int);
+	super_block *(*read_super)(super_block*, void *, int);
 	filesystem_t *next;
 };
 

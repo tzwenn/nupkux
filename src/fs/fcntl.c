@@ -24,11 +24,11 @@
 
 int sys_dup2(int fd, int fd2)
 {
-	if (fd<0 || fd>=NR_OPEN || fd2<0 || fd2>=NR_OPEN) return -EBADF;
+	if (fd < 0 || fd >= NR_OPEN || fd2 < 0 || fd2 >= NR_OPEN) return -EBADF;
 	if (!current_task->files[fd]) return -EBADF;
 	sys_close(fd2);
-	current_task->close_on_exec&=~(1<<fd2);
-	current_task->files[fd2]=current_task->files[fd];
+	current_task->close_on_exec &= ~(1 << fd2);
+	current_task->files[fd2] = current_task->files[fd];
 	current_task->files[fd2]->count++;
 	return fd2; //man 2 dup on BSD told me to return 0 here, but Linux returns fd
 }
@@ -36,8 +36,8 @@ int sys_dup2(int fd, int fd2)
 int sys_dup(int fd)
 {
 	int fd2;
-	for (fd2=0;fd2<NR_OPEN;fd2++)
+	for (fd2 = 0; fd2 < NR_OPEN; fd2++)
 		if (!current_task->files[fd2]) break;
-	if (fd2>=NR_OPEN) return -EMFILE;
-	return sys_dup2(fd,fd2);
+	if (fd2 >= NR_OPEN) return -EMFILE;
+	return sys_dup2(fd, fd2);
 }

@@ -19,15 +19,15 @@
 
 #include <fs/devfs.h>
 
-static vnode *devfs_lookup(vnode *dir,const char *name)
+static vnode *devfs_lookup(vnode *dir, const char *name)
 {
 	devfs_handle *handle = dir->u.devfs_i;
 	if (!handle) return 0;
 	devfs_d_entry *entries = handle->pdata;
-	UINT i = dir->size/sizeof(devfs_d_entry);
+	UINT i = dir->size / sizeof(devfs_d_entry);
 	while (i--) {
-		if (namei_match(name,entries[i].filename))
-			return iget(dir->sb,entries[i].inode);
+		if (namei_match(name, entries[i].filename))
+			return iget(dir->sb, entries[i].inode);
 	}
 	return 0;
 }
@@ -35,6 +35,8 @@ static vnode *devfs_lookup(vnode *dir,const char *name)
 extern file_operations devfs_dir_fop;
 
 inode_operations devfs_i_ops = {
-		f_op: &devfs_dir_fop,
-		lookup: &devfs_lookup,
+f_op:
+	&devfs_dir_fop,
+lookup:
+	&devfs_lookup,
 };

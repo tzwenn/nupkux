@@ -59,24 +59,24 @@
 
 static int detect_serial_port(USHORT port)
 {
-	outportb(port+MCR,MCR_LOOP);
-	if ((inportb(port+MSR)&0xF0)) return 0;
-	outportb(port+MCR,MCR_LOOP | 0x0F);
-	if ((inportb(port+MSR)&0xF0)!=0xF0) return 0;
+	outportb(port + MCR, MCR_LOOP);
+	if ((inportb(port + MSR) & 0xF0)) return 0;
+	outportb(port + MCR, MCR_LOOP | 0x0F);
+	if ((inportb(port + MSR) & 0xF0) != 0xF0) return 0;
 	return 1;
 }
 
 static int serial_open(vnode *node, FILE *f)
 {
-	USHORT port=(USHORT) ((UINT) devicen_pdata(node));
-	outportb(port+IER,NO_INTERRUPTS);
-	outportb(port+LCR,SET_DLAB);
-	outportb(port+DL_LO,divisor & 0xFF);
-	outportb(port+DL_HI,(divisor >> 8) & 0xFF);
-	outportb(port+LCR,WORD_8);
-	outportb(port+MCR,LOOP_CLEAR);
-	outportb(port+FCR,RX_TRIGGER | RFres | XFres | FCR_enable);
-	outportb(port+MCR,OUT2 | RTS | DTR);
+	USHORT port = (USHORT) ((UINT) devicen_pdata(node));
+	outportb(port + IER, NO_INTERRUPTS);
+	outportb(port + LCR, SET_DLAB);
+	outportb(port + DL_LO, divisor & 0xFF);
+	outportb(port + DL_HI, (divisor >> 8) & 0xFF);
+	outportb(port + LCR, WORD_8);
+	outportb(port + MCR, LOOP_CLEAR);
+	outportb(port + FCR, RX_TRIGGER | RFres | XFres | FCR_enable);
+	outportb(port + MCR, OUT2 | RTS | DTR);
 	//By now this is my first "real hardware" driver, nupkux is without "real" scheduling
 	//For this reason this is non-interrupt-driven and therefore ugly one
 	//outportb(port+IER,ERBFI);
@@ -85,52 +85,56 @@ static int serial_open(vnode *node, FILE *f)
 
 static int serial_write(vnode *node, off_t offset, size_t size, const char *buffer)
 {
-	size_t i=size;
-	USHORT port=(USHORT) ((UINT) devicen_pdata(node));
+	size_t i = size;
+	USHORT port = (USHORT) ((UINT) devicen_pdata(node));
 
 	while (i--)  {
-		while (!(inportb(port+LSR)&THRE));
-		outportb(port+THR,*(buffer++));
+		while (!(inportb(port + LSR)&THRE));
+		outportb(port + THR, *(buffer++));
 	}
 	return size;
 }
 
 static int serial_read(vnode *node, off_t offset, size_t size, char *buffer)
 {
-	size_t i=size;
-	USHORT port=(USHORT) ((UINT) devicen_pdata(node));
+	size_t i = size;
+	USHORT port = (USHORT) ((UINT) devicen_pdata(node));
 
 	while (i--) {
-		while (!inportb(port+LSR)&RBF);
-		*(buffer++)=inportb(port+RBR);
+		while (!inportb(port + LSR)&RBF);
+		*(buffer++) = inportb(port + RBR);
 	}
 	return size;
 }
 
 static int serial_close(vnode *node)
 {
-	USHORT port=(USHORT) ((UINT) devicen_pdata(node));
+	USHORT port = (USHORT) ((UINT) devicen_pdata(node));
 
-	outportb(port+IER,NO_INTERRUPTS);
-	outportb(port+MCR,0x00);
+	outportb(port + IER, NO_INTERRUPTS);
+	outportb(port + MCR, 0x00);
 	return 0;
 }
 
 static file_operations serial_ops = {
-		open: &serial_open,
-		read: &serial_read,
-		write: &serial_write,
-		close: &serial_close,
+open:
+	&serial_open,
+read:
+	&serial_read,
+write:
+	&serial_write,
+close:
+	&serial_close,
 };
 
 void setup_serial(void)
 {
 	if (detect_serial_port(COM1))
-		set_device_pdata(devfs_register_device(NULL,"ttyS0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM1);
+		set_device_pdata(devfs_register_device(NULL, "ttyS0", 0660, FS_UID_ROOT, FS_GID_ROOT, FS_CHARDEVICE, &serial_ops), (void *)COM1);
 	if (detect_serial_port(COM2))
-		set_device_pdata(devfs_register_device(NULL,"ttyS1",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM2);
+		set_device_pdata(devfs_register_device(NULL, "ttyS1", 0660, FS_UID_ROOT, FS_GID_ROOT, FS_CHARDEVICE, &serial_ops), (void *)COM2);
 	if (detect_serial_port(COM3))
-		set_device_pdata(devfs_register_device(NULL,"ttyS2",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM3);
+		set_device_pdata(devfs_register_device(NULL, "ttyS2", 0660, FS_UID_ROOT, FS_GID_ROOT, FS_CHARDEVICE, &serial_ops), (void *)COM3);
 	if (detect_serial_port(COM4))
-		set_device_pdata(devfs_register_device(NULL,"ttyS3",0660,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&serial_ops),(void *)COM4);
+		set_device_pdata(devfs_register_device(NULL, "ttyS3", 0660, FS_UID_ROOT, FS_GID_ROOT, FS_CHARDEVICE, &serial_ops), (void *)COM4);
 }

@@ -35,18 +35,18 @@ extern int sys_exit(int status);
 extern pid_t sys_fork(void);
 extern int sys_read(int fd, char *buffer, size_t size);
 extern int sys_write(int fd, const char *buffer, size_t size);
-extern int sys_open(const char *filename,int flag,int mode);
+extern int sys_open(const char *filename, int flag, int mode);
 extern int sys_close(int fd);
 extern pid_t sys_waitpid(pid_t pid, int *statloc, int options);
-extern int sys_execve(const char *file,const char **argv,const char **envp);
+extern int sys_execve(const char *file, const char **argv, const char **envp);
 extern int sys_chdir(const char *name);
 extern int sys_mknod(const char *name, int mode, int addr);
 extern pid_t sys_getpid(void);
 extern int sys_mount(	const char *source, const char *target,
-			const char *filesystemtype, unsigned long mountflags,
-			void *data);
+                        const char *filesystemtype, unsigned long mountflags,
+                        void *data);
 extern int sys_pause(void);
-extern int sys_kill(pid_t pid,int sign);
+extern int sys_kill(pid_t pid, int sign);
 extern int sys_dup(int fd);
 extern int sys_umount(const char *target);
 extern int sys_ioctl(int fd, UINT cmd, ULONG arg);

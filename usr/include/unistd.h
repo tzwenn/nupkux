@@ -163,25 +163,25 @@ type name(atype a,btype b,ctype c)
 extern int errno;
 #endif
 
-_decl_syscall1(int,putchar,char,chr);
-_decl_syscall1(int,exit,int,status);
-_decl_syscall0(pid_t,fork);
-_decl_syscall3(int,read,int,fd,char *,buffer,size_t,size);
-_decl_syscall3(int,write,int,fd,const char *,buffer,size_t,size);
-_decl_syscall3(int,open,const char *,filename,int,flag,int,mode);
-_decl_syscall1(int,close,int,fd);
-_decl_syscall3(pid_t,waitpid,pid_t,pid,int *,status,int,options);
-_decl_syscall3(int,execve,const char *,file,const char **,argv,const char **,envp);
-_decl_syscall1(int,chdir,const char *,name);
-_decl_syscall3(int,mknod,const char *,name,int,mode,int,addr);
-_decl_syscall0(pid_t,getpid);
-_decl_syscall0(int,pause);
-_decl_syscall2(int,kill,pid_t,pid,int,sign);
-_decl_syscall1(int,dup,int,fd);
-_decl_syscall3(int,ioctl,int,fd,unsigned int,cmd,unsigned long,arg);
-_decl_syscall1(int,chroot,const char *,name);
-_decl_syscall2(int,dup2,int,fd,int,fd2);
-_decl_syscall0(pid_t,getppid);
-_decl_syscall1(int,reboot,int,howto);
+_decl_syscall1(int, putchar, char, chr);
+_decl_syscall1(int, exit, int, status);
+_decl_syscall0(pid_t, fork);
+_decl_syscall3(int, read, int, fd, char *, buffer, size_t, size);
+_decl_syscall3(int, write, int, fd, const char *, buffer, size_t, size);
+_decl_syscall3(int, open, const char *, filename, int, flag, int, mode);
+_decl_syscall1(int, close, int, fd);
+_decl_syscall3(pid_t, waitpid, pid_t, pid, int *, status, int, options);
+_decl_syscall3(int, execve, const char *, file, const char **, argv, const char **, envp);
+_decl_syscall1(int, chdir, const char *, name);
+_decl_syscall3(int, mknod, const char *, name, int, mode, int, addr);
+_decl_syscall0(pid_t, getpid);
+_decl_syscall0(int, pause);
+_decl_syscall2(int, kill, pid_t, pid, int, sign);
+_decl_syscall1(int, dup, int, fd);
+_decl_syscall3(int, ioctl, int, fd, unsigned int, cmd, unsigned long, arg);
+_decl_syscall1(int, chroot, const char *, name);
+_decl_syscall2(int, dup2, int, fd, int, fd2);
+_decl_syscall0(pid_t, getppid);
+_decl_syscall1(int, reboot, int, howto);
 
 #endif

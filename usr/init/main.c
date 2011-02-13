@@ -43,10 +43,10 @@
 int main(void)
 {
 	//switch_to_user_mode();
-	open("/dev/tty0",O_RDWR,0); //No open files at this moment
+	open("/dev/tty0", O_RDWR, 0); //No open files at this moment
 	dup(STDIN_FILENO);
 	dup(STDIN_FILENO);
-	if (getpid()!=1) {
+	if (getpid() != 1) {
 		printf("\e[91mWARNING: \e[mDo not run init manually!!\n");
 		exit(1);
 	}
@@ -55,12 +55,12 @@ int main(void)
 	char cmd[6] = "getty";
 	char device[4] = {0,};
 	int i;
-	argv[0]=cmd;
-	argv[1]=device;
-	for (i=0;i<TTY_SETUPS;i++) {
-		sprintf(device,"%d",i);
+	argv[0] = cmd;
+	argv[1] = device;
+	for (i = 0; i < TTY_SETUPS; i++) {
+		sprintf(device, "%d", i);
 		if (!fork())
-			exit(execve("/bin/getty",argv,0));
+			exit(execve("/bin/getty", argv, 0));
 	}
 	for (;;) pause();
 	return 0;

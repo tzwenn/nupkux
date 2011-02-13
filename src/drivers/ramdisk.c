@@ -22,18 +22,18 @@
 static int ramdisk_request(vnode *node, int cmd, ULONG sector, ULONG count, char *buffer)
 {
 	device_lock(node);
-	if (sector>RAMDISK_SECTOR_COUNT) return 0;
-	if (sector+count>RAMDISK_SECTOR_COUNT)
-		count=RAMDISK_SECTOR_COUNT-sector;
-	size_t size=count*RAMDISK_SECTOR_SIZE;
-	off_t off=sector*RAMDISK_SECTOR_SIZE;
+	if (sector > RAMDISK_SECTOR_COUNT) return 0;
+	if (sector + count > RAMDISK_SECTOR_COUNT)
+		count = RAMDISK_SECTOR_COUNT - sector;
+	size_t size = count * RAMDISK_SECTOR_SIZE;
+	off_t off = sector * RAMDISK_SECTOR_SIZE;
 	switch (cmd) {
-		case REQUEST_READ:
-			memcpy(buffer,((char *)node->u.devfs_i->pdata)+off,size);
-			break;
-		case REQUEST_WRITE:
-			memcpy(((char *)node->u.devfs_i->pdata)+off,buffer,size);
-			break;
+	case REQUEST_READ:
+		memcpy(buffer, ((char *)node->u.devfs_i->pdata) + off, size);
+		break;
+	case REQUEST_WRITE:
+		memcpy(((char *)node->u.devfs_i->pdata) + off, buffer, size);
+		break;
 	}
 	device_unlock(node);
 	return count;
@@ -45,19 +45,22 @@ static void ramdisk_free_pdata(void *pdata)
 }
 
 file_operations ramdisk_ops = {
-		request: ramdisk_request,
-		free_pdata: ramdisk_free_pdata,};
+request:
+	ramdisk_request,
+free_pdata:
+	ramdisk_free_pdata,
+};
 
 void setup_ramdisk(void)
 {
-	devfs_handle *dev=devfs_register_device(NULL,"ram0",0660,FS_UID_ROOT,FS_GID_ROOT,FS_BLOCKDEVICE,&ramdisk_ops);
-	dev->pdata=calloc(RAMDISK_SECTOR_COUNT,RAMDISK_SECTOR_SIZE);
-	dev->bcount=RAMDISK_SECTOR_COUNT;
-	dev->bsize=RAMDISK_SECTOR_SIZE;
+	devfs_handle *dev = devfs_register_device(NULL, "ram0", 0660, FS_UID_ROOT, FS_GID_ROOT, FS_BLOCKDEVICE, &ramdisk_ops);
+	dev->pdata = calloc(RAMDISK_SECTOR_COUNT, RAMDISK_SECTOR_SIZE);
+	dev->bcount = RAMDISK_SECTOR_COUNT;
+	dev->bsize = RAMDISK_SECTOR_SIZE;
 	/////////////////////////////////
-	vnode *floppy=namei("/dev/fd0",0);
+	vnode *floppy = namei("/dev/fd0", 0);
 	if (floppy) {
-		request_fs(floppy,REQUEST_READ,0,RAMDISK_SECTOR_COUNT,dev->pdata);
+		request_fs(floppy, REQUEST_READ, 0, RAMDISK_SECTOR_COUNT, dev->pdata);
 	}
 	iput(floppy);
 	/////////////////////////////////

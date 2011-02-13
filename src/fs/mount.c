@@ -31,57 +31,57 @@ int d_mount(vfsmount *mnt)
 {
 	if (!mnt) return -EINVAL;
 	if (mnt->next) return -EBUSY;
-	mnt->next=vfs_mounts;
-	vfs_mounts=mnt;
+	mnt->next = vfs_mounts;
+	vfs_mounts = mnt;
 	return 0;
 }
 
 int d_umount(super_block *sb)
 {
 	if (!sb) return 0;
-	vfsmount *tmp=vfs_mounts, *prev=0;
+	vfsmount *tmp = vfs_mounts, *prev = 0;
 	while (tmp) {
-		if (sb->mi==tmp) break;
-		prev=tmp;
-		tmp=tmp->next;
+		if (sb->mi == tmp) break;
+		prev = tmp;
+		tmp = tmp->next;
 	}
-	if (!prev) vfs_mounts=tmp->next;
-		else prev->next=tmp->next;
+	if (!prev) vfs_mounts = tmp->next;
+	else prev->next = tmp->next;
 	free(tmp);
 	return 0;
 }
 
 int sys_mount(	const char *source, const char *target,
-		const char *filesystemtype, unsigned long mountflags,
-		void *data)
+                const char *filesystemtype, unsigned long mountflags,
+                void *data)
 {
 	if (!I_AM_ROOT()) return -EPERM;
 	//TODO: Check for EFAULT
-	filesystem_t *type=vfs_get_fs(filesystemtype);
+	filesystem_t *type = vfs_get_fs(filesystemtype);
 	if (!type) return -EINVAL;
 	int status;
-	vnode *mountpoint=namei(target,&status);
+	vnode *mountpoint = namei(target, &status);
 	if (!mountpoint) return status;
-	vnode *dev=0;
-	if (type->flags&MNT_FLAG_REQDEV) {
-		dev=namei(source,&status);
+	vnode *dev = 0;
+	if (type->flags & MNT_FLAG_REQDEV) {
+		dev = namei(source, &status);
 		if (!dev) {
 			iput(mountpoint);
 			return status;
 		}
 		/* Device stuff goes here: open/request */
 	}
-	vfsmount *mnt=calloc(1,sizeof(vfsmount));
-	super_block *sb=calloc(1,sizeof(super_block));
-	mnt->devname=source;
-	mnt->dirname=target;
-	mnt->flags=mountflags;
-	sb->dev=dev;
-	sb->flags=mountflags;
-	sb->mi=mnt;
-	sb->type=type;
-	sb->cache=vfs_create_cache();
-	mnt->sb=type->read_super(sb,data,0);
+	vfsmount *mnt = calloc(1, sizeof(vfsmount));
+	super_block *sb = calloc(1, sizeof(super_block));
+	mnt->devname = source;
+	mnt->dirname = target;
+	mnt->flags = mountflags;
+	sb->dev = dev;
+	sb->flags = mountflags;
+	sb->mi = mnt;
+	sb->type = type;
+	sb->cache = vfs_create_cache();
+	mnt->sb = type->read_super(sb, data, 0);
 	if (!sb) {
 		free(mnt);
 		free(sb);
@@ -91,8 +91,8 @@ int sys_mount(	const char *source, const char *target,
 		return -EINVAL;
 	}
 	d_mount(mnt);
-	mountpoint->mount=sb->root;
-	sb->root->cover=mountpoint;
+	mountpoint->mount = sb->root;
+	sb->root->cover = mountpoint;
 	return 0;
 }
 
@@ -101,15 +101,15 @@ int sys_umount(const char *target)
 	if (!I_AM_ROOT()) return -EPERM;
 	if (!target || !*target) return -EFAULT;
 	int status;
-	vnode *node=namei(target,&status),*newnode;
+	vnode *node = namei(target, &status), *newnode;
 	if (!node) return status;
 	if (!IS_MNT(node)) { //Not a mountpoint
 		iput(node);
 		return -EINVAL;
 	}
-	newnode=node->mount;
+	newnode = node->mount;
 	iput(node);
-	super_block *sb=newnode->sb;
+	super_block *sb = newnode->sb;
 	if (sb->s_op->put_super)
 		sb->s_op->put_super(sb);
 	/*

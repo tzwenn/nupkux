@@ -24,25 +24,25 @@
 
 char *sh_gets(char *buf)
 {
-	int i=0;
+	int i = 0;
 	printf("\e[?25h");
 	for (;;) {
-		buf[i]=getchar();
+		buf[i] = getchar();
 		switch (buf[i]) {
-			case '\n':
-				buf[i]='\0';
-				goto end;
-				break;
-			case '\b':
-				i-=2;
-				if (i>=-1) printf("\b");
-				if (i<0) i=-1;
-				break;
-			case '\t':
-				break;
-			default:
-				printf("%c",buf[i]);
-				break;
+		case '\n':
+			buf[i] = '\0';
+			goto end;
+			break;
+		case '\b':
+			i -= 2;
+			if (i >= -1) printf("\b");
+			if (i < 0) i = -1;
+			break;
+		case '\t':
+			break;
+		default:
+			printf("%c", buf[i]);
+			break;
 		}
 		i++;
 	}
@@ -63,15 +63,15 @@ int main(int argc, char *argv[], char *envp[])
 {
 	char input[255] = {0,};
 	print_welcome();
-	int fd=open("/dev/nish",O_RDWR,0);
-	if (fd<0) {
+	int fd = open("/dev/nish", O_RDWR, 0);
+	if (fd < 0) {
 		printf("\e[31mCannot connect to nish\e[m\n");
 		exit(1);
 	}
 	for (;;) {
 		printf("\e[97msh#\e[m ");
 		sh_gets(input);
-		write(fd,input,strlen(input)+1);
+		write(fd, input, strlen(input) + 1);
 	}
 	close(fd);
 	return 0;

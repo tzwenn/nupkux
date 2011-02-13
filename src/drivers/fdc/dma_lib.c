@@ -41,7 +41,7 @@ void _dma_xfer(uchar DMA_channel, unsigned char apage, unsigned int offset, unsi
 
 void dma_xfer(uchar channel, unsigned long address, unsigned int length, unsigned char read_req)
 {
-	unsigned char apage=0, mode=0;
+	unsigned char apage = 0, mode = 0;
 	unsigned int offset = 0;
 
 	if(read_req)
@@ -59,34 +59,34 @@ void dma_xfer(uchar channel, unsigned long address, unsigned int length, unsigne
 
 void _dma_xfer(uchar DMA_channel, unsigned char apage, unsigned int offset, unsigned int length, uchar mode)
 {
-    /* Don't let anyone else mess up what we're doing. */
-    cli();
+	/* Don't let anyone else mess up what we're doing. */
+	cli();
 
-    /* Set up the DMA channel so we can use it.  This tells the DMA */
-    /* that we're going to be using this channel.  (It's masked) */
-    outportb(MaskReg[DMA_channel], 0x04 | DMA_channel);
+	/* Set up the DMA channel so we can use it.  This tells the DMA */
+	/* that we're going to be using this channel.  (It's masked) */
+	outportb(MaskReg[DMA_channel], 0x04 | DMA_channel);
 
-    /* Clear any data transfers that are currently executing. */
-    outportb(ClearReg[DMA_channel], 0x00);
+	/* Clear any data transfers that are currently executing. */
+	outportb(ClearReg[DMA_channel], 0x00);
 
-    /* Send the specified mode to the DMA. */
-    outportb(ModeReg[DMA_channel], mode);
+	/* Send the specified mode to the DMA. */
+	outportb(ModeReg[DMA_channel], mode);
 
-    /* Send the offset address.  The first byte is the low base offset, the */
-    /* second byte is the high offset. */
-    outportb(AddrPort[DMA_channel], LOW_BYTE(offset));
-    outportb(AddrPort[DMA_channel], HI_BYTE(offset));
+	/* Send the offset address.  The first byte is the low base offset, the */
+	/* second byte is the high offset. */
+	outportb(AddrPort[DMA_channel], LOW_BYTE(offset));
+	outportb(AddrPort[DMA_channel], HI_BYTE(offset));
 
-    /* Send the physical page that the data lies on. */
-    outportb(PagePort[DMA_channel], apage);
+	/* Send the physical page that the data lies on. */
+	outportb(PagePort[DMA_channel], apage);
 
-    /* Send the length of the data.  Again, low byte first. */
-    outportb(CountPort[DMA_channel], LOW_BYTE(length));
-    outportb(CountPort[DMA_channel], HI_BYTE(length));
+	/* Send the length of the data.  Again, low byte first. */
+	outportb(CountPort[DMA_channel], LOW_BYTE(length));
+	outportb(CountPort[DMA_channel], HI_BYTE(length));
 
-    /* Ok, we're done.  Enable the DMA channel (clear the mask). */
-    outportb(MaskReg[DMA_channel], DMA_channel);
+	/* Ok, we're done.  Enable the DMA channel (clear the mask). */
+	outportb(MaskReg[DMA_channel], DMA_channel);
 
-    /* Re-enable interrupts before we leave. */
-    sti();
+	/* Re-enable interrupts before we leave. */
+	sti();
 }

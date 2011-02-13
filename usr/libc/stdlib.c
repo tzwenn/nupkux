@@ -25,7 +25,7 @@ int atoi(const char *str)
 
 	while (*str) {
 		if is_digit(*str)
-			res=10*(res)+(*str-'0');
+			res = 10 * (res) + (*str - '0');
 		str++;
 	}
 	return res;

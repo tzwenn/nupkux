@@ -23,12 +23,12 @@
 int lba28_init(USHORT controller, UCHAR drive, UINT addr, UCHAR sectorcount)
 {
 	while ((inportb(controller + ATA_CHK2) & 0x80)) sys_pause();
-	outportb(controller | ATA_FEAT,0x00);
-	outportb(controller | ATA_SECS,sectorcount);
-	outportb(controller | ATA_SNUM,(UCHAR) addr);
-	outportb(controller | ATA_CLOW,(UCHAR) (addr>>8));
-	outportb(controller | ATA_CHIH,(UCHAR) (addr>>16));
-	outportb(controller | ATA_HDEV,0xE0 | (UCHAR) (drive << 4) | (UCHAR) ((addr >> 24) & (0x0F)));
+	outportb(controller | ATA_FEAT, 0x00);
+	outportb(controller | ATA_SECS, sectorcount);
+	outportb(controller | ATA_SNUM, (UCHAR) addr);
+	outportb(controller | ATA_CLOW, (UCHAR) (addr >> 8));
+	outportb(controller | ATA_CHIH, (UCHAR) (addr >> 16));
+	outportb(controller | ATA_HDEV, 0xE0 | (UCHAR) (drive << 4) | (UCHAR) ((addr >> 24) & (0x0F)));
 	return 1;
 }
 
@@ -52,16 +52,16 @@ int lba28_read(UCHAR* buf, USHORT controller, UCHAR drive, UINT addr, UCHAR sect
 	int i;
 	USHORT value;
 
-	controller=controller & 0xFFF0;
-	if ((controller!=ATA_IDE_1) && (controller!=ATA_IDE_2)) return 0;
-	if ((drive!=ATA_MASTER) && (drive!=ATA_SLAVE)) return 0;
-	if (!lba28_init(controller,drive,addr,sectorcount)) return 0;
-	outportb(controller | ATA_CMD,ATA_READ_CMD);
+	controller = controller & 0xFFF0;
+	if ((controller != ATA_IDE_1) && (controller != ATA_IDE_2)) return 0;
+	if ((drive != ATA_MASTER) && (drive != ATA_SLAVE)) return 0;
+	if (!lba28_init(controller, drive, addr, sectorcount)) return 0;
+	outportb(controller | ATA_CMD, ATA_READ_CMD);
 	while (!(inportb(controller | ATA_CMD) & 0x08)) sys_pause();
-	for (i=0;i<256*(sectorcount+1);i++) {
-		value=inportw(controller);
-		buf[i*2]=(UCHAR) (value & 0xFF);
-		buf[i*2+1]=(UCHAR) ((value & 0xFF00) >> 8);
+	for (i = 0; i < 256 * (sectorcount + 1); i++) {
+		value = inportw(controller);
+		buf[i*2] = (UCHAR) (value & 0xFF);
+		buf[i*2+1] = (UCHAR) ((value & 0xFF00) >> 8);
 	}
 	return 1;
 }
@@ -71,16 +71,16 @@ int lba28_write(UCHAR* buf, USHORT controller, UCHAR drive, UINT addr, UCHAR sec
 	int i;
 	USHORT value;
 
-	controller=controller & 0xFFF0;
-	if ((controller!=ATA_IDE_1) && (controller!=ATA_IDE_2)) return 0;
-	if ((drive!=ATA_MASTER) && (drive!=ATA_SLAVE)) return 0;
-	if (!lba28_init(controller,drive,addr,sectorcount)) return 0;
-	outportb(controller | ATA_CMD,ATA_WRITE_CMD);
+	controller = controller & 0xFFF0;
+	if ((controller != ATA_IDE_1) && (controller != ATA_IDE_2)) return 0;
+	if ((drive != ATA_MASTER) && (drive != ATA_SLAVE)) return 0;
+	if (!lba28_init(controller, drive, addr, sectorcount)) return 0;
+	outportb(controller | ATA_CMD, ATA_WRITE_CMD);
 	while (!(inportb(controller | ATA_CMD) & 0x08)) sys_pause();
-	for (i=0;i<256*(sectorcount+1);i++) {
-		value=buf[i*2];
-		value|=buf[i*2+1] << 8;
-		outportw(controller,value);
+	for (i = 0; i < 256 * (sectorcount + 1); i++) {
+		value = buf[i*2];
+		value |= buf[i*2+1] << 8;
+		outportw(controller, value);
 	}
 	return 1;
 }

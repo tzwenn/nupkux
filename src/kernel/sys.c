@@ -47,8 +47,8 @@ static void do_poweroff(void)
 static void do_reboot(void)
 {
 	printf("Restarting system.");
-	while (inportb(0x64)&0x02);
-	outportb(0x64,0xFE);
+	while (inportb(0x64) & 0x02);
+	outportb(0x64, 0xFE);
 }
 
 #include <fs/mount.h>
@@ -65,15 +65,15 @@ int sys_reboot(int howto)
 	printf("Close VFS ... \n");
 	close_vfs();
 	switch (howto) {
-		case RB_HALT_SYSTEM:
-			do_halt();
-			break;
-		case RB_POWEROFF:
-			do_poweroff();
-			break;
-		case RB_AUTOBOOT:
-			do_reboot();
-			break;
+	case RB_HALT_SYSTEM:
+		do_halt();
+		break;
+	case RB_POWEROFF:
+		do_poweroff();
+		break;
+	case RB_AUTOBOOT:
+		do_reboot();
+		break;
 	}
 	return 0;
 }

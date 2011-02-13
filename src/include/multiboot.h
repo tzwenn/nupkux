@@ -115,7 +115,7 @@ typedef struct multiboot_module_info
 #define NR_BOOT_MODULES		4
 typedef struct _boot_module
 {
-	UINT addr,size; //start,size of module
+	UINT addr, size; //start,size of module
 	char string[255];
 } boot_module;
 

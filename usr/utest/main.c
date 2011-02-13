@@ -23,19 +23,19 @@ typedef unsigned int UINT;
 
 int main(int argc, char *argv[], char *envp[])
 {
-	int i=0;
+	int i = 0;
 	if (argv) {
-		printf("%d Params:\n",argc);
+		printf("%d Params:\n", argc);
 		while (argv[i]) {
-			printf("\targv[%d]=%s\n",i,argv[i]);
+			printf("\targv[%d]=%s\n", i, argv[i]);
 			i++;
 		}
 	}
 	printf("\nEnvp:\n");
 	if (envp) {
-		i=0;
+		i = 0;
 		while (envp[i]) {
-			printf("\tenvp[%d]=%s\n",i,envp[i]);
+			printf("\tenvp[%d]=%s\n", i, envp[i]);
 			i++;
 		}
 	}

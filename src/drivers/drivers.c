@@ -42,7 +42,7 @@ inline void *device_pdata(devfs_handle *handle)
 inline void set_device_pdata(devfs_handle *handle, void *pdata)
 {
 	if (handle)
-		handle->pdata=pdata;
+		handle->pdata = pdata;
 }
 
 inline devfs_handle *device_discr(vnode *node)
@@ -53,50 +53,50 @@ inline devfs_handle *device_discr(vnode *node)
 
 void device_lock(vnode *node)
 {
-	devfs_handle *dev=device_discr(node);
+	devfs_handle *dev = device_discr(node);
 	if (!dev) return;
 	cli();
-	request_t *newreq=malloc(sizeof(request_t)), *tmp;
-	newreq->pid=current_task->pid;
-	newreq->next=0;
-	if (!dev->queue) dev->queue=newreq;
+	request_t *newreq = malloc(sizeof(request_t)), *tmp;
+	newreq->pid = current_task->pid;
+	newreq->next = 0;
+	if (!dev->queue) dev->queue = newreq;
 	else {
-		tmp=dev->queue;
-		while (tmp->next) tmp=tmp->next;
-		tmp->next=newreq;
+		tmp = dev->queue;
+		while (tmp->next) tmp = tmp->next;
+		tmp->next = newreq;
 	}
 	sti();
-	while (dev->queue->pid!=current_task->pid) sys_pause();
+	while (dev->queue->pid != current_task->pid) sys_pause();
 }
 
 void device_unlock(vnode *node)
 {
-	devfs_handle *dev=device_discr(node);
+	devfs_handle *dev = device_discr(node);
 	if (!dev) return;
-	request_t *req=dev->queue;
-	if (req->pid!=current_task->pid) return;
+	request_t *req = dev->queue;
+	if (req->pid != current_task->pid) return;
 	cli();
-	dev->queue=req->next;
+	dev->queue = req->next;
 	free(req);
 	sti();
-	if (dev->queue) sys_kill(dev->queue->pid,SIGCONT);
+	if (dev->queue) sys_kill(dev->queue->pid, SIGCONT);
 }
 
 inline pid_t requesting_pid(vnode *node)
 {
-	devfs_handle *dev=device_discr(node);
+	devfs_handle *dev = device_discr(node);
 	if (!dev || !dev->queue) return -1;
 	return dev->queue->pid;
 }
 
 inline void outportb(USHORT port, UCHAR value)
 {
-    asm volatile ("outb %%al,%%dx"::"d" (port), "a" (value));
+	asm volatile ("outb %%al,%%dx"::"d" (port), "a" (value));
 }
 
 inline UCHAR inportb(USHORT port)
 {
- 	UCHAR value;
+	UCHAR value;
 
 	asm volatile ("inb %%dx,%%al":"=a" (value):"d"(port));
 	return value;
@@ -104,12 +104,12 @@ inline UCHAR inportb(USHORT port)
 
 inline void outportw(USHORT port, USHORT value)
 {
-    asm volatile ("outw %%ax,%%dx"::"d"(port), "a"(value));
+	asm volatile ("outw %%ax,%%dx"::"d"(port), "a"(value));
 }
 
 inline USHORT inportw(USHORT port)
 {
- 	USHORT value;
+	USHORT value;
 
 	asm volatile ("inw %%dx,%%ax":"=a"(value):"d"(port));
 	return value;

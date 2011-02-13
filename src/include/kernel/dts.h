@@ -53,8 +53,8 @@ struct _idt_entry {
 } __attribute__((packed));
 
 struct _idt_pointer {
-    USHORT limit;
-    UINT base;
+	USHORT limit;
+	UINT base;
 } __attribute__((packed));
 
 #define IRQ0 32
@@ -76,9 +76,9 @@ struct _idt_pointer {
 
 typedef struct _registers {
 	UINT ds;
-	UINT edi,esi,ebp,esp,ebx,edx,ecx,eax;
-	UINT int_no,err_code;
-	UINT eip,cs,eflags,useresp,ss;
+	UINT edi, esi, ebp, esp, ebx, edx, ecx, eax;
+	UINT int_no, err_code;
+	UINT eip, cs, eflags, useresp, ss;
 } registers;
 
 typedef void (*isr_t)(registers*);

@@ -22,8 +22,8 @@
 
 int fs_read_block(super_block *sb, ULONG block, ULONG count, char *buffer)
 {
-	UINT start_sector=sb->skip_bytes/sb->dev->u.devfs_i->bsize;
-	UINT sec_block=sb->blocksize/sb->dev->u.devfs_i->bsize;
+	UINT start_sector = sb->skip_bytes / sb->dev->u.devfs_i->bsize;
+	UINT sec_block = sb->blocksize / sb->dev->u.devfs_i->bsize;
 	//FIXME: I assume sb->blocksize > sb->dev->u.devfs_i->bsize
-	return request_fs(sb->dev,REQUEST_READ,block*sec_block+start_sector,count*sec_block,buffer);
+	return request_fs(sb->dev, REQUEST_READ, block * sec_block + start_sector, count * sec_block, buffer);
 }

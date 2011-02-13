@@ -27,19 +27,19 @@ static ULONG urandom_state = 0, urandom_seed = 0;
 
 void srand(UINT seed)
 {
-	if (seed==1 && urandom_seed) urandom_state=urandom_seed;
+	if (seed == 1 && urandom_seed) urandom_state = urandom_seed;
 	else {
-		urandom_state=seed;
-		urandom_seed=seed;
+		urandom_state = seed;
+		urandom_seed = seed;
 	}
 }
 
 long double sqrt(long double a) //Heron
 {
-	double x=1,x_=0;
-	while (x!=x_) {
-		x_=x;
-		x=(x_+a/x_)*0.5;
+	double x = 1, x_ = 0;
+	while (x != x_) {
+		x_ = x;
+		x = (x_ + a / x_) * 0.5;
 	}
 	return x;
 }
@@ -47,10 +47,10 @@ long double sqrt(long double a) //Heron
 int rand(void)
 {
 	if (!urandom_state) srand(time(0));
-	long double tmp=sqrt((long double)urandom_state);
-	tmp*=10;
-	tmp-=(UINT)tmp;
-	urandom_state=(int)(RAND_MAX*tmp);
+	long double tmp = sqrt((long double)urandom_state);
+	tmp *= 10;
+	tmp -= (UINT)tmp;
+	urandom_state = (int)(RAND_MAX * tmp);
 	return urandom_state;
 }
 
@@ -63,20 +63,23 @@ static int drv_urandom_open(vnode *node, FILE *f)
 static int drv_urandom_read(vnode *node, off_t offset, size_t size, char *buffer)
 {
 	size_t i;
-	i=size;
+	i = size;
 	while (i--)
-		buffer[i]=(char)(rand()%0x100);
+		buffer[i] = (char)(rand() % 0x100);
 	return size;
 }
 
 extern int drv_null_write(vnode *node, off_t offset, size_t size, const char *buffer);
 static file_operations urandom_ops = {
-		open: &drv_urandom_open,
-		read: &drv_urandom_read,
-		write: &drv_null_write,
+open:
+	&drv_urandom_open,
+read:
+	&drv_urandom_read,
+write:
+	&drv_null_write,
 };
 
 void setup_urandom_file(void)
 {
-	devfs_register_device(NULL,"urandom",0666,FS_UID_ROOT,FS_GID_ROOT,FS_CHARDEVICE,&urandom_ops);
+	devfs_register_device(NULL, "urandom", 0666, FS_UID_ROOT, FS_GID_ROOT, FS_CHARDEVICE, &urandom_ops);
 }
