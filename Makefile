@@ -99,6 +99,7 @@ do_install:
 
 do_umount:
 	@$(SUDO) umount $(MOUNTPOINT)
+	@rmdir $(MOUNTPOINT)
 	@echo "============Finished============="
 
 run_qemu:
