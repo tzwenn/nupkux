@@ -27,6 +27,8 @@ DISTNAME	= nupkux-dist.tar.gz
 
 REALINST	= NO
 
+SUDO		= sudo
+
 .PHONY: install tools help
 
 all: kernel userspace tools
@@ -71,17 +73,17 @@ tools:
 do_mount:
 	@echo "===Mount virtual floppy drive===="
 	@mkdir -p $(MOUNTPOINT)
-	@mount -t $(FSTYPE) $(FLOPPYIMAGE) $(MOUNTPOINT) -o loop
+	@$(SUDO) mount -t $(FSTYPE) $(FLOPPYIMAGE) $(MOUNTPOINT) -o loop
 
 do_initrd:
 	@echo "======Build initial ramdisk======"
 	@mkdir -p $(INITRDDIR)/dev
 	@$(MAKE) -sC $(USERSOURCE) install
-	-@$(MAKEINITRD) $(INITRDDIR) > $(MOUNTPOINT)/initrd 2> /dev/null	
+	-@sudo -s "$(MAKEINITRD) $(INITRDDIR) > $(MOUNTPOINT)/initrd 2> /dev/null"
 
 do_install:
 	@echo "=Install Nupkux on virtual drive="
-	@cp $(KERNELSOURCE)/$(KERNELIMAGE) $(MOUNTPOINT)/nupkux
+	@$(SUDO) cp $(KERNELSOURCE)/$(KERNELIMAGE) $(MOUNTPOINT)/nupkux
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 #                                                #
 # The following two statements install nupkux on #
@@ -91,12 +93,12 @@ do_install:
 #                                                #
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 	@if [ $(REALINST) = YES ]; then \
-		cp $(MOUNTPOINT)/nupkux /boot/nupkux; \
-		cp $(MOUNTPOINT)/initrd /boot/nupkux-initrd; \
+		$(SUDO) cp $(MOUNTPOINT)/nupkux /boot/nupkux; \
+		$(SUDO) cp $(MOUNTPOINT)/initrd /boot/nupkux-initrd; \
 	fi	
 
 do_umount:
-	@umount $(MOUNTPOINT)
+	@$(SUDO) umount $(MOUNTPOINT)
 	@echo "============Finished============="
 
 run_qemu:
