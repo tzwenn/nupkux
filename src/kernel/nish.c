@@ -215,8 +215,9 @@ static int nish_cd(int argc, char *argv[])
 
 static int nish_test(int argc, char **argv)
 {
-	printf("---ext2 test: Mount /dev/ram0 on /mnt---\n");
-	sys_mount("/dev/ram0", "/mnt", "ext2", 0, 0);
+/*	printf("---ext2 test: Mount /dev/ram0 on /mnt---\n");
+	sys_mount("/dev/ram0", "/mnt", "ext2", 0, 0);*/
+	printf("No tests today.\n");
 	return 1;
 }
 
