@@ -13,13 +13,13 @@ WFLAGS = -Wall -Werror -Wcast-align -Wwrite-strings -Wshadow -Winline -Wredundan
 	 -Wunsafe-loop-optimizations
 
 AS	= gcc
-ASFLAGS	= -c
+ASFLAGS	= -c -m32
 
 CC	= gcc
-CFLAGS	= -c $(WFLAGS) -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I$(INCLUDEDIR)
+CFLAGS	= -c $(WFLAGS) -m32 -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -I$(INCLUDEDIR)
 
 LD	= ld
-LDFLAGS	=
+LDFLAGS	= -melf_i386
 
 LIBCFILES=$(shell find libc -name "*.c")
 LIBCOBJS=$(patsubst %.c,%.o,$(LIBCFILES))

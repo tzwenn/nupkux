@@ -22,14 +22,14 @@ WFLAGS = -Wall -Werror -Wcast-align -Wwrite-strings -Wshadow -Winline -Wredundan
 	 -Wunsafe-loop-optimizations
 
 AS	= gcc
-ASFLAGS	= -c
+ASFLAGS	= -c -m32
 
 CC	= gcc
-CFLAGS	= -c $(WFLAGS) -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -fstrength-reduce \
+CFLAGS	= -c $(WFLAGS) -m32 -nostartfiles -nodefaultlibs -nostdlib -ffreestanding -fstrength-reduce \
 	  -fomit-frame-pointer -finline-functions -I$(INCLUDEDIR)
 
 LD	= ld
-LDFLAGS	= -Tlink.ld
+LDFLAGS	= -Tlink.ld -melf_i386
 
 DEPDIR		= .deps
 DEPFILE		= $(DEPDIR)/$*.d

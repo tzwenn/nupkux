@@ -7,7 +7,7 @@
 TOOLS	= mkinitrd
 
 CC	= gcc
-CFLAGS	= -Wall -Werror
+CFLAGS	= -Wall -Werror -m32
 
 MAKE	= make
 
