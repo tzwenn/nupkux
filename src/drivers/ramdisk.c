@@ -57,11 +57,11 @@ void setup_ramdisk(void)
 	dev->pdata = calloc(RAMDISK_SECTOR_COUNT, RAMDISK_SECTOR_SIZE);
 	dev->bcount = RAMDISK_SECTOR_COUNT;
 	dev->bsize = RAMDISK_SECTOR_SIZE;
-	/////////////////////////////////
+	/*////////////////////////////////
 	vnode *floppy = namei("/dev/fd0", 0);
 	if (floppy) {
 		request_fs(floppy, REQUEST_READ, 0, RAMDISK_SECTOR_COUNT, dev->pdata);
 	}
 	iput(floppy);
-	/////////////////////////////////
+	////////////////////////////////*/
 }
