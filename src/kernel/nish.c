@@ -122,6 +122,7 @@ static void format_mode(vnode *node, char *output)
 static int nish_help(void)
 {
 	printf("List of built-in commands:\n");
+	printf("\texec\t\tFork and execute command\n");
 	printf("\ttest\t\tRun the current development function\n");
 	printf("\tls\t\tList directory contents\n");
 	printf("\tcat\t\tShow file content on stdout\n");
@@ -213,6 +214,31 @@ static int nish_cd(int argc, char *argv[])
 	return 1;
 }
 
+static int nish_exec(int argc, char *argv[])
+{
+	if (argc < 2) {
+		printf("You need to provide at least 1 argument (executable file)!\n");
+		return 1;
+	}
+	pid_t parent_pid = sys_getpid();
+	pid_t fork_pid = sys_fork();
+	if(!fork_pid) {
+		fork_pid = sys_getpid();
+		parent_pid = sys_getppid();
+//		printf("Fork PID: %i, parent PID: %i\n", fork_pid, parent_pid);
+//		printf("Fork calling execve...\n");
+		int process_exit_code = sys_execve(argv[1], (const char **) argv, 0);
+//		printf("Returned from execve, exiting...\n");
+		sys_exit(process_exit_code);
+	} else {
+//		printf("Parent PID: %i\n", parent_pid);
+		int *exit_code = 0;
+		sys_waitpid(fork_pid, exit_code, 0);
+//		printf("Parent done, exit code was: %i\n", exit_code);
+	}
+	return 1;
+}
+
 static int nish_test(int argc, char **argv)
 {
 /*	printf("---ext2 test: Mount /dev/ram0 on /mnt---\n");
@@ -239,6 +265,7 @@ static int _nish_interpret(char *str)
 	else if (!strcmp(argv[0], "reboot")) ret = sys_reboot(0x02);
 	else if (!strcmp(argv[0], "help")) ret = nish_help();
 	else if (!strcmp(argv[0], "exit")) ret = NISH_EXIT;
+	else if (!strcmp(argv[0], "exec")) ret = nish_exec(argc, argv);
 	else printf("nish: %s: command not found.\n", argv[0]);
 	for (i = 0; i < MAX_ARGS; i++) {
 		free(argv[i]);
