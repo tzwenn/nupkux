@@ -215,10 +215,11 @@ static int nish_cd(int argc, char *argv[])
 
 static int nish_test(int argc, char **argv)
 {
-/*	printf("---ext2 test: Mount /dev/ram0 on /mnt---\n");
-	sys_mount("/dev/ram0", "/mnt", "ext2", 0, 0);*/
-	printf("---fork test---");
-	// TODO: Do it!
+	printf("---fork-execve test---\n");
+	if (!sys_fork()) {
+		sys_execve("/bin/utest", 0, 0);
+		sys_exit(0);
+	}
 	return 1;
 }
 
