@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007,2008 Sven Köhler
+ *  Copyright (C) 2007-2010 Sven Köhler
  *
  *  This file is part of Nupkux.
  *
@@ -104,20 +104,8 @@ int _kclear()
 	return 0;
 }
 
-static int _kiomove(int x, int y, int len)
-{
-	int i;
-
-	for (i = 2 * TXT_HEIGHT * TXT_WIDTH; i >= 2 * (y * TXT_WIDTH + x + len - 1); i--)
-		mem[i] = mem[i-2*len];
-	for (i = (y * TXT_WIDTH + x + len - 1); i >= (y * TXT_WIDTH + x); i--) {
-		mem[2*i] = ' ';
-		mem[2*i+1] = TXT_COL_WHITE;
-	}
-	return 0;
-}
-
-static int _kout(devfs_handle *handle, off_t offset, size_t size, const char *output)
+static int _kout(devfs_handle *dummy, off_t offset, size_t size, const char *output)
+/* This method is only to be used on start up, before we can use ttys */
 {
 	UCHAR x = _cursor_pos.x, y = _cursor_pos.y;
 	int i;
@@ -125,7 +113,6 @@ static int _kout(devfs_handle *handle, off_t offset, size_t size, const char *ou
 	while (size--) {
 		switch (*output) {
 		case '\n':
-			_kiomove(x, y, TXT_WIDTH);
 #ifdef NEWLINE_RETURN
 			for (i = 2 * ((y + 1) * TXT_WIDTH); i < 2 * TXT_HEIGHT * TXT_WIDTH; i++)
 				mem[i] = mem[i+2*x];
@@ -138,7 +125,6 @@ static int _kout(devfs_handle *handle, off_t offset, size_t size, const char *ou
 			break;
 		case '\t':
 			i = TAB_WIDTH - (x % TAB_WIDTH);
-			_kiomove(x, y, i);
 			x += i + 1;
 			break;
 		case '\b':
@@ -152,15 +138,12 @@ static int _kout(devfs_handle *handle, off_t offset, size_t size, const char *ou
 				mem[i] = mem[i+2];
 			break;
 		case '\v':
-			_kiomove(x, y, TXT_WIDTH);
 			y++;
 			break;
 		case '\f':
-			_kiomove(x, y, TXT_WIDTH);
 			y++;
 			break;
 		default:
-			_kiomove(x, y, 1);
 			mem[2*(y*TXT_WIDTH+x)] = *output;
 			mem[2*(y*TXT_WIDTH+x)+1] = TXT_COL_WHITE;
 			x++;
