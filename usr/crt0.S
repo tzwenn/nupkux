@@ -25,11 +25,16 @@ _start:
 	pushl 8(%ebx)
 	pushl 4(%ebx)
 	pushl (%ebx)
+
+# Jump into programs main function
 	call main
-# Exit Process:
+
+#Unwind selfmade stack
 	popl %ebx
 	popl %ebx
 	popl %ebx
+
+# Call syscall exit(%eax)
 	mov %eax,%ebx
 	mov $0x01,%eax
 	int $0x80

@@ -218,7 +218,7 @@ static int nish_test(int argc, char **argv)
 	printf("---fork-execve test---\n");
 	if (!sys_fork()) {
 		sys_execve("/bin/utest", 0, 0);
-		sys_exit(0);
+		//sys_exit(0);
 	}
 	return 1;
 }

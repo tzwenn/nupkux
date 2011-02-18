@@ -17,8 +17,11 @@
  *  along with Nupkux.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+
 int main(int argc, char *argv[], char *envp[])
 {
+	printf("A\n");
 	return 0;
 }
 
