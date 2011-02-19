@@ -214,6 +214,7 @@ static int nish_cd(int argc, char *argv[])
 	return 1;
 }
 
+#define NISH_EXEC_DEBUG_COMMENTS // (un)comment this line to disable (enable) debugging output on nish console.
 static int nish_exec(int argc, char *argv[])
 {
 	if (argc < 2) {
@@ -225,16 +226,24 @@ static int nish_exec(int argc, char *argv[])
 	if(!fork_pid) {
 		fork_pid = sys_getpid();
 		parent_pid = sys_getppid();
-//		printf("Fork PID: %i, parent PID: %i\n", fork_pid, parent_pid);
-//		printf("Fork calling execve...\n");
+#ifdef NISH_EXEC_DEBUG_COMMENTS
+		printf("CHILDF> Fork PID: %i, parent PID: %i\n", fork_pid, parent_pid);
+		printf("CHILDF> Fork calling execve...\n");
+#endif
 		int process_exit_code = sys_execve(argv[1], (const char **) argv, 0);
-//		printf("Returned from execve, exiting...\n");
+#ifdef NISH_EXEC_DEBUG_COMMENTS
+		printf("CHILDF> Returned from execve with exit code %i...\n", process_exit_code);
+#endif
 		sys_exit(process_exit_code);
 	} else {
-//		printf("Parent PID: %i\n", parent_pid);
-		int *exit_code = 0;
-		sys_waitpid(fork_pid, exit_code, 0);
-//		printf("Parent done, exit code was: %i\n", exit_code);
+#ifdef NISH_EXEC_DEBUG_COMMENTS
+		printf("PARENT> Parent PID: %i, Fork PID: %i\n", parent_pid, fork_pid);
+#endif
+		pid_t exit_code = 0;
+		sys_waitpid(fork_pid, &exit_code, 0);
+#ifdef NISH_EXEC_DEBUG_COMMENTS
+		printf("PARENT> Parent done, exit code was: %i\n", exit_code);
+#endif
 	}
 	return 1;
 }
