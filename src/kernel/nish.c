@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007,2008 Sven Köhler
+ *  Copyright (C) 2007-2011 Sven Köhler, Kai Fabian
  *
  *  This file is part of Nupkux.
  *
@@ -122,6 +122,7 @@ static void format_mode(vnode *node, char *output)
 static int nish_help(void)
 {
 	printf("List of built-in commands:\n");
+	printf("\texec\t\tFork and execute command\n");
 	printf("\ttest\t\tRun the current development function\n");
 	printf("\tls\t\tList directory contents\n");
 	printf("\tcat\t\tShow file content on stdout\n");
@@ -213,13 +214,45 @@ static int nish_cd(int argc, char *argv[])
 	return 1;
 }
 
+#define NISH_EXEC_DEBUG_COMMENTS // (un)comment this line to disable (enable) debugging output on nish console.
+static int nish_exec(int argc, char *argv[])
+{
+	if (argc < 2) {
+		printf("You need to provide at least 1 argument (executable file)!\n");
+		return 1;
+	}
+	pid_t parent_pid = sys_getpid();
+	pid_t fork_pid = sys_fork();
+	if(!fork_pid) {
+		fork_pid = sys_getpid();
+		parent_pid = sys_getppid();
+#ifdef NISH_EXEC_DEBUG_COMMENTS
+		printf("CHILDF> Fork PID: %i, parent PID: %i\n", fork_pid, parent_pid);
+		printf("CHILDF> Fork calling execve...\n");
+#endif
+		int process_exit_code = sys_execve(argv[1], (const char **) argv, 0);
+#ifdef NISH_EXEC_DEBUG_COMMENTS
+		printf("CHILDF> Returned from execve with exit code %i...\n", process_exit_code);
+#endif
+		sys_exit(process_exit_code);
+	} else {
+#ifdef NISH_EXEC_DEBUG_COMMENTS
+		printf("PARENT> Parent PID: %i, Fork PID: %i\n", parent_pid, fork_pid);
+#endif
+		pid_t exit_code = 0;
+		sys_waitpid(fork_pid, &exit_code, 0);
+#ifdef NISH_EXEC_DEBUG_COMMENTS
+		printf("PARENT> Parent done, exit code was: %i\n", exit_code);
+#endif
+	}
+	return 1;
+}
+
 static int nish_test(int argc, char **argv)
 {
-	printf("---fork-execve test---\n");
-	if (!sys_fork()) {
-		sys_execve("/bin/utest", 0, 0);
-		//sys_exit(0);
-	}
+/*	printf("---ext2 test: Mount /dev/ram0 on /mnt---\n");
+	sys_mount("/dev/ram0", "/mnt", "ext2", 0, 0);*/
+	printf("No tests today.\n");
 	return 1;
 }
 
@@ -241,6 +274,7 @@ static int _nish_interpret(char *str)
 	else if (!strcmp(argv[0], "reboot")) ret = sys_reboot(0x02);
 	else if (!strcmp(argv[0], "help")) ret = nish_help();
 	else if (!strcmp(argv[0], "exit")) ret = NISH_EXIT;
+	else if (!strcmp(argv[0], "exec")) ret = nish_exec(argc, argv);
 	else printf("nish: %s: command not found.\n", argv[0]);
 	for (i = 0; i < MAX_ARGS; i++) {
 		free(argv[i]);
