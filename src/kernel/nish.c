@@ -231,6 +231,9 @@ static int nish_exec(int argc, char *argv[])
 		printf("CHILDF> Fork calling execve...\n");
 #endif
 		int process_exit_code = sys_execve(argv[1], (const char **) argv, 0);
+		// any point below here should never be reached, 'cause any process in sys_execve should call sys_exit(...);.
+		// anyhow, this is not happening (yet). also, the following code assures, that the exit code is set
+		// correctly if sys_execve fails due to permission restrictions, etc.
 #ifdef NISH_EXEC_DEBUG_COMMENTS
 		printf("CHILDF> Returned from execve with exit code %i...\n", process_exit_code);
 #endif
@@ -240,7 +243,14 @@ static int nish_exec(int argc, char *argv[])
 		printf("PARENT> Parent PID: %i, Fork PID: %i\n", parent_pid, fork_pid);
 #endif
 		pid_t exit_code = 0;
-		sys_waitpid(fork_pid, &exit_code, 0);
+		// if last argument == & -> do not wait
+		// (run parallel)
+		if (strcmp(argv[argc-1], "&") || strlen(argv[argc-1]) != 1) {
+#ifdef NISH_EXEC_DEBUG_COMMENTS
+			printf("PARENT> waiting for fork to finish...\n");
+#endif
+			sys_waitpid(fork_pid, &exit_code, 0);
+		}
 #ifdef NISH_EXEC_DEBUG_COMMENTS
 		printf("PARENT> Parent done, exit code was: %i\n", exit_code);
 #endif
