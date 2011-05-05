@@ -230,7 +230,18 @@ static int nish_exec(int argc, char *argv[])
 		printf("CHILDF> Fork PID: %i, parent PID: %i\n", fork_pid, parent_pid);
 		printf("CHILDF> Fork calling execve...\n");
 #endif
-		int process_exit_code = sys_execve(argv[1], (const char **) argv, 0);
+		// as sven told me, this one is _very_ bad: int process_exit_code = sys_execve(argv[1], (const char **) argv, 0);
+		/* some explanation:
+		 * sys_execve is a function call, whereas sys_execve needs to be called by an interrupt.
+		 * else, it does not update the registers -> there is no change, no jump to
+		 * entry point, bla bla.
+		 */
+		// well, let's try it with the correct code (it's not as shiny, but hopefully works...)
+		set_kernel_stack(current_task->kernel_stack + KERNEL_STACK_SIZE);
+		int process_exit_code = -1;
+		asm volatile ("int $0x80":"=a"(process_exit_code):"a"(__NR_execve), "b"(argv[1]), "c"((const char **) argv), "d"(0));
+		asm volatile ("int $0x80"::"a"(__NR_exit), "b"(process_exit_code));
+		for (;;);
 		// any point below here should never be reached, 'cause any process in sys_execve should call sys_exit(...);.
 		// anyhow, this is not happening (yet). also, the following code assures, that the exit code is set
 		// correctly if sys_execve fails due to permission restrictions, etc.
