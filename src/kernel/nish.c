@@ -214,7 +214,6 @@ static int nish_cd(int argc, char *argv[])
 	return 1;
 }
 
-#define NISH_EXEC_DEBUG_COMMENTS // (un)comment this line to disable (enable) debugging output on nish console.
 static int nish_exec(int argc, char *argv[])
 {
 	if (argc < 2) {
@@ -226,10 +225,6 @@ static int nish_exec(int argc, char *argv[])
 	if(!fork_pid) {
 		fork_pid = sys_getpid();
 		parent_pid = sys_getppid();
-#ifdef NISH_EXEC_DEBUG_COMMENTS
-		printf("CHILDF> Fork PID: %i, parent PID: %i\n", fork_pid, parent_pid);
-		printf("CHILDF> Fork calling execve...\n");
-#endif
 		// as sven told me, this one is _very_ bad: int process_exit_code = sys_execve(argv[1], (const char **) argv, 0);
 		/* some explanation:
 		 * sys_execve is a function call, whereas sys_execve needs to be called by an interrupt.
@@ -245,26 +240,14 @@ static int nish_exec(int argc, char *argv[])
 		// any point below here should never be reached, 'cause any process in sys_execve should call sys_exit(...);.
 		// anyhow, this is not happening (yet). also, the following code assures, that the exit code is set
 		// correctly if sys_execve fails due to permission restrictions, etc.
-#ifdef NISH_EXEC_DEBUG_COMMENTS
-		printf("CHILDF> Returned from execve with exit code %i...\n", process_exit_code);
-#endif
 		sys_exit(process_exit_code);
 	} else {
-#ifdef NISH_EXEC_DEBUG_COMMENTS
-		printf("PARENT> Parent PID: %i, Fork PID: %i\n", parent_pid, fork_pid);
-#endif
 		pid_t exit_code = 0;
 		// if last argument == & -> do not wait
 		// (run parallel)
 		if (strcmp(argv[argc-1], "&") || strlen(argv[argc-1]) != 1) {
-#ifdef NISH_EXEC_DEBUG_COMMENTS
-			printf("PARENT> waiting for fork to finish...\n");
-#endif
 			sys_waitpid(fork_pid, &exit_code, 0);
 		}
-#ifdef NISH_EXEC_DEBUG_COMMENTS
-		printf("PARENT> Parent done, exit code was: %i\n", exit_code);
-#endif
 	}
 	return 1;
 }
