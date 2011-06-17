@@ -18,7 +18,7 @@ There are tree main parts in this package:
 
 ----------Dependencies
 
-I'm using Debian GNU/Linux for developpinng, compiling and testing.
+I'm using Debian GNU/Linux for developing, compiling and testing.
 You will need a Linux distribution, since you've got to use "mount -o loop"
 Further needed:
 	- gcc (>=4.X)
@@ -48,7 +48,7 @@ By default Nupkux is not going to be installed on your real hard drive.
 If you type as superuser:
 
 	# make install
-	
+
 Nupkux and its userspace applications will be installed on a virtual
 floppy drive. Mounting this drive requires superuser-rights (root, sudo).
 
