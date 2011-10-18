@@ -7,8 +7,9 @@
 PROGRAMS   =init utest hello getty sh login
 INCLUDEDIR =include
 PROJDIRS   = $(PROGRAMS) $(INCLUDEDIR) libc
+SUDO       = sudo
 
-WFLAGS = -Wall -Werror -Wcast-align -Wwrite-strings -Wshadow -Winline -Wredundant-decls \
+WFLAGS = -Wall -Wcast-align -Wwrite-strings -Wshadow -Winline -Wredundant-decls \
 	 -Wstrict-prototypes -Wpointer-arith -Wnested-externs -Wno-long-long \
 	 -Wunsafe-loop-optimizations
 
@@ -63,9 +64,9 @@ programs:
 	-@for program in $(PROGRAMS); do ($(MAKE) -s "EXECUTABLE= $$program" $$program); done; true
 
 install:
-	@mkdir -p $(INSTDIR)
-	@rm -f $(INSTDIR)/*
-	@cp $(OUTDIR)/* $(INSTDIR)/
+	@$(SUDO) mkdir -p $(INSTDIR)
+	@$(SUDO) $(RM) $(INSTDIR)/*
+	@$(SUDO) cp $(OUTDIR)/* $(INSTDIR)/
 
 $(EXECUTABLE):	$(OBJFILES) link
 

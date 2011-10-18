@@ -77,9 +77,9 @@ do_mount:
 
 do_initrd:
 	@echo "======Build initial ramdisk======"
-	@mkdir -p $(INITRDDIR)/dev
+	@$(SUDO) mkdir -p $(INITRDDIR)/dev
 	@$(MAKE) -sC $(USERSOURCE) install
-	-@$(SUDO) -s $(MAKEINITRD) $(INITRDDIR) > $(MOUNTPOINT)/initrd 2> /dev/null
+	@$(SUDO) sh -c '$(MAKEINITRD) $(INITRDDIR) > $(MOUNTPOINT)/initrd 2> /dev/null'
 
 do_install:
 	@echo "=Install Nupkux on virtual drive="

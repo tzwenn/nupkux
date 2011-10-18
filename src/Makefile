@@ -17,7 +17,7 @@ OBJFILES = $(OSFILES) $(OCFILES)
 
 AUXFILES = COPYING Makefile link.ld
 
-WFLAGS = -Wall -Werror -Wcast-align -Wwrite-strings -Wshadow -Winline -Wredundant-decls \
+WFLAGS = -Wall -Wcast-align -Wwrite-strings -Wshadow -Winline -Wredundant-decls \
 	 -Wstrict-prototypes -Wpointer-arith -Wnested-externs -Wno-long-long \
 	 -Wunsafe-loop-optimizations
 
